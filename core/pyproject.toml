@@ -30,3 +30,4 @@ readcode = ["viewer_dist/**", "queries/*.scm"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["integration: runs external tools (e.g. graphify) for real"]

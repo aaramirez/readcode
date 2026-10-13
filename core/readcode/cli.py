@@ -75,3 +75,60 @@ def index(
         f"Indexado {result['sha']}: {result['indexed']} archivos con símbolos, "
         f"{result['skipped']} sin indexar"
     )
+
+
+@app.command()
+def plan(
+    kb_dir: Annotated[Path, typer.Argument(help="Directorio de la base de conocimiento.")],
+    study: Annotated[str, typer.Argument(help="Nombre del estudio.")],
+    sha: Annotated[str, typer.Option("--sha", help="SHA del snapshot (completo o prefijo único).")],
+    batch_lines: Annotated[int, typer.Option("--batch-lines", help="Máximo de líneas por lote.")] = 1500,
+    as_json: Annotated[bool, typer.Option("--json", help="Salida en JSON.")] = False,
+) -> None:
+    """Cola de trabajo para la skill: reutiliza explicaciones y lista lo pendiente."""
+    import json
+
+    from readcode.plan_cmd import PlanError, plan_snapshot, summarize
+
+    try:
+        result = plan_snapshot(kb_dir, study, sha, batch_lines)
+    except PlanError as exc:
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(1)
+    typer.echo(json.dumps(result, indent=2, ensure_ascii=False) if as_json else summarize(result))
+
+
+@app.command()
+def graph(
+    kb_dir: Annotated[Path, typer.Argument(help="Directorio de la base de conocimiento.")],
+    study: Annotated[str, typer.Argument(help="Nombre del estudio.")],
+    sha: Annotated[str, typer.Option("--sha", help="SHA del snapshot (completo o prefijo único).")],
+) -> None:
+    """Genera el grafo del snapshot con graphify (opcional)."""
+    from readcode.graph_cmd import GraphError, graph_snapshot
+
+    try:
+        ok = graph_snapshot(kb_dir, study, sha)
+    except GraphError as exc:
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(1)
+    if ok:
+        typer.echo("Grafo generado")
+
+
+@app.command()
+def diff(
+    kb_dir: Annotated[Path, typer.Argument(help="Directorio de la base de conocimiento.")],
+    study: Annotated[str, typer.Argument(help="Nombre del estudio.")],
+    sha_a: Annotated[str, typer.Argument(help="SHA base (completo o prefijo).")],
+    sha_b: Annotated[str, typer.Argument(help="SHA destino (completo o prefijo).")],
+) -> None:
+    """Calcula changes.json entre dos snapshots estudiados."""
+    from readcode.diff_cmd import DiffError, diff_snapshots
+
+    try:
+        doc = diff_snapshots(kb_dir, study, sha_a, sha_b)
+    except DiffError as exc:
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(1)
+    typer.echo(f"Diff {doc['from']}..{doc['to']}: {len(doc['files'])} archivos")

@@ -58,3 +58,27 @@ def blob_path(study_directory: Path | str, blob_hash: str) -> Path:
 def snapshot_dir(study_directory: Path | str, sha: str) -> Path:
     """``<study>/snapshots/<sha>``."""
     return Path(study_directory) / "snapshots" / sha
+
+
+def explain_path(snapshot_directory: Path | str, file_path: str) -> Path:
+    """``<snapshot>/explain/<path>.json`` (e.g. ``explain/app/main.py.json``)."""
+    return Path(snapshot_directory) / "explain" / f"{file_path}.json"
+
+
+def dir_summary_path(snapshot_directory: Path | str, dir_path: str) -> Path:
+    """``<snapshot>/dirs/<path>.json``; the repo root ("") is ``dirs/_root.json``."""
+    name = dir_path if dir_path else "_root"
+    return Path(snapshot_directory) / "dirs" / f"{name}.json"
+
+
+def resolve_sha(study_data: dict, prefix: str) -> str:
+    """Resolve a full sha or unique prefix against study.json snapshots; ValueError if not studied."""
+    shas = [s["sha"] for s in study_data.get("snapshots", [])]
+    if prefix in shas:
+        return prefix
+    matches = [s for s in shas if prefix and s.startswith(prefix)]
+    if len(matches) == 1:
+        return matches[0]
+    if not matches:
+        raise ValueError(f"Snapshot {prefix!r} is not part of the study; run `readcode snapshot` first")
+    raise ValueError(f"Ambiguous sha prefix {prefix!r}: {', '.join(matches)}")
