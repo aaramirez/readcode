@@ -21,8 +21,11 @@ def _has_explain(sdir: Path, sha: str) -> bool:
     return d.is_dir() and any(d.rglob("*.json"))
 
 
-def _reuse_source(sdir: Path, study_data: dict, sha: str) -> str | None:
-    """Most recent earlier snapshot with explain/ files; otherwise any other (newest first)."""
+def reuse_source(sdir: Path, study_data: dict, sha: str) -> str | None:
+    """Snapshot ``plan`` inherits from (reported as ``reusedFrom``).
+
+    Most recent earlier snapshot with explain/ files; otherwise any other (newest first).
+    """
     snaps = sorted(study_data["snapshots"], key=_date)
     this = next((s for s in snaps if s["sha"] == sha), None)
     others = [s for s in snaps if s["sha"] != sha]
@@ -54,6 +57,34 @@ def _parents(path: str) -> list[str]:
         out.append(str(cur))
         cur = cur.parent
     out.append("")
+    return out
+
+
+def _abandoned(snap: Path) -> set[str]:
+    """Files given up by the generator: issues.json entries with source "generator"
+    whose file is ``explain/<path>.json``."""
+    path = snap / "issues.json"
+    if not path.is_file():
+        return set()
+    try:
+        issues = kbio.read_json(path).get("issues", [])
+    except (ValueError, AttributeError):
+        return set()
+    out = set()
+    for issue in issues:
+        f = issue.get("file") if isinstance(issue, dict) else None
+        if (issue.get("source") == "generator" and isinstance(f, str)
+                and f.startswith("explain/") and f.endswith(".json")):
+            out.add(f[len("explain/"):-len(".json")])
+    return out
+
+
+def _subtrees(files: list[dict]) -> dict[str, dict[str, str]]:
+    """Directory -> {path: blob} of every file below it (the root is "")."""
+    out: dict[str, dict[str, str]] = {}
+    for f in files:
+        for d in _parents(f["path"]):
+            out.setdefault(d, {})[f["path"]] = f["blob"]
     return out
 
 
@@ -92,9 +123,11 @@ def plan_snapshot(kb: Path | str, study: str, sha: str, batch_lines: int = 1500)
 
     explainable = [f for f in tree["files"] if not (f["language"] is None and f["bytes"] == 0)]
 
-    other = _reuse_source(sdir, study_data, sha)
+    other = reuse_source(sdir, study_data, sha)
+    given_up = _abandoned(snap)
     reused = 0
     pending: list[dict] = []
+    abandoned: list[str] = []
     for f in explainable:
         mine = kbio.explain_path(snap, f["path"])
         if other is not None and not mine.is_file():
@@ -103,26 +136,24 @@ def plan_snapshot(kb: Path | str, study: str, sha: str, batch_lines: int = 1500)
                 kbio.atomic_write_bytes(mine, theirs.read_bytes())
                 reused += 1
         if _explain_hash(mine) != f["blob"]:
-            pending.append(f)
+            if f["path"] in given_up:
+                abandoned.append(f["path"])
+            else:
+                pending.append(f)
 
     all_dirs = {d for f in tree["files"] for d in _parents(f["path"])} | {""}
     dirty = {d for f in pending for d in _parents(f["path"])}
     reused_dirs = 0
-    changed_set = False
     if other is not None:
         other_dir = kbio.snapshot_dir(sdir, other)
         other_tree = other_dir / "tree.json"
-        old_paths = [f["path"] for f in kbio.read_json(other_tree)["files"]] if other_tree.is_file() else []
-        new_paths = [f["path"] for f in tree["files"]]
-        changed_set = set(old_paths) != set(new_paths)
-        old_sets: dict[str, set[str]] = {}
-        new_sets: dict[str, set[str]] = {}
-        for paths, sets in ((old_paths, old_sets), (new_paths, new_sets)):
-            for path in paths:
-                for d in _parents(path):
-                    sets.setdefault(d, set()).add(path)
+        old_files = kbio.read_json(other_tree)["files"] if other_tree.is_file() else []
+        # A summary is inherited only when its whole subtree (paths and blobs) is identical;
+        # the overview only when the whole tree is.
+        old_sub, new_sub = _subtrees(old_files), _subtrees(tree["files"])
+        same_tree = old_sub.get("", {}) == new_sub.get("", {})
         for d in all_dirs:
-            if d in dirty or old_sets.get(d) != new_sets.get(d):
+            if d in dirty or old_sub.get(d) != new_sub.get(d):
                 continue
             mine, theirs = kbio.dir_summary_path(snap, d), kbio.dir_summary_path(other_dir, d)
             if not mine.is_file() and theirs.is_file():
@@ -135,7 +166,7 @@ def plan_snapshot(kb: Path | str, study: str, sha: str, batch_lines: int = 1500)
                     dest = snap / sub / f.relative_to(src)
                     if f.is_file() and not dest.exists():
                         kbio.atomic_write_bytes(dest, f.read_bytes())
-        if not pending and not changed_set and not (snap / "overview.md").is_file():
+        if same_tree and not pending and not (snap / "overview.md").is_file():
             ov = other_dir / "overview.md"
             if ov.is_file():
                 kbio.atomic_write_bytes(snap / "overview.md", ov.read_bytes())
@@ -149,12 +180,14 @@ def plan_snapshot(kb: Path | str, study: str, sha: str, batch_lines: int = 1500)
 
     result = {
         "sha": sha,
+        "reusedFrom": other,
         "reused": reused,
         "reusedDirs": reused_dirs,
         "batches": _batches(pending, batch_lines),
         "dirs": pending_dirs,
         "overview": overview_pending,
         "tours": tours_pending,
+        "abandoned": sorted(abandoned),
         "done": not (pending or pending_dirs or overview_pending or tours_pending),
     }
     kbio.atomic_write_json(snap / "plan.json", result)
@@ -167,6 +200,7 @@ def summarize(plan: dict) -> str:
         f"Plan {plan['sha']}: {plan['reused']} explicaciones y {plan['reusedDirs']} directorios reutilizados, "
         f"{nfiles} archivos pendientes en {len(plan['batches'])} lotes, "
         f"{len(plan['dirs'])} directorios pendientes, "
+        f"{len(plan['abandoned'])} abandonados, "
         f"overview={'pendiente' if plan['overview'] else 'ok'}, "
         f"tours={'pendientes' if plan['tours'] else 'ok'}, "
         f"{'completo' if plan['done'] else 'incompleto'}"

@@ -1,0 +1,162 @@
+"""readcode context / stale / mark (helpers for the /readcode skill)."""
+
+import json
+import shutil
+from pathlib import Path
+
+import pytest
+from typer.testing import CliRunner
+
+from readcode import kbio
+from readcode.cli import app
+from readcode.context_cmd import ContextError, file_context
+from readcode.mark_cmd import MarkError, mark_study
+from readcode.stale_cmd import StaleError, stale_docs
+
+EXAMPLE_KB = Path(__file__).resolve().parents[2] / "examples" / "kb"
+SHA1 = "b42f63fb2414b4d4d830af722a64255504a80ee8"
+SHA2 = "074ec965eabffb43a0224ef9f1426515d2818975"
+
+runner = CliRunner()
+
+
+@pytest.fixture()
+def kb(tmp_path):
+    shutil.copytree(EXAMPLE_KB / "fixture", tmp_path / "fixture")
+    return tmp_path
+
+
+def test_context_on_example_snapshot():
+    billing, missing = file_context(EXAMPLE_KB, "fixture", SHA2[:7],
+                                    ["app/services/billing.py", "missing.py"])
+    assert billing["lines"] == 15
+    assert Path(billing["blobFile"]).is_absolute() and Path(billing["blobFile"]).is_file()
+    assert billing["blobHash"] in billing["blobFile"]
+    assert "refund (function) L13-15" in billing["defs"]
+    assert billing["imports"] == ["app.models -> app/models.py"]
+    assert billing["importedBy"] == ["app/main.py", "app/services/refunds.py"]
+    assert billing["usedBy"]["app/services/refunds.py"] == ["refund"]
+    assert any("app/services/refunds.py#process_refund" in n for n in billing["graphNeighbours"])
+    assert billing["explanation"] == "current"
+    assert missing == {"path": "missing.py", "error": "not in tree.json"}
+
+
+def test_context_explanation_states(kb):
+    snap = kbio.snapshot_dir(kb / "fixture", SHA2)
+    doc = kbio.read_json(kbio.explain_path(snap, "app/models.py"))
+    kbio.atomic_write_json(kbio.explain_path(snap, "app/models.py"), {**doc, "blobHash": "0" * 64})
+    kbio.explain_path(snap, "app/main.py").unlink()
+    states = {c["path"]: c["explanation"]
+              for c in file_context(kb, "fixture", SHA2, ["app/models.py", "app/main.py"])}
+    assert states == {"app/models.py": "stale", "app/main.py": "missing"}
+
+
+def test_context_errors(tmp_path):
+    with pytest.raises(ContextError, match="readcode init"):
+        file_context(tmp_path, "nope", SHA2, ["x"])
+    with pytest.raises(ContextError):
+        file_context(EXAMPLE_KB, "fixture", "deadbeef", ["x"])
+
+
+def test_context_cli():
+    r = runner.invoke(app, ["context", str(EXAMPLE_KB), "fixture", "--sha", SHA2,
+                            "app/services/billing.py", "--json"])
+    assert r.exit_code == 0, r.output
+    assert json.loads(r.stdout)[0]["path"] == "app/services/billing.py"
+    r = runner.invoke(app, ["context", str(EXAMPLE_KB), "fixture", "--sha", SHA2, "app/main.py"])
+    assert r.exit_code == 0 and r.stdout.startswith("app/main.py (python")
+    r = runner.invoke(app, ["context", str(EXAMPLE_KB), "fixture", "--sha", "deadbeef", "x"])
+    assert r.exit_code == 1
+
+
+def test_stale_on_example_update():
+    out = stale_docs(EXAMPLE_KB, "fixture", SHA1[:7], SHA2[:7])
+    assert (out["from"], out["to"]) == (SHA1, SHA2)
+    # only definitions whose text changed; compute_total/process are untouched
+    assert out["changedSymbols"] == {
+        "app/services/billing.py": ["refund"],
+        "app/services/refunds.py": ["process_refund"],
+        "web/src/api.ts": ["refundInvoice"],
+    }
+    explain = {e["path"]: e for e in out["explain"]}
+    assert "app/services/billing.py" not in explain  # changed files are re-explained, not refreshed
+    assert explain["app/models.py"] == {"path": "app/models.py", "symbols": [], "markers": [
+        "app/services/billing.py#refund", "app/services/refunds.py#process_refund"]}
+    assert out["dirs"] == [{"path": "app/services", "markers": ["app/services/billing.py#refund"]}]
+    tours = {t["id"]: t for t in out["tours"]}
+    assert tours["flujo-facturacion"]["steps"] == [3, 6, 7]
+    assert "worker-cola" not in tours
+    # [[ref:app/services/billing.py#process]] is not flagged: process did not change
+    assert out["overview"] == ["app/services/billing.py#refund",
+                               "app/services/refunds.py#process_refund"]
+
+
+def test_stale_flags_code_refs_line_markers_and_unpathed(kb):
+    snap2 = kbio.snapshot_dir(kb / "fixture", SHA2)
+    syms = kbio.read_json(snap2 / "symbols.json")
+    for d in syms["files"]["app/services/billing.py"]["defs"]:
+        if d["name"] == "process":
+            d["range"] = [7, 10]  # different text than in the old snapshot
+    kbio.atomic_write_json(snap2 / "symbols.json", syms)
+    worker = kbio.explain_path(snap2, "worker/queue.go")
+    doc = kbio.read_json(worker)
+    doc["summary"] += (" Ver [[ref:app/services/billing.py:L1-2]] y [[ref:#process]];"
+                       " no `[[ref:app/services/refunds.py#process_refund]]`.")
+    kbio.atomic_write_json(worker, doc)
+    out = stale_docs(kb, "fixture", SHA1, SHA2)
+    assert "process" in out["changedSymbols"]["app/services/billing.py"]
+    explain = {e["path"]: e for e in out["explain"]}
+    assert explain["app/main.py"]["symbols"] == ["process"]  # main.py calls billing.process
+    # marker inside inline code is ignored (refs.parse_markers semantics)
+    assert explain["worker/queue.go"]["markers"] == ["#process", "app/services/billing.py"]
+
+
+def test_stale_needs_diff(kb):
+    shutil.rmtree(kb / "fixture" / "diffs")
+    with pytest.raises(StaleError, match="readcode diff"):
+        stale_docs(kb, "fixture", SHA1, SHA2)
+    r = runner.invoke(app, ["stale", str(kb), "fixture", SHA1, SHA2])
+    assert r.exit_code == 1
+
+
+def test_stale_cli():
+    r = runner.invoke(app, ["stale", str(EXAMPLE_KB), "fixture", SHA1, SHA2, "--json"])
+    assert r.exit_code == 0, r.output
+    assert json.loads(r.stdout)["to"] == SHA2
+    r = runner.invoke(app, ["stale", str(EXAMPLE_KB), "fixture", SHA1, SHA2])
+    assert r.exit_code == 0 and "explain app/models.py" in r.stdout
+
+
+def test_mark_status_and_archify(kb):
+    data = mark_study(kb, "fixture", sha=SHA1[:7], status="partial")
+    assert data["snapshots"][0]["status"] == "partial"
+    data = mark_study(kb, "fixture", archify=False)
+    assert data["tools"] == {"graphify": True, "archify": False}
+    stored = kbio.read_json(kb / "fixture" / "study.json")
+    assert stored["snapshots"][0]["status"] == "partial" and stored["tools"]["archify"] is False
+
+
+@pytest.mark.parametrize("kwargs, match", [
+    ({}, "nothing to mark"),
+    ({"status": "explained"}, "together"),
+    ({"sha": SHA1}, "together"),
+    ({"sha": SHA1, "status": "done"}, "one of"),
+    ({"sha": "deadbeef", "status": "explained"}, None),
+])
+def test_mark_errors(kb, kwargs, match):
+    before = (kb / "fixture" / "study.json").read_bytes()
+    with pytest.raises(MarkError, match=match):
+        mark_study(kb, "fixture", **kwargs)
+    assert (kb / "fixture" / "study.json").read_bytes() == before
+
+
+def test_mark_cli(kb):
+    r = runner.invoke(app, ["mark", str(kb), "fixture", "--sha", SHA2, "--status", "partial",
+                            "--archify", "false"])
+    assert r.exit_code == 0, r.output
+    data = kbio.read_json(kb / "fixture" / "study.json")
+    assert data["snapshots"][1]["status"] == "partial" and data["tools"]["archify"] is False
+    r = runner.invoke(app, ["mark", str(kb), "fixture", "--archify", "maybe"])
+    assert r.exit_code == 1
+    r = runner.invoke(app, ["mark", str(kb), "fixture"])
+    assert r.exit_code == 1

@@ -1,8 +1,8 @@
 # readcode — overview y diagramas del repositorio
 
 Esta plantilla tiene dos tareas; tu mensaje dice cuál: `overview` o `diagrama <nombre> de tipo
-<tipo>`. En ambos casos te llegan `KB`, `Estudio` (`SDIR`), `SHA`
-(`SNAP = <SDIR>/snapshots/<SHA>`), `Idioma` ({{LANGUAGE}}) y `Scripts`.
+<tipo>`. En ambos casos te llegan `KB`, `Estudio` (nombre `STUDY`, directorio `SDIR`), `SHA`
+(`SNAP = <SDIR>/snapshots/<SHA>`) e `Idioma` ({{LANGUAGE}}).
 
 ## Fuentes (las dos tareas)
 
@@ -13,8 +13,8 @@ Lee en este orden y solo lo necesario:
 2. `<SNAP>/graph/GRAPH_REPORT.md` y `<SNAP>/graph/graph.json` si existen (comunidades, nodos más
    conectados, llamadas entre archivos).
 3. Las explicaciones (`<SNAP>/explain/<path>.json`) de los puntos de entrada y de las piezas
-   centrales, y sus blobs cuando necesites precisar (`python <Scripts>/file_context.py <SNAP>
-   <path>` da la ruta del blob y las relaciones).
+   centrales, y sus blobs cuando necesites precisar (`readcode context <KB> <STUDY> --sha <SHA>
+   <path> --json` da la ruta del blob y las relaciones).
 
 Solo afirma lo que se desprende de lo leído; lo que esté fuera del repo (servicios externos,
 infraestructura no descrita) se marca como tal.
@@ -104,7 +104,9 @@ archivo. Tu mensaje incluye la ruta de `archify.mjs`.
    `mktemp -d`): ahí van `candidate.json`, el HTML y todo lo que genere `finalize`. Pon
    `meta.output` = `"<nombre>.html"`.
 3. Ejecuta `node <archify.mjs> finalize <tipo> candidate.json <nombre>.html --json` (con las
-   opciones de calidad que indique su SKILL.md) y repara hasta que pase, dentro de los límites
+   opciones de calidad que indique su SKILL.md; **no** pases `--repo-root` salvo que tu mensaje
+   indique un checkout del repo exactamente en `SHA`: el working copy puede estar en otro commit
+   y la evidencia no casaría) y repara hasta que pase, dentro de los límites
    de reparación de Archify.
 4. Copia **solo** dos archivos a `<SNAP>/diagrams/`: el HTML como `<nombre>.html` y el candidato
    como `<nombre>.json` (la fuente, para poder regenerarlo). Nada más.
@@ -143,4 +145,4 @@ Los marcadores no funcionan dentro de backticks ni de bloques cercados (Mermaid 
 ## Modo corrección (`Tarea: corrige …`)
 
 Te llegan problemas de `readcode validate` para `overview.md`: corrige marcadores rotos o
-inválidos (verifica rutas y símbolos con `file_context.py`) sin rehacer el resto.
+inválidos (verifica rutas y símbolos con `readcode context`) sin rehacer el resto.

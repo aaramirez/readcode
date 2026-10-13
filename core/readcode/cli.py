@@ -216,3 +216,72 @@ def install_skill_cmd(
         typer.echo(f"error: {exc}", err=True)
         raise typer.Exit(1)
     typer.echo(f"Skill instalada en {path}")
+
+
+@app.command()
+def context(
+    kb_dir: Annotated[Path, typer.Argument(help="Directorio de la base de conocimiento.")],
+    study: Annotated[str, typer.Argument(help="Nombre del estudio.")],
+    paths: Annotated[list[str], typer.Argument(help="Rutas de archivo del repo.")],
+    sha: Annotated[str, typer.Option("--sha", help="SHA del snapshot (completo o prefijo único).")],
+    as_json: Annotated[bool, typer.Option("--json", help="Salida en JSON.")] = False,
+) -> None:
+    """Contexto de archivos para la skill: blob, defs, imports, usos, vecinos en el grafo."""
+    import json
+
+    from readcode.context_cmd import ContextError, file_context, format_context
+
+    try:
+        items = file_context(kb_dir, study, sha, paths)
+    except ContextError as exc:
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(1)
+    typer.echo(json.dumps(items, indent=2, ensure_ascii=False) if as_json else format_context(items))
+
+
+@app.command()
+def stale(
+    kb_dir: Annotated[Path, typer.Argument(help="Directorio de la base de conocimiento.")],
+    study: Annotated[str, typer.Argument(help="Nombre del estudio.")],
+    sha_a: Annotated[str, typer.Argument(help="SHA base (del que se heredó).")],
+    sha_b: Annotated[str, typer.Argument(help="SHA nuevo.")],
+    as_json: Annotated[bool, typer.Option("--json", help="Salida en JSON.")] = False,
+) -> None:
+    """Documentos heredados que pueden haber quedado viejos tras un update (requiere diff)."""
+    import json
+
+    from readcode.stale_cmd import StaleError, format_stale, stale_docs
+
+    try:
+        result = stale_docs(kb_dir, study, sha_a, sha_b)
+    except StaleError as exc:
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(1)
+    typer.echo(json.dumps(result, indent=2, ensure_ascii=False) if as_json else format_stale(result))
+
+
+@app.command()
+def mark(
+    kb_dir: Annotated[Path, typer.Argument(help="Directorio de la base de conocimiento.")],
+    study: Annotated[str, typer.Argument(help="Nombre del estudio.")],
+    sha: Annotated[Optional[str], typer.Option("--sha", help="Snapshot cuyo estado se fija.")] = None,
+    status: Annotated[Optional[str], typer.Option(
+        "--status", help="indexed | explained | partial (requiere --sha).")] = None,
+    archify: Annotated[Optional[str], typer.Option(
+        "--archify", help="true | false: si hay diagramas Archify.")] = None,
+) -> None:
+    """Fija el estado de un snapshot y/o tools.archify en study.json."""
+    from readcode.mark_cmd import MarkError, mark_study
+
+    flag = None
+    if archify is not None:
+        if archify.lower() not in ("true", "false"):
+            typer.echo("error: --archify must be true or false", err=True)
+            raise typer.Exit(1)
+        flag = archify.lower() == "true"
+    try:
+        mark_study(kb_dir, study, sha=sha, status=status, archify=flag)
+    except MarkError as exc:
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(1)
+    typer.echo("study.json actualizado")

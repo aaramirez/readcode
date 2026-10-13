@@ -1,12 +1,12 @@
-"""The /readcode Claude Code skill: SKILL.md, prompts, helper scripts and install-skill."""
+"""The /readcode Claude Code skill: SKILL.md, prompts and install-skill."""
 
-import importlib.util
 import json
 import re
 from pathlib import Path
 
 import pytest
 import typer.main
+import yaml
 from typer.testing import CliRunner
 
 from readcode.cli import app
@@ -15,18 +15,10 @@ from readcode.install_skill import install_skill, skill_source
 ROOT = Path(__file__).resolve().parents[2]
 SKILL = ROOT / "skills" / "readcode"
 EXAMPLE_KB = ROOT / "examples" / "kb"
-SHA1 = "b42f63fb2414b4d4d830af722a64255504a80ee8"
 SHA2 = "074ec965eabffb43a0224ef9f1426515d2818975"
 PROMPTS = ["explain-file.md", "dir.md", "overview.md", "tour.md", "diff.md"]
 
 runner = CliRunner()
-
-
-def _script(name):
-    spec = importlib.util.spec_from_file_location(name, SKILL / "scripts" / f"{name}.py")
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
 
 
 def _docs():
@@ -37,7 +29,6 @@ def _docs():
 
 
 def test_skill_frontmatter_is_valid_yaml():
-    yaml = pytest.importorskip("yaml")
     text = (SKILL / "SKILL.md").read_text(encoding="utf-8")
     m = re.match(r"^---\n(.*?)\n---\n", text, re.S)
     assert m, "SKILL.md must start with a --- frontmatter block"
@@ -65,15 +56,18 @@ def test_every_cli_command_mentioned_exists():
         for cmd in pattern.findall(doc.read_text(encoding="utf-8")):
             assert cmd in registered, f"{doc.name}: `readcode {cmd}` is not a CLI command"
             seen.add(cmd)
-    assert {"init", "snapshot", "index", "graph", "plan", "diff", "validate", "catalog"} <= seen
+    assert {"init", "snapshot", "index", "graph", "plan", "diff", "validate", "catalog",
+            "context", "stale", "mark"} <= seen
 
 
-def test_prompts_and_scripts_referenced_by_skill_exist():
+def test_prompts_referenced_by_skill_exist():
     text = (SKILL / "SKILL.md").read_text(encoding="utf-8")
-    for name in set(re.findall(r"`([a-z-]+\.md)`", text)) - {"SKILL.md", "overview.md"}:
+    names = set(re.findall(r"`([a-z-]+\.md)`", text)) - {"SKILL.md"}
+    assert set(PROMPTS) <= names
+    for name in names:
         assert (SKILL / "prompts" / name).is_file(), name
-    for name in re.findall(r"scripts/([a-z_]+\.py)", text):
-        assert (SKILL / "scripts" / name).is_file(), name
+    for doc in _docs():  # helpers are CLI commands now, not skill scripts
+        assert "scripts/" not in doc.read_text(encoding="utf-8"), doc.name
 
 
 def test_prompt_examples_quote_the_reference_study():
@@ -89,59 +83,6 @@ def test_prompt_examples_quote_the_reference_study():
         SKILL / "prompts" / "dir.md").read_text(encoding="utf-8")
 
 
-# ------------------------------------------------------------------ helper scripts
-
-
-def test_file_context_on_example_snapshot():
-    out = _script("file_context").file_context(
-        EXAMPLE_KB / "fixture" / "snapshots" / SHA2, ["app/services/billing.py", "missing.py"])
-    billing, missing = out
-    assert billing["lines"] == 15
-    assert Path(billing["blobFile"]).is_file()
-    assert billing["blobHash"] in billing["blobFile"]
-    assert "refund (function) L13-15" in billing["defs"]
-    assert billing["importedBy"] == ["app/main.py", "app/services/refunds.py"]
-    assert billing["usedBy"]["app/services/refunds.py"] == ["refund"]
-    assert billing["explanation"] == "current"
-    assert missing == {"path": "missing.py", "error": "not in tree.json"}
-
-
-def test_stale_refs_on_example_update():
-    out = _script("stale_refs").stale_refs(EXAMPLE_KB, "fixture", SHA1[:7], SHA2[:7])
-    assert (out["from"], out["to"]) == (SHA1, SHA2)
-    # only definitions whose text changed; compute_total/process are untouched
-    assert out["changedSymbols"] == {
-        "app/services/billing.py": ["refund"],
-        "app/services/refunds.py": ["process_refund"],
-        "web/src/api.ts": ["refundInvoice"],
-    }
-    explain = {e["path"]: e for e in out["explain"]}
-    assert "app/services/billing.py" not in explain  # changed files are re-explained, not refreshed
-    assert explain["app/models.py"]["markers"] == [
-        "app/services/billing.py#refund", "app/services/refunds.py#process_refund"]
-    tours = {t["id"]: t for t in out["tours"]}
-    assert tours["flujo-facturacion"]["steps"] == [3, 6, 7]
-    assert "worker-cola" not in tours
-
-
-def test_stale_refs_flags_code_references(tmp_path):
-    import shutil
-
-    kb = tmp_path / "kb"
-    shutil.copytree(EXAMPLE_KB / "fixture", kb / "fixture")
-    # main.py calls billing.process; pretend process changed in the new snapshot.
-    snap2 = kb / "fixture" / "snapshots" / SHA2
-    syms = json.loads((snap2 / "symbols.json").read_text(encoding="utf-8"))
-    for d in syms["files"]["app/services/billing.py"]["defs"]:
-        if d["name"] == "process":
-            d["range"] = [7, 10]  # different text than in the old snapshot
-    (snap2 / "symbols.json").write_text(json.dumps(syms), encoding="utf-8")
-    out = _script("stale_refs").stale_refs(kb, "fixture", SHA1, SHA2)
-    assert "process" in out["changedSymbols"]["app/services/billing.py"]
-    main = next(e for e in out["explain"] if e["path"] == "app/main.py")
-    assert main["symbols"] == ["process"]
-
-
 # ------------------------------------------------------------------ install-skill
 
 
@@ -155,7 +96,6 @@ def test_install_skill_copies_and_needs_force(tmp_path):
     assert (dest / "SKILL.md").read_bytes() == (SKILL / "SKILL.md").read_bytes()
     for p in PROMPTS:
         assert (dest / "prompts" / p).is_file()
-    assert (dest / "scripts" / "stale_refs.py").is_file()
     assert not list(dest.rglob("__pycache__"))
 
     (dest / "stale.txt").write_text("x")

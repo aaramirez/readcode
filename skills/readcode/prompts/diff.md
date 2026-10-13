@@ -5,7 +5,7 @@ cambiados, hunk por hunk) o **global** (la explicación de conjunto, `explain.md
 
 ## Entradas (vienen en tu mensaje)
 
-- `KB`, `Estudio` (`SDIR`), `Idioma` ({{LANGUAGE}}), `Scripts`.
+- `KB`, `Estudio` (nombre `STUDY`, directorio `SDIR`), `Idioma` ({{LANGUAGE}}).
 - `A` y `B`: shas completos (base y destino); `DDIR = <SDIR>/diffs/<A>..<B>`.
 - Los mensajes de commit entre A y B (pueden faltar si no hay checkout local).
 - Modo archivo: la lista de archivos a explicar.
@@ -18,8 +18,8 @@ Fuentes:
 - El contenido viejo y nuevo: `<SDIR>/blobs/<primeros 2>/<hash>.txt` con `fromBlob` / `toBlob`
   (sus números de línea son los de los rangos).
 - Contexto: las explicaciones existentes `<SDIR>/snapshots/<B>/explain/<path>.json` (y las de
-  `<A>` para lo borrado), y `python <Scripts>/file_context.py <SDIR>/snapshots/<B> <path>` para
-  saber quién usa lo que cambió.
+  `<A>` para lo borrado), y `readcode context <KB> <STUDY> --sha <B> <path> --json` para saber
+  quién usa lo que cambió.
 
 ## Rol
 
@@ -130,6 +130,7 @@ Se resuelven contra el snapshot **B**; si no existen en B (archivos o líneas bo
 | `[[ref:ruta#Clase.método]]` | Método con `parent` = `Clase`. |
 | `[[ref:#símbolo]]` | Sin ruta: en modo archivo busca en ese archivo → sus imports → todo el repo; en `explain.md`, todo el repo. |
 | `[[ref:ruta:L10-31]]`, `[[ref:ruta:L9]]` | Rango de líneas (de B; de A si el archivo ya no existe). |
+| `[[ref::L10-12]]` | Rango de líneas del archivo explicado (ruta vacía). Mejor con ruta explícita; no sirve en `explain.md`. |
 | `[[ref:ruta#símbolo\|texto]]` | Igual, mostrando `texto` (en Markdown normal, sin la barra invertida). |
 | `[[archify:nombre]]` | Diagrama `diagrams/nombre.html` del snapshot B (debe existir). |
 

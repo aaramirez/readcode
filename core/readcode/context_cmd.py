@@ -1,27 +1,17 @@
-"""Print the context a subagent needs to explain some files of a readcode snapshot.
-
-Usage: python file_context.py <snapshot-dir> <path> [<path> ...]
-
-For each repo path prints (JSON): language, lines, the blob file holding the exact
-snapshot content (read it instead of the working copy), definitions, imports,
-files that import it, files that reference its definitions, graph neighbours
-(when graph/graph.json exists) and whether an explanation already exists.
-
-Stdlib only; never writes anything.
-"""
+"""``readcode context``: what a skill subagent needs to explain some files of a snapshot."""
 
 from __future__ import annotations
 
-import json
-import sys
 from pathlib import Path
+
+from readcode import kbio
 
 USED_BY_LIMIT = 15
 NEIGHBOUR_LIMIT = 20
 
 
-def _load(path: Path) -> dict:
-    return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+class ContextError(RuntimeError):
+    pass
 
 
 def _graph_neighbours(graph: dict, path: str) -> list[str]:
@@ -40,11 +30,29 @@ def _graph_neighbours(graph: dict, path: str) -> list[str]:
     return out[:NEIGHBOUR_LIMIT]
 
 
-def file_context(snap: Path, paths: list[str]) -> list[dict]:
-    study = snap.resolve().parent.parent
-    tree = {f["path"]: f for f in _load(snap / "tree.json").get("files", [])}
-    files = _load(snap / "symbols.json").get("files", {})
-    graph = _load(snap / "graph" / "graph.json")
+def _read(path: Path) -> dict:
+    try:
+        data = kbio.read_json(path) if path.is_file() else {}
+    except ValueError:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def file_context(kb: Path | str, study: str, sha: str, paths: list[str]) -> list[dict]:
+    """Per path: blob file, defs, imports, importers, users, graph neighbours, explanation state."""
+    sdir = kbio.study_dir(kb, study)
+    if not (sdir / "study.json").is_file():
+        raise ContextError(f"{sdir / 'study.json'} not found; run `readcode init` first")
+    try:
+        sha = kbio.resolve_sha(kbio.read_json(sdir / "study.json"), sha)
+    except ValueError as exc:
+        raise ContextError(str(exc)) from exc
+    snap = kbio.snapshot_dir(sdir, sha)
+    if not (snap / "tree.json").is_file():
+        raise ContextError(f"{snap / 'tree.json'} not found; run `readcode snapshot` first")
+    tree = {f["path"]: f for f in _read(snap / "tree.json").get("files", [])}
+    files = _read(snap / "symbols.json").get("files", {})
+    graph = _read(snap / "graph" / "graph.json")
     result = []
     for path in paths:
         info = tree.get(path)
@@ -63,13 +71,15 @@ def file_context(snap: Path, paths: list[str]) -> list[dict]:
                 if r["name"] in names:
                     hits.setdefault(p, set()).add(r["name"])
         used_by = sorted(hits.items(), key=lambda kv: (-len(kv[1]), kv[0]))[:USED_BY_LIMIT]
-        explain = snap / "explain" / f"{path}.json"
-        current = _load(explain).get("blobHash") == info["blob"] if explain.is_file() else False
+        explain = kbio.explain_path(snap, path)
+        state = "missing"
+        if explain.is_file():
+            state = "current" if _read(explain).get("blobHash") == info["blob"] else "stale"
         result.append({
             "path": path,
             "language": info["language"],
             "lines": info["lines"],
-            "blobFile": str(study / "blobs" / info["blob"][:2] / f"{info['blob']}.txt"),
+            "blobFile": str(kbio.blob_path(sdir.resolve(), info["blob"])),
             "blobHash": info["blob"],
             "indexed": info["indexed"],
             "defs": [f"{d['name']} ({d['kind']}{', in ' + d['parent'] if d.get('parent') else ''}) "
@@ -78,23 +88,23 @@ def file_context(snap: Path, paths: list[str]) -> list[dict]:
             "importedBy": imported_by,
             "usedBy": {p: sorted(n) for p, n in used_by},
             "graphNeighbours": _graph_neighbours(graph, path) if graph else [],
-            "explanation": ("current" if current else "stale") if explain.is_file() else "missing",
+            "explanation": state,
         })
     return result
 
 
-def main(argv: list[str]) -> int:
-    if len(argv) < 2:
-        print(__doc__.strip().splitlines()[2], file=sys.stderr)
-        return 2
-    snap = Path(argv[0])
-    if not (snap / "tree.json").is_file():
-        print(f"error: {snap / 'tree.json'} not found", file=sys.stderr)
-        return 1
-    sys.stdout.reconfigure(encoding="utf-8")
-    print(json.dumps(file_context(snap, argv[1:]), indent=2, ensure_ascii=False))
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
+def format_context(items: list[dict]) -> str:
+    out = []
+    for c in items:
+        if "error" in c:
+            out.append(f"{c['path']}: {c['error']}")
+            continue
+        out.append(f"{c['path']} ({c['language']}, {c['lines']} líneas, explicación: {c['explanation']})")
+        out.append(f"  blob: {c['blobFile']}")
+        out.append(f"  blobHash: {c['blobHash']}")
+        for key in ("defs", "imports", "importedBy", "graphNeighbours"):
+            if c[key]:
+                out.append(f"  {key}: " + "; ".join(c[key]))
+        if c["usedBy"]:
+            out.append("  usedBy: " + "; ".join(f"{p} ({', '.join(n)})" for p, n in c["usedBy"].items()))
+    return "\n".join(out)

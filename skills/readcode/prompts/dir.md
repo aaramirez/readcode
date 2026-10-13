@@ -9,8 +9,7 @@ a leer.
 
 ## Entradas (vienen en tu mensaje)
 
-- `KB`, `Estudio` (`SDIR`), `SHA` (`SNAP = <SDIR>/snapshots/<SHA>`), `Idioma` ({{LANGUAGE}}),
-  `Scripts`.
+- `KB`, `Estudio` (nombre `STUDY`, directorio `SDIR`), `SHA` (`SNAP = <SDIR>/snapshots/<SHA>`), `Idioma` ({{LANGUAGE}}).
 - `Tarea`: la lista de directorios (rutas relativas al repo; `""` = la raíz), o `refresca …` /
   `corrige …` (ver abajo).
 
@@ -22,7 +21,7 @@ Para cada directorio `D`:
    falta precisar algo).
 3. Para cada subdirectorio hijo lee `<SNAP>/dirs/<subdir>.json` (ya escritos: se trabaja de abajo
    hacia arriba).
-4. Si una relación no queda clara, mira `symbols.json`/`file_context.py` o el blob; no inventes.
+4. Si una relación no queda clara, mira `readcode context <KB> <STUDY> --sha <SHA> <path> --json` o el blob; no inventes.
 
 ## Salida
 

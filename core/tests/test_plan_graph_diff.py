@@ -126,8 +126,51 @@ def test_plan_done(study):
     kbio.atomic_write_text(snap / "overview.md", "# o\n")
     kbio.atomic_write_json(snap / "tours" / "t.json", {})
     plan = plan_snapshot(kb, "demo", sha1)
-    assert plan == {"sha": sha1, "reused": 0, "reusedDirs": 0, "batches": [], "dirs": [], "overview": False,
-                    "tours": False, "done": True}
+    assert plan == {"sha": sha1, "reusedFrom": None, "reused": 0, "reusedDirs": 0, "batches": [],
+                    "dirs": [], "overview": False, "tours": False, "abandoned": [], "done": True}
+
+
+def test_plan_after_reexplaining_keeps_affected_dirs_and_overview_pending(study):
+    """Regression: once changed files are re-explained, re-running plan must not copy the
+    previous snapshot's summaries of their ancestor dirs nor its overview."""
+    kb, sd, sha1, sha2 = study
+    fake_explain(sd, sha1)
+    fake_dirs(sd, sha1)
+    kbio.atomic_write_text(kbio.snapshot_dir(sd, sha1) / "overview.md", "# o\n")
+    first = plan_snapshot(kb, "demo", sha2)
+    assert first["reusedFrom"] == sha1
+    affected = {"app/services", "app", "web/src", "web", "db", ""}
+    assert set(first["dirs"]) == affected
+    fake_explain(sd, sha2)  # the wave re-explains every changed file
+    again = plan_snapshot(kb, "demo", sha2)
+    s2 = kbio.snapshot_dir(sd, sha2)
+    assert again["batches"] == []
+    assert set(again["dirs"]) == affected
+    assert not (s2 / "dirs" / "app" / "services.json").exists()
+    assert not (s2 / "dirs" / "_root.json").exists()
+    assert again["overview"] is True and not (s2 / "overview.md").exists()
+    assert (s2 / "dirs" / "worker.json").is_file()
+
+
+def test_plan_abandoned_files(study):
+    kb, sd, sha1, _ = study
+    fake_explain(sd, sha1)
+    fake_dirs(sd, sha1)
+    snap = kbio.snapshot_dir(sd, sha1)
+    kbio.atomic_write_text(snap / "overview.md", "# o\n")
+    kbio.atomic_write_json(snap / "tours" / "t.json", {})
+    kbio.explain_path(snap, "app/models.py").unlink()
+    kbio.atomic_write_json(snap / "issues.json", {"schemaVersion": 1, "issues": [
+        {"file": "explain/app/models.py.json", "problem": "failed twice", "source": "generator"},
+        {"file": "explain/app/main.py.json", "problem": "x", "source": "validate"}]})
+    plan = plan_snapshot(kb, "demo", sha1)
+    assert plan["batches"] == [] and plan["abandoned"] == ["app/models.py"]
+    assert plan["dirs"] == [] and plan["overview"] is False and plan["done"] is True
+    # removing the issue makes the file pending again (retry)
+    kbio.atomic_write_json(snap / "issues.json", {"schemaVersion": 1, "issues": []})
+    plan = plan_snapshot(kb, "demo", sha1)
+    assert [f["path"] for b in plan["batches"] for f in b["files"]] == ["app/models.py"]
+    assert plan["abandoned"] == [] and "app" in plan["dirs"] and plan["overview"] is True
 
 
 def test_plan_stale_explain_hash_is_pending(study):

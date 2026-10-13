@@ -10,15 +10,14 @@ vigilar**, no repetirle lo que ya lee.
 
 ## Entradas (vienen en tu mensaje)
 
-- `KB`, `Estudio` (`SDIR`), `SHA` (`SNAP = <SDIR>/snapshots/<SHA>`), `Idioma` ({{LANGUAGE}}),
-  `Scripts`.
+- `KB`, `Estudio` (nombre `STUDY`, directorio `SDIR`), `SHA` (`SNAP = <SDIR>/snapshots/<SHA>`), `Idioma` ({{LANGUAGE}}).
 - `Tarea`: la lista de archivos del lote (`- <path> (<language>, <lines> líneas)`), o
   `refresca …` (modo refresco) o `corrige …` (modo corrección), ver abajo.
 
 Para cada archivo, primero obtén su contexto:
 
 ```bash
-python <Scripts>/file_context.py <SNAP> <path1> <path2> ...
+readcode context <KB> <STUDY> --sha <SHA> <path1> <path2> ... --json
 ```
 
 Te da por archivo: `blobFile` (el contenido **exacto** del snapshot: léelo con Read, sus números
@@ -40,7 +39,7 @@ adicionales):
 {
   "schemaVersion": 1,
   "path": "<ruta relativa del archivo, con />",
-  "blobHash": "<blobHash que da file_context.py, 64 hex>",
+  "blobHash": "<blobHash que da `readcode context`, 64 hex>",
   "summary": "Markdown: qué es el archivo, su papel en el repo y la idea clave para leerlo.",
   "blocks": [
     { "id": "b1", "range": [1, 1], "title": "Título corto", "body": "Markdown" }
@@ -126,20 +125,21 @@ marcadores `[[…]]` dentro del Mermaid.
 | `[[ref:ruta#Clase.método]]` | Método `método` cuya definición tiene `parent` = `Clase`. |
 | `[[ref:#símbolo]]` | Sin ruta: busca en este archivo → archivos que importa → todo el repo (puede quedar ambiguo; mejor con ruta si lo sabes). |
 | `[[ref:ruta:L10-31]]`, `[[ref:ruta:L9]]` | Rango de líneas de `ruta` (dentro del archivo). |
+| `[[ref::L10-12]]` | Rango de líneas de **este** archivo (ruta vacía). Válido, pero mejor con ruta explícita. |
 | `[[ref:ruta#símbolo\|texto]]` | Igual, mostrando `texto` como enlace (en Markdown normal, sin la barra invertida). |
 | `[[archify:nombre]]` | Diagrama `diagrams/nombre.html` (solo si existe). |
 
 - `ruta` es relativa a la raíz del repo, con `/`, sin espacios, `#`, `:` ni `|`.
 - Los marcadores **no funcionan** dentro de `código en línea` ni de bloques cercados: no los
   pongas entre backticks.
-- Solo símbolos que aparezcan en `defs` (de `file_context.py` del archivo destino). Para algo
+- Solo símbolos que aparezcan en `defs` (de ``readcode context`` del archivo destino). Para algo
   sin definición indexada (una columna, una clave de config), usa el rango de líneas.
 
 ## Modo refresco (`Tarea: refresca …`)
 
 Se usa en `update`: tus archivos **no cambiaron**, pero código del que dependen sí (te llegan los
 símbolos y marcadores afectados y `changedSymbols`). Lee la explicación existente, el blob de tu
-archivo y las nuevas definiciones de los símbolos cambiados (con `file_context.py` sobre los
+archivo y las nuevas definiciones de los símbolos cambiados (con ``readcode context`` sobre los
 archivos que los definen). Corrige **solo** las frases que el cambio volvió inexactas (firmas,
 comportamiento, rangos de línea de marcadores `:L` que se movieron, símbolos borrados o
 renombrados). No cambies `blobHash`, `range` de los bloques ni lo que sigue siendo cierto. Si
@@ -150,12 +150,12 @@ todo sigue siendo correcto, no toques el archivo.
 Te llegan problemas de `readcode validate` para un archivo existente (problema + pista). Edita
 ese JSON para resolverlos — rangos fuera del archivo o solapados, `blobHash` desactualizado
 (reexplica el archivo), marcadores rotos (`broken reference`: verifica ruta y símbolo con
-`file_context.py`; si no hay definición, usa un rango `:L`) o inválidos — sin rehacer lo que
+``readcode context``; si no hay definición, usa un rango `:L`) o inválidos — sin rehacer lo que
 está bien.
 
 ## Antes de terminar
 
 - El JSON es válido (comillas y saltos de línea `\n` escapados) y no tiene campos extra.
-- `path` y `blobHash` coinciden con `file_context.py`.
+- `path` y `blobHash` coinciden con ``readcode context``.
 - Bloques ordenados, sin solapes, cubriendo el archivo.
 - Cada `[[ref:…]]` apunta a algo que existe.

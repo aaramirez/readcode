@@ -39,13 +39,12 @@ pregunta qué quiere (update, diff o tour).
    `study.json` → `tools`):
    - Graphify: lo detecta `readcode graph` (pone `tools.graphify` solo).
    - Archify: busca `~/.agents/skills/archify/bin/archify.mjs` (o `~/.claude/skills/archify/bin/archify.mjs`)
-     y comprueba `node <archify.mjs> doctor`. Pon `tools.archify` en `true`/`false` editando
-     `study.json` (JSON con indentación 2, UTF-8, sin escapar acentos). Sin Archify los
+     y comprueba `node <archify.mjs> doctor`. Anótalo con
+     `readcode mark <KB> <STUDY> --archify true` (o `--archify false`). Sin Archify los
      diagramas van como Mermaid (`diagrams/<nombre>.mmd` y bloques ```` ```mermaid ````) y no se
      usan marcadores `[[archify:…]]`.
 5. Variables que usa el resto de esta guía:
-   - `SKILL_DIR`: el directorio de este `SKILL.md` (las plantillas están en `SKILL_DIR/prompts/`,
-     los scripts auxiliares en `SKILL_DIR/scripts/`).
+   - `SKILL_DIR`: el directorio de este `SKILL.md` (las plantillas están en `SKILL_DIR/prompts/`).
    - `KB`, `STUDY`, `SDIR = <KB>/<STUDY>`.
    - `SHA`: el sha **completo** (40 hex) del snapshot, tal como lo imprime `readcode snapshot`
      o como figura en `study.json`.
@@ -59,7 +58,7 @@ pregunta qué quiere (update, diff o tour).
   ver Fase 4, y `<KB>/catalog.json`, que escribe `readcode catalog`). Nunca modifiques el repo
   estudiado.
 - **Nunca hagas commit ni push en la KB.** Al final solo **sugieres** el commit.
-- Lee el código del snapshot desde los blobs (`file_context.py` da la ruta exacta), no del
+- Lee el código del snapshot desde los blobs (`readcode context` da la ruta exacta), no del
   working copy: el working copy puede estar en otro commit y los números de línea no casarían.
 - Toda afirmación debe salir de código leído de verdad. Si algo no se puede saber desde el repo
   (un servicio externo, una configuración ausente), se dice así.
@@ -68,6 +67,8 @@ pregunta qué quiere (update, diff o tour).
   skill continúa donde se quedó.
 - Escribe los JSON con UTF-8, indentación 2 y `"schemaVersion": 1`; las rutas siempre con `/` y
   relativas a la raíz del repo.
+- No edites `study.json` a mano: el estado del snapshot y `tools.archify` se fijan con
+  `readcode mark`.
 
 ## Cómo se despacha un subagente
 
@@ -88,7 +89,6 @@ KB: <KB>
 Estudio: <STUDY>   (directorio <SDIR>)
 SHA: <SHA>         (snapshot <SNAP>)
 Idioma: <LANG>
-Scripts: <SKILL_DIR>/scripts
 Tarea: <lo específico: lote de archivos, directorios, tour, problemas a corregir…>
 Escribe solo los archivos indicados en la plantilla. Al terminar responde únicamente con la
 lista de archivos escritos y, si algo no pudiste hacer, por qué.
@@ -97,13 +97,13 @@ lista de archivos escritos y, si algo no pudiste hacer, por qué.
 No pegues código ni JSON en el mensaje: el subagente lee lo que necesita. En las plantillas,
 `{{LANGUAGE}}` es el `Idioma` del mensaje.
 
-Scripts auxiliares (solo lectura, Python estándar):
+Comandos auxiliares (solo lectura):
 
-- `python <SKILL_DIR>/scripts/file_context.py <SNAP> <path>...`: por archivo, el blob exacto del
+- `readcode context <KB> <STUDY> --sha <SHA> <path>... --json`: por archivo, el blob exacto del
   snapshot, defs, imports, quién lo importa o usa, vecinos en el grafo y si ya está explicado.
   Lo usan los subagentes.
-- `python <SKILL_DIR>/scripts/stale_refs.py <KB> <STUDY> <shaA> <shaB>`: documentos heredados
-  que pueden haber quedado viejos tras un `update` (ver abajo).
+- `readcode stale <KB> <STUDY> <shaA> <shaB> --json`: documentos heredados que pueden haber
+  quedado viejos tras un `update` (ver abajo).
 
 ## `/readcode study`
 
@@ -125,8 +125,11 @@ readcode plan <KB> <STUDY> --sha <SHA> --json
 - `readcode snapshot` imprime `Snapshot <sha> (<mensaje>)`: ese es el `SHA` completo.
 - `readcode graph` sin Graphify solo avisa; sigue adelante.
 - `readcode plan` escribe `<SNAP>/plan.json`:
-  `{sha, reused, reusedDirs, batches: [{id, files: [{path, lines, language}]}], dirs: [...],
-  overview, tours, done}`. Es la cola de trabajo y la **fuente de verdad** de lo pendiente.
+  `{sha, reusedFrom, reused, reusedDirs, batches: [{id, files: [{path, lines, language}]}],
+  dirs: [...], overview, tours, abandoned: [...], done}`. Es la cola de trabajo y la **fuente de
+  verdad** de lo pendiente. `reusedFrom` es el snapshot del que hereda (o `null`); `abandoned`
+  son archivos sin explicar que el generador abandonó (ver Fase 2), que no cuentan como
+  pendientes.
 
 ### Fase 2 — Archivos (en paralelo)
 
@@ -136,13 +139,15 @@ readcode plan <KB> <STUDY> --sha <SHA> --json
    (`- <path> (<language>, <lines> líneas)`). Cada uno escribe `<SNAP>/explain/<path>.json`
    según `explain.schema.json`.
 3. Al terminar cada ola, vuelve a ejecutar `readcode plan <KB> <STUDY> --sha <SHA> --json` y
-   relee `plan.json`: los lotes que siguen pendientes (o los archivos que fallaron) vuelven a
-   aparecer, renumerados. Repite hasta que `batches` quede vacío.
-4. Si un mismo archivo sigue pendiente después de **2 intentos**, déjalo: añade a
-   `<SNAP>/issues.json` una entrada
+   relee `plan.json`: los archivos que fallaron vuelven a aparecer en `batches`, renumerados, y
+   reciben un **segundo intento** en la ola siguiente. Repite hasta que `batches` quede vacío.
+4. Si un archivo sigue pendiente tras su **segundo intento fallido**, abandónalo registrándolo en
+   `<SNAP>/issues.json`:
    `{"file": "explain/<path>.json", "problem": "…", "hint": "…", "source": "generator"}`
    (crea el archivo como `{"schemaVersion": 1, "issues": []}` si no existe; `validate`
-   conserva las entradas que no son suyas) y no lo vuelvas a lanzar en esta corrida.
+   conserva las entradas que no son suyas). Desde entonces `readcode plan` lo lista en
+   `abandoned` y no en `batches`, también en corridas futuras: el registro de intentos vive en
+   `issues.json`, no en la conversación. Para reintentarlo, el usuario borra esa entrada.
 
 ### Fase 3 — Directorios (de abajo hacia arriba)
 
@@ -154,7 +159,8 @@ readcode plan <KB> <STUDY> --sha <SHA> --json
 3. No lances una ola hasta que la anterior (más profunda) haya terminado: cada resumen se
    construye con los de sus hijos.
 4. Al final, `readcode plan <KB> <STUDY> --sha <SHA> --json` debe dejar `dirs` vacío; si no,
-   repite solo los que falten (máx. 2 intentos, luego `issues.json` como en la Fase 2).
+   repite solo los que falten; tras el segundo intento fallido regístralo en `issues.json`
+   (`"file": "dirs/<ruta>.json"`, `source: "generator"`) y sigue (el snapshot quedará `partial`).
 
 ### Fase 4 — Diagramas y overview
 
@@ -214,11 +220,9 @@ readcode validate <KB> <STUDY> --sha <SHA> --json
 
 ### Fase 7 — Cierre
 
-1. `readcode plan <KB> <STUDY> --sha <SHA> --json`. Si `done` es `true` y `<SNAP>/issues.json`
-   no tiene problemas, el snapshot queda `explained`; si no, `partial`. Escribe ese `status` en
-   la entrada del snapshot en `<SDIR>/study.json` (mismo formato JSON: indentación 2, UTF-8) y
-   comprueba con `readcode validate <KB> <STUDY> --sha <SHA>` que `study.json` sigue siendo
-   válido.
+1. `readcode plan <KB> <STUDY> --sha <SHA> --json`. Si `done` es `true`, `abandoned` está vacío
+   y `<SNAP>/issues.json` no tiene problemas, el estado es `explained`; si no, `partial`:
+   `readcode mark <KB> <STUDY> --sha <SHA> --status explained` (o `--status partial`).
 2. `readcode catalog <KB>`.
 3. Informa: archivos explicados/heredados, directorios, diagramas, tours, problemas restantes
    (con su archivo), y cómo verlo: `readcode serve <KB>`.
@@ -227,9 +231,7 @@ readcode validate <KB> <STUDY> --sha <SHA> --json
 
 ## `/readcode update <estudio> [--sha <rev>]`
 
-1. Lee `<SDIR>/study.json`. `PREV` = el snapshot más reciente (por `date`) con `status`
-   `explained` o `partial`. Si no hay ninguno, esto es un `study`: sigue ese flujo.
-2. Mecánica del nuevo commit (por defecto `HEAD`; añade `--repo-path` si el estudio no tiene
+1. Mecánica del nuevo commit (por defecto `HEAD`; añade `--repo-path` si el estudio no tiene
    `repo.localPath`):
 
    ```bash
@@ -237,16 +239,24 @@ readcode validate <KB> <STUDY> --sha <SHA> --json
    readcode index <KB> <STUDY> --sha <SHA>
    readcode graph <KB> <STUDY> --sha <SHA>
    readcode plan <KB> <STUDY> --sha <SHA> --json
+   ```
+
+   Si en `study.json` ese snapshot ya está `explained`, no hay nada que actualizar: dilo y
+   termina. `plan` hereda por hash de blob las explicaciones de archivos sin cambio, los
+   resúmenes de directorios cuyo subárbol es idéntico, tours, diagramas (y el overview si el
+   árbol entero es idéntico); `plan.json` lista solo lo que falta.
+2. `PREV` = `plan.json` → `reusedFrom` (el snapshot del que `plan` heredó; usa siempre este,
+   no lo deduzcas de `study.json`). Si es `null`, no hay nada que heredar: esto es un `study`,
+   sigue ese flujo desde la Fase 2. Si no:
+
+   ```bash
    readcode diff <KB> <STUDY> <PREV> <SHA>
    ```
 
-   Si `SHA == PREV`, no hay nada que actualizar: dilo y termina. `plan` hereda por hash de blob
-   las explicaciones de archivos sin cambio, los resúmenes de directorios no afectados, tours,
-   diagramas (y el overview si no cambió nada); `plan.json` lista solo lo que falta.
 3. **Explicaciones heredadas que pueden haber quedado viejas:**
 
    ```bash
-   python <SKILL_DIR>/scripts/stale_refs.py <KB> <STUDY> <PREV> <SHA>
+   readcode stale <KB> <STUDY> <PREV> <SHA> --json
    ```
 
    Devuelve `changedSymbols` (definiciones que cambiaron) y los documentos heredados que las
@@ -282,7 +292,8 @@ readcode validate <KB> <STUDY> --sha <SHA> --json
    en paralelo (máx. 8), plantilla `diff.md` (*modo archivo*), `model: "sonnet"`, hasta ~6
    archivos o ~600 líneas cambiadas por subagente; `Tarea`: `A`, `B`, `DDIR`, los archivos y
    los mensajes de commit.
-5. **Global**: cuando terminen, un subagente (plantilla `diff.md`, *modo global*, sin `model`)
+5. **Global** (si `DDIR/explain.md` ya existe de una corrida anterior, sáltalo): cuando terminen
+   los de archivo, un subagente (plantilla `diff.md`, *modo global*, sin `model`)
    escribe `DDIR/explain.md` a partir de los mensajes de commit, `changes.json` y las
    explicaciones por archivo.
 6. `readcode validate <KB> <STUDY> --json`; corrige los problemas de `diffs/<A>..<B>/` como en la

@@ -9,16 +9,15 @@ después. El visor muestra los pasos con ◀ ▶.
 
 ## Entradas (vienen en tu mensaje)
 
-- `KB`, `Estudio` (`SDIR`), `SHA` (`SNAP = <SDIR>/snapshots/<SHA>`), `Idioma` ({{LANGUAGE}}),
-  `Scripts`.
+- `KB`, `Estudio` (nombre `STUDY`, directorio `SDIR`), `SHA` (`SNAP = <SDIR>/snapshots/<SHA>`), `Idioma` ({{LANGUAGE}}).
 - `Tarea`: `id` del tour, título u objetivo (o la **pregunta del usuario** tal cual) y, si se
   conoce, el punto de partida. O `refresca …` / `corrige …` (ver abajo).
 
 Cómo seguir el flujo:
 
 1. Lee `<SNAP>/overview.md` y el resumen del directorio del punto de partida.
-2. Desde el punto de partida, sigue las llamadas reales: `python <Scripts>/file_context.py <SNAP>
-   <path>` te da defs, imports, quién usa qué y vecinos en el grafo; las explicaciones de
+2. Desde el punto de partida, sigue las llamadas reales: `readcode context <KB> <STUDY>
+   --sha <SHA> <path> --json` te da defs, imports, quién usa qué y vecinos en el grafo; las explicaciones de
    `<SNAP>/explain/<path>.json` te dicen qué hace cada bloque; el blob (`blobFile`) da las
    líneas exactas.
 3. No supongas llamadas que no veas en el código. Si el flujo sale del repo (HTTP a un servicio
@@ -83,6 +82,7 @@ Ejemplo real (`examples/kb/fixture`, `tours/flujo-facturacion.json`), recortado:
 | `[[ref:ruta#Clase.método]]` | Método con `parent` = `Clase`. |
 | `[[ref:#símbolo]]` | Sin ruta, dentro de un paso: busca en el archivo del paso → sus imports → todo el repo. En `description` busca en todo el repo. |
 | `[[ref:ruta:L10-31]]`, `[[ref:ruta:L9]]` | Rango de líneas de un archivo. |
+| `[[ref::L10-12]]` | Dentro de un paso: rango de líneas del archivo del paso (ruta vacía). Mejor con ruta explícita; no sirve en `description`. |
 | `[[ref:ruta#símbolo\|texto]]` | Igual, mostrando `texto` (en Markdown normal, sin la barra invertida). |
 | `[[archify:nombre]]` | Diagrama `diagrams/nombre.html` (debe existir). |
 
