@@ -383,7 +383,9 @@
           4,
           7
         ]
-      },
+      }
+    ],
+    "tours/flujo-facturacion.json#1": [
       {
         "raw": "[[ref:app/main.py:L5-6]]",
         "kind": "lines",
@@ -393,7 +395,9 @@
           5,
           6
         ]
-      },
+      }
+    ],
+    "tours/flujo-facturacion.json#2": [
       {
         "raw": "[[ref:app/services/auth.py#hash_token]]",
         "kind": "symbol",
@@ -403,7 +407,9 @@
           1,
           2
         ]
-      },
+      }
+    ],
+    "tours/flujo-facturacion.json#3": [
       {
         "raw": "[[ref:app/services/billing.py#compute_total]]",
         "kind": "symbol",
@@ -413,7 +419,9 @@
           4,
           5
         ]
-      },
+      }
+    ],
+    "tours/flujo-facturacion.json#4": [
       {
         "raw": "[[ref:web/src/types.ts#Invoice]]",
         "kind": "symbol",
@@ -435,6 +443,7 @@
         ]
       }
     ],
+    "tours/flujo-facturacion.json#5": [],
     "tours/worker-cola.json": [
       {
         "raw": "[[ref:worker/queue.go#Queue]]",
@@ -445,7 +454,13 @@
           3,
           5
         ]
-      },
+      }
+    ],
+    "tours/worker-cola.json#1": [],
+    "tours/worker-cola.json#2": [],
+    "tours/worker-cola.json#3": [],
+    "tours/worker-cola.json#4": [],
+    "tours/worker-cola.json#5": [
       {
         "raw": "[[ref:worker/queue.go#Queue.Pop]]",
         "kind": "symbol",

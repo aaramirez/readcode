@@ -1,0 +1,263 @@
+[
+  {
+    "path": ".gitignore",
+    "blockId": "b1",
+    "title": "Logs y secretos fuera de git",
+    "range": [
+      1,
+      2
+    ]
+  },
+  {
+    "path": "README.md",
+    "blockId": "b1",
+    "title": "Título y propósito",
+    "range": [
+      1,
+      3
+    ]
+  },
+  {
+    "path": "app/main.py",
+    "blockId": "b1",
+    "title": "Importar módulos, no funciones",
+    "range": [
+      1,
+      1
+    ]
+  },
+  {
+    "path": "app/main.py",
+    "blockId": "b2",
+    "title": "main(): el flujo completo en tres líneas",
+    "range": [
+      4,
+      7
+    ]
+  },
+  {
+    "path": "app/main.py",
+    "blockId": "b3",
+    "title": "Guardia de ejecución directa",
+    "range": [
+      10,
+      11
+    ]
+  },
+  {
+    "path": "app/models.py",
+    "blockId": "b1",
+    "title": "Constructor: solo guarda datos",
+    "range": [
+      1,
+      4
+    ]
+  },
+  {
+    "path": "app/models.py",
+    "blockId": "b2",
+    "title": "describe(): representación legible",
+    "range": [
+      6,
+      7
+    ]
+  },
+  {
+    "path": "app/services/auth.py",
+    "blockId": "b1",
+    "title": "hash_token(): un hash que cambia en cada ejecución",
+    "range": [
+      1,
+      2
+    ]
+  },
+  {
+    "path": "app/services/auth.py",
+    "blockId": "b2",
+    "title": "process(): muta y devuelve el mismo diccionario",
+    "range": [
+      5,
+      7
+    ]
+  },
+  {
+    "path": "app/services/billing.py",
+    "blockId": "b1",
+    "title": "Dependencia del modelo",
+    "range": [
+      1,
+      1
+    ]
+  },
+  {
+    "path": "app/services/billing.py",
+    "blockId": "b2",
+    "title": "compute_total(): el cálculo puro",
+    "range": [
+      4,
+      5
+    ]
+  },
+  {
+    "path": "app/services/billing.py",
+    "blockId": "b3",
+    "title": "process(): de usuario e importes a total",
+    "range": [
+      8,
+      10
+    ]
+  },
+  {
+    "path": "app/services/billing.py",
+    "blockId": "b4",
+    "title": "refund(): un reembolso es una factura negativa",
+    "range": [
+      13,
+      15
+    ]
+  },
+  {
+    "path": "app/services/refunds.py",
+    "blockId": "b1",
+    "title": "Importa refund desde billing",
+    "range": [
+      1,
+      1
+    ]
+  },
+  {
+    "path": "app/services/refunds.py",
+    "blockId": "b2",
+    "title": "process_refund(): delegación pura",
+    "range": [
+      4,
+      5
+    ]
+  },
+  {
+    "path": "db/schema.sql",
+    "blockId": "b1",
+    "title": "Tabla users",
+    "range": [
+      1,
+      4
+    ]
+  },
+  {
+    "path": "db/schema.sql",
+    "blockId": "b2",
+    "title": "Tabla invoices y su relación con users",
+    "range": [
+      6,
+      10
+    ]
+  },
+  {
+    "path": "web/src/api.ts",
+    "blockId": "b1",
+    "title": "Importa los contratos",
+    "range": [
+      1,
+      1
+    ]
+  },
+  {
+    "path": "web/src/api.ts",
+    "blockId": "b2",
+    "title": "fetchInvoice(): tipado optimista",
+    "range": [
+      3,
+      6
+    ]
+  },
+  {
+    "path": "web/src/api.ts",
+    "blockId": "b3",
+    "title": "refundInvoice(): el reembolso desde la web",
+    "range": [
+      8,
+      11
+    ]
+  },
+  {
+    "path": "web/src/index.ts",
+    "blockId": "b1",
+    "title": "Llamada al arrancar",
+    "range": [
+      1,
+      3
+    ]
+  },
+  {
+    "path": "web/src/types.ts",
+    "blockId": "b1",
+    "title": "Invoice: espejo del modelo Python",
+    "range": [
+      1,
+      4
+    ]
+  },
+  {
+    "path": "web/src/types.ts",
+    "blockId": "b2",
+    "title": "ApiResponse<T>: sobre genérico",
+    "range": [
+      6,
+      9
+    ]
+  },
+  {
+    "path": "worker/main.go",
+    "blockId": "b1",
+    "title": "Paquete main e imports",
+    "range": [
+      1,
+      3
+    ]
+  },
+  {
+    "path": "worker/main.go",
+    "blockId": "b2",
+    "title": "main(): ciclo push/pop",
+    "range": [
+      5,
+      9
+    ]
+  },
+  {
+    "path": "worker/queue.go",
+    "blockId": "b1",
+    "title": "Queue: un slice privado",
+    "range": [
+      3,
+      5
+    ]
+  },
+  {
+    "path": "worker/queue.go",
+    "blockId": "b2",
+    "title": "NewQueue(): constructor",
+    "range": [
+      7,
+      9
+    ]
+  },
+  {
+    "path": "worker/queue.go",
+    "blockId": "b3",
+    "title": "Push(): receptor puntero obligatorio",
+    "range": [
+      11,
+      13
+    ]
+  },
+  {
+    "path": "worker/queue.go",
+    "blockId": "b4",
+    "title": "Pop(): FIFO por re-slicing",
+    "range": [
+      15,
+      19
+    ]
+  }
+]
