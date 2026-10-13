@@ -132,3 +132,70 @@ def diff(
         typer.echo(f"error: {exc}", err=True)
         raise typer.Exit(1)
     typer.echo(f"Diff {doc['from']}..{doc['to']}: {len(doc['files'])} archivos")
+
+
+@app.command("validate")
+def validate_cmd(
+    kb_dir: Annotated[Path, typer.Argument(help="Directorio de la base de conocimiento.")],
+    study: Annotated[str, typer.Argument(help="Nombre del estudio.")],
+    sha: Annotated[Optional[str], typer.Option("--sha", help="Solo este snapshot (y sus diffs).")] = None,
+    as_json: Annotated[bool, typer.Option("--json", help="Salida en JSON.")] = False,
+) -> None:
+    """Valida el estudio; escribe links.json e issues.json. Exit 1 si hay problemas."""
+    import json
+
+    from readcode.validate_cmd import ValidateError, format_problems, validate_study
+
+    try:
+        problems = validate_study(kb_dir, study, sha)
+    except ValidateError as exc:
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(1)
+    typer.echo(json.dumps(problems, indent=2, ensure_ascii=False) if as_json
+               else format_problems(problems))
+    if problems:
+        raise typer.Exit(1)
+
+
+@app.command()
+def catalog(
+    kb_dir: Annotated[Path, typer.Argument(help="Directorio de la base de conocimiento.")],
+) -> None:
+    """Regenera <kb>/catalog.json."""
+    from readcode.catalog_cmd import CatalogError, build_catalog
+
+    try:
+        cat, warnings = build_catalog(kb_dir)
+    except CatalogError as exc:
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(1)
+    for w in warnings:
+        typer.echo(f"aviso: {w}", err=True)
+    typer.echo(f"catalog.json: {len(cat['studies'])} estudios")
+
+
+@app.command()
+def serve(
+    kb_dir: Annotated[Path, typer.Argument(help="Directorio de la base de conocimiento.")],
+    port: Annotated[int, typer.Option("--port", help="Puerto.")] = 8765,
+    no_open: Annotated[bool, typer.Option("--no-open", help="No abre el navegador.")] = False,
+) -> None:
+    """Sirve el visor en / y el directorio de estudios en /kb/."""
+    import webbrowser
+
+    from readcode.server import make_server
+
+    if not kb_dir.is_dir():
+        typer.echo(f"error: {kb_dir} no es un directorio", err=True)
+        raise typer.Exit(1)
+    server = make_server(kb_dir, port=port)
+    url = f"http://127.0.0.1:{server.server_address[1]}/"
+    typer.echo(f"Sirviendo {kb_dir} en {url} (Ctrl+C para salir)")
+    if not no_open:
+        webbrowser.open(url)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.server_close()

@@ -1,0 +1,379 @@
+"""`readcode validate`: the gate every generated study file passes through.
+
+Checks schemas, explain/tour ranges and markers, and writes ``links.json``
+(for every snapshot and every diff validated) plus the snapshot ``issues.json``.
+
+Problem ``file`` values are paths relative to the study directory
+(``snapshots/<sha>/explain/app/x.py.json``). In ``issues.json`` the same
+problems are stored with ``file`` relative to the snapshot directory, i.e. the
+same key the doc has in ``links.json``. Problems of study.json and of diffs are
+only reported on output (issues.json is per snapshot).
+"""
+
+from __future__ import annotations
+
+import json
+import re
+from pathlib import Path
+
+from readcode import kbio, refs
+from readcode.schemas import validate as schema_validate
+
+_DIFF_DIR_RE = re.compile(r"^([0-9a-f]{40})\.\.([0-9a-f]{40})$")
+_EMPTY_TREE: dict = {"files": []}
+_EMPTY_SYMBOLS: dict = {"files": {}}
+
+
+class ValidateError(RuntimeError):
+    """The study or the requested snapshot cannot be validated at all."""
+
+
+class _Collector:
+    def __init__(self) -> None:
+        self.problems: list[dict] = []
+
+    def add(self, file: str, problem: str, hint: str) -> None:
+        self.problems.append({"file": file, "problem": problem, "hint": hint})
+
+
+def _lf(text: str) -> str:
+    return text.replace("\r\n", "\n").replace("\r", "\n")
+
+
+def _load(path: Path, kind: str, rel: str, out: _Collector) -> dict | None:
+    """Read JSON and validate against ``kind``; None (and a problem) if unusable."""
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        out.add(rel, f"unreadable JSON: {exc}", "write valid UTF-8 JSON")
+        return None
+    errors = schema_validate(kind, data)
+    for err in errors:
+        out.add(rel, f"schema {kind}: {err}", f"fix the field to match schemas/{kind}.schema.json")
+    return None if errors else data
+
+
+def _range_problem(rng: list[int], lines: int | None) -> str | None:
+    start, end = rng
+    if start > end:
+        return f"range {start}-{end} has start > end"
+    if lines is not None and end > lines:
+        return f"range {start}-{end} is outside the file ({lines} lines)"
+    return None
+
+
+class _Resolver:
+    """Resolves markdown markers for one doc set; collects link entries and problems."""
+
+    def __init__(self, tree: dict, symbols: dict, diagrams: set[str],
+                 fallback: tuple[dict, dict] | None = None) -> None:
+        self.tree, self.symbols, self.diagrams = tree, symbols, diagrams
+        self.fallback = fallback
+        self.docs: dict[str, list[dict]] = {}
+
+    def doc(self, key: str) -> None:
+        self.docs.setdefault(key, [])
+
+    def markdown(self, key: str, rel: str, text: str, current_path: str | None,
+                 where: str, out: _Collector) -> None:
+        entries = self.docs.setdefault(key, [])
+        for marker in refs.parse_markers(_lf(text)):
+            res = refs.resolve(marker, current_path, self.tree, self.symbols, self.diagrams)
+            if res.status == "broken" and self.fallback and marker.kind in ("symbol", "lines"):
+                alt = refs.resolve(marker, current_path, *self.fallback, self.diagrams)
+                if alt.status != "broken":
+                    res = alt
+            entries.append(res.to_link_entry())
+            self._report(res, rel, where, out)
+
+    @staticmethod
+    def _report(res: refs.Resolution, rel: str, where: str, out: _Collector) -> None:
+        if res.kind == "invalid":
+            out.add(rel, f"invalid marker {res.raw} in {where}",
+                    "use [[ref:path#symbol]], [[ref:path:L10-31]] or [[archify:name]]")
+        elif res.status == "broken" and res.kind == "archify":
+            out.add(rel, f"broken reference {res.raw} in {where}",
+                    f"create {res.target} or remove the marker")
+        elif res.status == "broken":
+            out.add(rel, f"broken reference {res.raw} in {where}",
+                    "check the path, symbol name and line range against tree.json/symbols.json")
+        elif res.status == "exact" and (
+                res.target is None or (res.kind in ("symbol", "lines") and res.range is None)):
+            out.add(rel, f"internal: exact resolution of {res.raw} lacks target/range",
+                    "report this as a readcode bug")
+
+    def links(self, sha: str) -> dict:
+        return {"schemaVersion": 1, "sha": sha, "docs": self.docs}
+
+
+def _rel_json_files(base: Path) -> list[str]:
+    if not base.is_dir():
+        return []
+    return sorted(p.relative_to(base).as_posix() for p in base.rglob("*.json") if p.is_file())
+
+
+def _write_links(path: Path, links: dict, rel: str, out: _Collector) -> None:
+    for err in schema_validate("links", links):
+        out.add(rel, f"internal: generated links.json invalid: {err}", "report this as a readcode bug")
+    kbio.atomic_write_json(path, links)
+
+
+# --------------------------------------------------------------- snapshot
+
+
+def _check_explain(snap: Path, sp: str, rel_path: str, files: dict, res: _Resolver,
+                   out: _Collector) -> None:
+    key = f"explain/{rel_path}"
+    rel = f"{sp}/{key}"
+    res.doc(key)
+    doc = _load(snap / key, "explain", rel, out)
+    if doc is None:
+        return
+    location = rel_path[: -len(".json")]
+    if doc["path"] != location:
+        out.add(rel, f"path {doc['path']!r} does not match its location ({location!r})",
+                f"set \"path\": \"{location}\" or move the file")
+    info = files.get(location)
+    lines = None
+    if info is None:
+        out.add(rel, f"explained file {location!r} is not in tree.json",
+                "delete this explanation or check the path")
+    else:
+        lines = info["lines"]
+        if doc["blobHash"] != info["blob"]:
+            out.add(rel, "stale explanation: blobHash differs from the tree blob",
+                    "re-explain the file (its content changed)")
+    seen: set[str] = set()
+    prev: tuple[str, list[int]] | None = None
+    for block in doc["blocks"]:
+        bid, rng = block["id"], block["range"]
+        if bid in seen:
+            out.add(rel, f"duplicate block id {bid}", "give each block a unique id (b1, b2, ...)")
+        seen.add(bid)
+        bad = _range_problem(rng, lines)
+        if bad:
+            out.add(rel, f"block {bid}: {bad}", "fix the block range to lie within the file")
+            continue
+        if prev is not None:
+            pid, prng = prev
+            if rng[0] < prng[0]:
+                out.add(rel, f"block {bid} starts before block {pid}: blocks not sorted by start",
+                        "order blocks by start line")
+            elif rng[0] <= prng[1]:
+                out.add(rel, f"block {bid} ({rng[0]}-{rng[1]}) overlaps block {pid} "
+                             f"({prng[0]}-{prng[1]})", "make block ranges disjoint")
+        prev = (bid, rng)
+    res.markdown(key, rel, doc["summary"], location, "summary", out)
+    for block in doc["blocks"]:
+        res.markdown(key, rel, block["body"], location, f"block {block['id']}", out)
+
+
+def _check_dir(snap: Path, sp: str, rel_path: str, res: _Resolver, out: _Collector) -> None:
+    key = f"dirs/{rel_path}"
+    rel = f"{sp}/{key}"
+    res.doc(key)
+    doc = _load(snap / key, "dir", rel, out)
+    if doc is None:
+        return
+    location = rel_path[: -len(".json")]
+    location = "" if location == "_root" else location
+    if doc["path"] != location:
+        out.add(rel, f"path {doc['path']!r} does not match its location ({location!r})",
+                f"set \"path\": \"{location}\" (root directory = \"\", stored as dirs/_root.json)")
+    res.markdown(key, rel, doc["summary"], location, "summary", out)
+
+
+def _check_tour(snap: Path, sp: str, rel_path: str, files: dict, res: _Resolver,
+                out: _Collector) -> None:
+    key = f"tours/{rel_path}"
+    rel = f"{sp}/{key}"
+    res.doc(key)
+    doc = _load(snap / key, "tour", rel, out)
+    if doc is None:
+        return
+    tour_id = rel_path[: -len(".json")]
+    if doc["id"] != tour_id:
+        out.add(rel, f"tour id {doc['id']!r} does not match the file name",
+                f"set \"id\": \"{tour_id}\"")
+    res.markdown(key, rel, doc["description"], None, "description", out)
+    for i, step in enumerate(doc["steps"], 1):
+        info = files.get(step["path"])
+        if info is None:
+            out.add(rel, f"tour step {i}: file {step['path']!r} is not in tree.json",
+                    "use a path listed in tree.json")
+        else:
+            bad = _range_problem(step["range"], info["lines"])
+            if bad:
+                out.add(rel, f"tour step {i}: {bad}", "fix the step range")
+        res.markdown(key, rel, step["body"], step["path"], f"step {i}", out)
+
+
+def _validate_snapshot(sdir: Path, sha: str, out: _Collector) -> None:
+    snap = kbio.snapshot_dir(sdir, sha)
+    sp = f"snapshots/{sha}"
+    if not snap.is_dir():
+        out.add(sp, "snapshot directory missing", "run `readcode snapshot` for this sha")
+        return
+    start = len(out.problems)
+    tree = _EMPTY_TREE
+    if (snap / "tree.json").is_file():
+        tree = _load(snap / "tree.json", "tree", f"{sp}/tree.json", out) or _EMPTY_TREE
+    else:
+        out.add(f"{sp}/tree.json", "tree.json missing", "run `readcode snapshot` for this sha")
+    symbols = _EMPTY_SYMBOLS
+    if (snap / "symbols.json").is_file():
+        symbols = _load(snap / "symbols.json", "symbols", f"{sp}/symbols.json", out) or _EMPTY_SYMBOLS
+    files = {f["path"]: f for f in tree["files"]}
+    diagrams = {p.name for p in (snap / "diagrams").glob("*.html")} if (snap / "diagrams").is_dir() else set()
+    res = _Resolver(tree, symbols, diagrams)
+
+    for rel_path in _rel_json_files(snap / "explain"):
+        _check_explain(snap, sp, rel_path, files, res, out)
+    for rel_path in _rel_json_files(snap / "dirs"):
+        _check_dir(snap, sp, rel_path, res, out)
+    for rel_path in _rel_json_files(snap / "tours"):
+        _check_tour(snap, sp, rel_path, files, res, out)
+    overview = snap / "overview.md"
+    if overview.is_file():
+        try:
+            text = overview.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as exc:
+            out.add(f"{sp}/overview.md", f"unreadable: {exc}", "write overview.md as UTF-8")
+            text = ""
+        res.markdown("overview.md", f"{sp}/overview.md", text, None, "overview", out)
+
+    _write_links(snap / "links.json", res.links(sha), f"{sp}/links.json", out)
+    _write_issues(snap, sp, out.problems[start:], out)
+
+
+def _write_issues(snap: Path, sp: str, problems: list[dict], out: _Collector) -> None:
+    path = snap / "issues.json"
+    kept: list[dict] = []
+    if path.is_file():
+        try:
+            old = json.loads(path.read_text(encoding="utf-8"))
+            if not schema_validate("issues", old):
+                kept = [i for i in old["issues"] if i.get("source") != "validate"]
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            pass
+    prefix = f"{sp}/"
+    new = [{"file": p["file"][len(prefix):] if p["file"].startswith(prefix) else p["file"],
+            "problem": p["problem"], "hint": p["hint"], "source": "validate"} for p in problems]
+    kbio.atomic_write_json(path, {"schemaVersion": 1, "issues": kept + new})
+
+
+# ------------------------------------------------------------------ diffs
+
+
+def _snapshot_index(sdir: Path, sha: str) -> tuple[dict, dict]:
+    """tree/symbols of a snapshot for marker resolution (empty when absent/invalid)."""
+    snap = kbio.snapshot_dir(sdir, sha)
+    out = []
+    for name, kind, empty in (("tree.json", "tree", _EMPTY_TREE),
+                              ("symbols.json", "symbols", _EMPTY_SYMBOLS)):
+        try:
+            data = json.loads((snap / name).read_text(encoding="utf-8"))
+            out.append(empty if schema_validate(kind, data) else data)
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            out.append(empty)
+    return out[0], out[1]
+
+
+def _validate_diff(sdir: Path, name: str, out: _Collector) -> None:
+    ddir = sdir / "diffs" / name
+    dp = f"diffs/{name}"
+    m = _DIFF_DIR_RE.match(name)
+    if not m:
+        out.add(dp, "diff directory name is not <shaA>..<shaB> (40-hex shas)",
+                "regenerate it with `readcode diff`")
+        return
+    sha_a, sha_b = m.groups()
+    changes = None
+    if (ddir / "changes.json").is_file():
+        changes = _load(ddir / "changes.json", "changes", f"{dp}/changes.json", out)
+        if changes and (changes["from"], changes["to"]) != (sha_a, sha_b):
+            out.add(f"{dp}/changes.json", "from/to do not match the directory name",
+                    "regenerate it with `readcode diff`")
+    else:
+        out.add(f"{dp}/changes.json", "changes.json missing", "run `readcode diff` first")
+    by_path = {f["path"]: f for f in changes["files"]} if changes else {}
+
+    tree_b, symbols_b = _snapshot_index(sdir, sha_b)
+    res = _Resolver(tree_b, symbols_b, set(), fallback=_snapshot_index(sdir, sha_a))
+    snap_b = kbio.snapshot_dir(sdir, sha_b)
+    if (snap_b / "diagrams").is_dir():
+        res.diagrams = {p.name for p in (snap_b / "diagrams").glob("*.html")}
+
+    if (ddir / "explain.md").is_file():
+        try:
+            text = (ddir / "explain.md").read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as exc:
+            out.add(f"{dp}/explain.md", f"unreadable: {exc}", "write explain.md as UTF-8")
+            text = ""
+        res.markdown("explain.md", f"{dp}/explain.md", text, None, "explain.md", out)
+    for rel_path in _rel_json_files(ddir / "explain"):
+        key = f"explain/{rel_path}"
+        rel = f"{dp}/{key}"
+        res.doc(key)
+        doc = _load(ddir / key, "diff-explain", rel, out)
+        if doc is None:
+            continue
+        location = rel_path[: -len(".json")]
+        if doc["path"] != location:
+            out.add(rel, f"path {doc['path']!r} does not match its location ({location!r})",
+                    f"set \"path\": \"{location}\" or move the file")
+        change = by_path.get(location)
+        if changes is not None and change is None:
+            out.add(rel, f"file {location!r} is not in changes.json", "explain only changed files")
+        res.markdown(key, rel, doc["summary"], location, "summary", out)
+        for hunk in doc["hunks"]:
+            if change is not None and hunk["index"] >= len(change["hunks"]):
+                out.add(rel, f"hunk index {hunk['index']} does not exist "
+                             f"({len(change['hunks'])} hunks in changes.json)",
+                        "use 0-based indexes into the file's hunks")
+            res.markdown(key, rel, hunk["body"], location, f"hunk {hunk['index']}", out)
+    _write_links(ddir / "links.json", res.links(sha_b), f"{dp}/links.json", out)
+
+
+# ------------------------------------------------------------------- main
+
+
+def validate_study(kb: Path | str, study: str, sha: str | None = None) -> list[dict]:
+    """Validate a study (one snapshot with ``sha``, else all snapshots and diffs).
+
+    Returns problems ``[{file, problem, hint}]``; writes links.json / issues.json.
+    Raises ValidateError when study.json is missing or ``sha`` is not studied.
+    """
+    sdir = kbio.study_dir(kb, study)
+    if not (sdir / "study.json").is_file():
+        raise ValidateError(f"{sdir / 'study.json'} not found; run `readcode init` first")
+    out = _Collector()
+    study_data = _load(sdir / "study.json", "study", "study.json", out)
+    if study_data is None:
+        try:
+            study_data = json.loads((sdir / "study.json").read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            study_data = {}
+        if not isinstance(study_data, dict):
+            study_data = {}
+    shas = [s["sha"] for s in study_data.get("snapshots", [])
+            if isinstance(s, dict) and isinstance(s.get("sha"), str)]
+    if sha is not None:
+        try:
+            shas = [kbio.resolve_sha({"snapshots": [{"sha": s} for s in shas]}, sha)]
+        except ValueError as exc:
+            raise ValidateError(str(exc)) from exc
+    for s in shas:
+        _validate_snapshot(sdir, s, out)
+    diffs = sdir / "diffs"
+    if diffs.is_dir():
+        for d in sorted(p.name for p in diffs.iterdir() if p.is_dir()):
+            if sha is None or d.endswith(f"..{shas[0]}"):
+                _validate_diff(sdir, d, out)
+    return out.problems
+
+
+def format_problems(problems: list[dict]) -> str:
+    if not problems:
+        return "OK: sin problemas"
+    return "\n".join(f"{p['file']}: {p['problem']} ({p['hint']})" for p in problems)

@@ -1,0 +1,109 @@
+"""`readcode serve`: static server for the viewer ("/") and a kb directory ("/kb/")."""
+
+from __future__ import annotations
+
+import mimetypes
+from http import HTTPStatus
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from urllib.parse import unquote, urlsplit
+
+VIEWER_DIST = Path(__file__).resolve().parent / "viewer_dist"
+
+CONTENT_TYPES = {
+    ".json": "application/json; charset=utf-8",
+    ".md": "text/markdown; charset=utf-8",
+    ".html": "text/html; charset=utf-8",
+    ".js": "text/javascript; charset=utf-8",
+    ".mjs": "text/javascript; charset=utf-8",
+    ".css": "text/css; charset=utf-8",
+    ".svg": "image/svg+xml; charset=utf-8",
+    ".txt": "text/plain; charset=utf-8",
+    ".mmd": "text/plain; charset=utf-8",
+}
+
+PLACEHOLDER = """<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>readcode</title></head>
+<body style="font-family: sans-serif; max-width: 40rem; margin: 3rem auto">
+<h1>readcode</h1>
+<p>El visor no está compilado: falta <code>core/readcode/viewer_dist/</code>.</p>
+<p>Compílalo con <code>npm run build</code> en <code>viewer/</code>.
+Los estudios siguen disponibles en <a href="/kb/catalog.json">/kb/</a>.</p>
+</body></html>
+""".encode("utf-8")
+
+
+def content_type(path: Path) -> str:
+    ext = path.suffix.lower()
+    if ext in CONTENT_TYPES:
+        return CONTENT_TYPES[ext]
+    return mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+
+
+def safe_join(root: Path, rel: str) -> Path | None:
+    """``root/rel`` resolved, or None if it escapes ``root``."""
+    root = root.resolve()
+    try:
+        target = (root / rel.lstrip("/\\")).resolve()
+    except (OSError, ValueError):
+        return None
+    return target if target == root or target.is_relative_to(root) else None
+
+
+def make_server(kb_dir: Path | str, port: int = 8765, host: str = "127.0.0.1",
+                viewer_dir: Path | str | None = None, quiet: bool = False) -> ThreadingHTTPServer:
+    """Build (not start) the server; port 0 picks a free port (see ``server_address``)."""
+    kb_root = Path(kb_dir).resolve()
+    viewer_root = Path(viewer_dir) if viewer_dir is not None else VIEWER_DIST
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:  # noqa: N802
+            self._serve(head=False)
+
+        def do_HEAD(self) -> None:  # noqa: N802
+            self._serve(head=True)
+
+        def log_message(self, format: str, *args) -> None:  # noqa: A002
+            if not quiet:
+                super().log_message(format, *args)
+
+        def _send(self, status: int, ctype: str, body: bytes, head: bool) -> None:
+            self.send_response(status)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-cache")
+            self.end_headers()
+            if not head:
+                self.wfile.write(body)
+
+        def _not_found(self, head: bool) -> None:
+            self._send(HTTPStatus.NOT_FOUND, "text/plain; charset=utf-8", b"404 Not Found", head)
+
+        def _serve(self, head: bool) -> None:
+            path = unquote(urlsplit(self.path).path)
+            if "\x00" in path:
+                return self._not_found(head)
+            if path == "/kb":
+                self.send_response(HTTPStatus.MOVED_PERMANENTLY)
+                self.send_header("Location", "/kb/")
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
+            if path.startswith("/kb/"):
+                root, rel = kb_root, path[len("/kb/"):]
+            else:
+                if not (viewer_root / "index.html").is_file():
+                    return self._send(HTTPStatus.OK, "text/html; charset=utf-8", PLACEHOLDER, head)
+                root, rel = viewer_root, path
+            target = safe_join(root, rel)
+            if target is not None and target.is_dir():
+                target = target / "index.html"
+            if target is None or not target.is_file():
+                return self._not_found(head)
+            try:
+                body = target.read_bytes()
+            except OSError:
+                return self._not_found(head)
+            self._send(HTTPStatus.OK, content_type(target), body, head)
+
+    return ThreadingHTTPServer((host, port), Handler)
