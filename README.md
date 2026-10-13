@@ -44,8 +44,10 @@ En Claude Code:
 Para leerlo:
 
 ```bash
-readcode serve ~/code-kb        # http://127.0.0.1:8765 (--port, --no-open)
+readcode serve ~/code-kb        # http://127.0.0.1:8765 (--port, --no-open, --no-refresh)
 ```
+
+Al arrancar, `serve` regenera los derivados obsoletos (`links.json`, `search.json`) de cada estudio, para que tours y diagramas nuevos aparezcan sin correr `validate`. Con `--no-refresh` no escribe nada (solo lectura, como en v1); si la regeneración falla, avisa y sirve lo que hay. `readcode validate <kb> <estudio> --derived-only` hace lo mismo a mano, sin tocar `issues.json` ni fallar por problemas.
 
 Puedes probarlo ya con el estudio de ejemplo: `readcode serve examples/kb`.
 
@@ -87,9 +89,9 @@ Casi todos los comandos reciben `<kb> <estudio>` (ver `readcode <comando> --help
 | `readcode plan <kb> <estudio> --sha <sha>` | Cola de trabajo para la skill: reutiliza explicaciones y lista lo pendiente (`--json`). |
 | `readcode graph <kb> <estudio> --sha <sha>` | Grafo del snapshot con graphify (opcional). |
 | `readcode diff <kb> <estudio> <shaA> <shaB>` | Calcula `changes.json` entre dos snapshots. |
-| `readcode validate <kb> <estudio> [--sha] [--json]` | Valida schemas, rangos y refs; escribe `links.json` e `issues.json`; exit 1 si hay problemas. |
+| `readcode validate <kb> <estudio> [--sha] [--json] [--derived-only]` | Valida schemas, rangos y refs; escribe `links.json` e `issues.json`; exit 1 si hay problemas. |
 | `readcode catalog <kb>` | Regenera `<kb>/catalog.json`. |
-| `readcode serve <kb> [--port] [--no-open]` | Sirve el visor en `/` y la KB en `/kb/`. |
+| `readcode serve <kb> [--port] [--no-open] [--no-refresh]` | Sirve el visor en `/` y la KB en `/kb/`. |
 | `readcode install-skill [--dest] [--force]` | Instala la skill `/readcode` en `~/.claude/skills`. |
 | `readcode context <kb> <estudio> <rutas...> --sha <sha>` | Contexto de archivos para la skill: blob, defs, imports, usos, vecinos en el grafo. |
 | `readcode stale <kb> <estudio> <shaA> <shaB>` | Documentos heredados que pueden haber quedado viejos tras un update. |

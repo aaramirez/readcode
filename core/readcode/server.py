@@ -74,6 +74,20 @@ def safe_join(root: Path, rel: str) -> Path | None:
     return target if target == root or target.is_relative_to(root) else None
 
 
+def refresh_on_startup(kb_dir: Path | str, echo=print) -> list[str]:
+    """Regenerate stale derived files before serving; never raises (warns once and returns [])."""
+    from readcode.validate_cmd import refresh_stale
+
+    try:
+        done = refresh_stale(kb_dir)
+    except Exception as exc:  # e.g. PermissionError on a read-only kb: serve what exists
+        echo(f"aviso: no se pudieron regenerar los derivados ({exc}); se sirven los existentes")
+        return []
+    if done:
+        echo(f"Derivados regenerados: {', '.join(done)}")
+    return done
+
+
 def make_server(kb_dir: Path | str, port: int = 8765, host: str = "127.0.0.1",
                 viewer_dir: Path | str | None = None, quiet: bool = False) -> ThreadingHTTPServer:
     """Build (not start) the server; port 0 picks a free port (see ``server_address``)."""

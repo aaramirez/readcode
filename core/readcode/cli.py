@@ -140,6 +140,8 @@ def validate_cmd(
     study: Annotated[str, typer.Argument(help="Nombre del estudio.")],
     sha: Annotated[Optional[str], typer.Option("--sha", help="Solo este snapshot (y sus diffs).")] = None,
     as_json: Annotated[bool, typer.Option("--json", help="Salida en JSON.")] = False,
+    derived_only: Annotated[bool, typer.Option(
+        "--derived-only", help="Solo regenera links.json y search.json; no toca issues.json ni falla por problemas.")] = False,
 ) -> None:
     """Valida el estudio; escribe links.json e issues.json. Exit 1 si hay problemas (los avisos no cuentan)."""
     import json
@@ -147,10 +149,13 @@ def validate_cmd(
     from readcode.validate_cmd import ValidateError, format_problems, is_warning, validate_study
 
     try:
-        problems = validate_study(kb_dir, study, sha)
+        problems = validate_study(kb_dir, study, sha, derived_only=derived_only)
     except ValidateError as exc:
         typer.echo(f"error: {exc}", err=True)
         raise typer.Exit(1)
+    if derived_only:
+        typer.echo("Derivados regenerados (links.json, search.json)")
+        return
     typer.echo(json.dumps(problems, indent=2, ensure_ascii=False) if as_json
                else format_problems(problems))
     if any(not is_warning(p) for p in problems):  # warnings (legacy-root) do not fail
@@ -195,15 +200,19 @@ def serve(
     kb_dir: Annotated[Path, typer.Argument(help="Directorio de la base de conocimiento.")],
     port: Annotated[int, typer.Option("--port", help="Puerto.")] = 8765,
     no_open: Annotated[bool, typer.Option("--no-open", help="No abre el navegador.")] = False,
+    no_refresh: Annotated[bool, typer.Option(
+        "--no-refresh", help="No regenera los derivados obsoletos al arrancar (kb de solo lectura).")] = False,
 ) -> None:
     """Sirve el visor en / y el directorio de estudios en /kb/."""
     import webbrowser
 
-    from readcode.server import make_server
+    from readcode.server import make_server, refresh_on_startup
 
     if not kb_dir.is_dir():
         typer.echo(f"error: {kb_dir} no es un directorio", err=True)
         raise typer.Exit(1)
+    if not no_refresh:
+        refresh_on_startup(kb_dir, echo=lambda m: typer.echo(m, err=True))
     server = make_server(kb_dir, port=port)
     url = f"http://127.0.0.1:{server.server_address[1]}/"
     typer.echo(f"Sirviendo {kb_dir} en {url} (Ctrl+C para salir)")

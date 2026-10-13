@@ -246,7 +246,7 @@ def _check_tour(snap: Path, sp: str, rel_path: str, files: dict, res: _Resolver,
         res.markdown(f"{key}#{i}", rel, step["body"], step["path"], f"step {i}", out)
 
 
-def _validate_snapshot(sdir: Path, sha: str, out: _Collector) -> None:
+def _validate_snapshot(sdir: Path, sha: str, out: _Collector, derived_only: bool = False) -> None:
     snap = kbio.snapshot_dir(sdir, sha)
     sp = f"snapshots/{sha}"
     if not snap.is_dir():
@@ -297,7 +297,8 @@ def _validate_snapshot(sdir: Path, sha: str, out: _Collector) -> None:
         out.add(f"{sp}/search.json", f"internal: generated search.json invalid: {err}",
                 "report this as a readcode bug")
     kbio.atomic_write_json(snap / "search.json", search)
-    _write_issues(snap, sp, out.problems[start:], out)
+    if not derived_only:  # derived-only leaves issues.json (generator and validate entries) untouched
+        _write_issues(snap, sp, out.problems[start:], out)
 
 
 def _write_issues(snap: Path, sp: str, problems: list[dict], out: _Collector) -> None:
@@ -393,8 +394,12 @@ def _validate_diff(sdir: Path, name: str, out: _Collector) -> None:
 # ------------------------------------------------------------------- main
 
 
-def validate_study(kb: Path | str, study: str, sha: str | None = None) -> list[dict]:
+def validate_study(kb: Path | str, study: str, sha: str | None = None,
+                   derived_only: bool = False) -> list[dict]:
     """Validate a study (one snapshot with ``sha``, else all snapshots and diffs).
+
+    ``derived_only`` rewrites only links.json and search.json (byte-identical to a full run) and
+    leaves issues.json alone, so generator issues survive; the problems returned are informational.
 
     Returns problems ``[{file, problem, hint}]``; writes links.json / issues.json.
     Raises ValidateError when study.json is missing or ``sha`` is not studied.
@@ -419,7 +424,7 @@ def validate_study(kb: Path | str, study: str, sha: str | None = None) -> list[d
         except ValueError as exc:
             raise ValidateError(str(exc)) from exc
     for s in shas:
-        _validate_snapshot(sdir, s, out)
+        _validate_snapshot(sdir, s, out, derived_only)
     diffs = sdir / "diffs"
     if diffs.is_dir():
         for d in sorted(p.name for p in diffs.iterdir() if p.is_dir()):
@@ -437,3 +442,46 @@ def format_problems(problems: list[dict]) -> str:
         return "OK: sin problemas"
     return "\n".join(f"{'aviso: ' if is_warning(p) else ''}{p['file']}: {p['problem']} ({p['hint']})"
                      for p in problems)
+
+
+# ---------------------------------------------------------------- refresh
+
+_DERIVED_NAMES = frozenset({"links.json", "search.json", "issues.json"})
+
+
+def _study_shas(sdir: Path) -> list[str]:
+    data = json.loads((sdir / "study.json").read_text(encoding="utf-8"))
+    return [s["sha"] for s in data.get("snapshots", [])
+            if isinstance(s, dict) and isinstance(s.get("sha"), str)]
+
+
+def is_stale(sdir: Path) -> bool:
+    """True when a derived links.json is missing or older than a source file of the study."""
+    dirs = [d for d in (kbio.snapshot_dir(sdir, s) for s in _study_shas(sdir)) if d.is_dir()]
+    diffs = sdir / "diffs"
+    if diffs.is_dir():
+        dirs += [d for d in sorted(diffs.iterdir()) if d.is_dir() and _DIFF_DIR_RE.match(d.name)]
+    if not dirs:
+        return False
+    links = [d / "links.json" for d in dirs]
+    if not all(p.is_file() for p in links):
+        return True
+    oldest = min(p.stat().st_mtime for p in links)
+    return any(p.stat().st_mtime > oldest
+               for d in dirs for p in d.rglob("*")
+               if p.is_file() and not (p.parent == d and p.name in _DERIVED_NAMES))
+
+
+def refresh_stale(kb: Path | str) -> list[str]:
+    """Regenerate derived files of every stale study in ``kb``; return their names."""
+    kb = Path(kb)
+    done: list[str] = []
+    for sdir in sorted(p for p in kb.iterdir() if (p / "study.json").is_file()):
+        try:
+            stale = is_stale(sdir)
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            continue  # unreadable study.json: nothing sensible to regenerate
+        if stale:
+            validate_study(kb, sdir.name, derived_only=True)
+            done.append(sdir.name)
+    return done
