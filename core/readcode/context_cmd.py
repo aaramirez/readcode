@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from readcode import kbio
-from readcode.refs import _go_dir_files
+from readcode.refs import go_package_files, go_package_index
 
 USED_BY_LIMIT = 15
 NEIGHBOUR_LIMIT = 20
@@ -35,7 +35,8 @@ def _graph_neighbours(graph: dict, path: str) -> list[str]:
 
 def _import_target(i: dict) -> str | None:
     if i.get("resolved") is None and i.get("resolvedDir") is not None:
-        return i["resolvedDir"].strip("/") + "/"  # package folder ("/" = repo root)
+        d = i["resolvedDir"].strip("/")
+        return d + "/" if d else "(raíz)"  # package folder
     return i.get("resolved")
 
 
@@ -65,10 +66,11 @@ def _neighbour_files(files: dict, path: str, imports: list[dict]) -> list[str]:
     found = [i["resolved"] for i in imports if i.get("resolved")]
     if path.endswith(".go"):
         tests = path.endswith("_test.go")
-        found += _go_dir_files(files, path.rpartition("/")[0], tests)
+        index = go_package_index(files)
+        found += go_package_files(index, path.rpartition("/")[0], tests)
         for i in imports:
             if i.get("resolvedDir") is not None:
-                found += _go_dir_files(files, i["resolvedDir"].strip("/"), tests)
+                found += go_package_files(index, i["resolvedDir"].strip("/"), tests)
     return [p for p in dict.fromkeys(found) if p != path and p in files]
 
 

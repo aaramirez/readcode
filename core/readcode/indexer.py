@@ -133,7 +133,7 @@ def _contains(outer, inner) -> bool:
 
 
 def extract(source: bytes, language: str, path: str, paths: frozenset[str],
-            go_modules: dict[str, str] | None = None) -> dict | None:
+            go_modules: dict[str, str | None] | None = None) -> dict | None:
     """Symbols of one file ``{defs, refs, imports}``; None if the language is unsupported.
 
     ``go_modules`` maps a directory ("" = repo root) to the module path of its go.mod.
@@ -162,7 +162,9 @@ def extract(source: bytes, language: str, path: str, paths: frozenset[str],
             elif capture.startswith("reference.") and names:
                 raw_refs.extend(names)
 
-    defs = _build_defs(raw_defs, source)
+    # Go blank identifiers (`var _ I = (*T)(nil)`) declare nothing.
+    defs = _build_defs([r for r in raw_defs if not (language == "go" and _text(r[2], source) == "_")],
+                       source)
     def_names = {(n.start_byte, n.end_byte) for _, _, n in raw_defs}
     refs: dict[tuple, dict] = {}
     for node in raw_refs:
@@ -214,7 +216,7 @@ def _build_defs(raw_defs, source: bytes) -> list[dict]:
 
 
 def _build_imports(raw, source: bytes, language: str, path: str, paths: frozenset[str],
-                   go_modules: dict[str, str]) -> list[dict]:
+                   go_modules: dict[str, str | None]) -> list[dict]:
     out: list[dict] = []
     for node, stmt in sorted(raw, key=lambda r: r[0].start_byte):
         module = _text(node, source)
@@ -329,7 +331,7 @@ def _go_dirs(paths: frozenset[str]) -> frozenset[str]:
 
 
 def _resolve_go_dir(module: str, path: str, paths: frozenset[str],
-                    go_modules: dict[str, str]) -> str | None:
+                    go_modules: dict[str, str | None]) -> str | None:
     """Directory of a package imported from the nearest go.mod's module, if it has .go files.
 
     ``""`` is the repo root (the module root package); callers must test ``is not None``.
@@ -340,6 +342,8 @@ def _resolve_go_dir(module: str, path: str, paths: frozenset[str],
             return None
         directory = posixpath.dirname(directory)
     prefix = go_modules[directory]
+    if prefix is None:  # unreadable go.mod: still a module boundary, imports unresolved
+        return None
     if module == prefix:
         sub = ""
     elif module.startswith(prefix + "/"):
@@ -348,7 +352,9 @@ def _resolve_go_dir(module: str, path: str, paths: frozenset[str],
         return None
     target = posixpath.join(directory, sub) if directory else sub
     for other in go_modules:  # target inside a nested module -> not part of this one
-        if other != directory and (other == target or target.startswith(other + "/"))                 and (other.startswith(directory + "/") or not directory):
+        if (other != directory
+                and (other == target or target.startswith(other + "/"))
+                and (other.startswith(directory + "/") or not directory)):
             return None
     return target if target in _go_dirs(paths) else None
 
@@ -388,9 +394,11 @@ def _find_snapshot(sdir: Path, sha: str) -> Path:
     raise IndexingError(f"Ambiguous sha prefix {sha!r}: {', '.join(p.name for p in matches)}")
 
 
-def _read_go_modules(sdir: Path, tree: dict) -> dict[str, str]:
-    """``{directory: module path}`` for every go.mod in the snapshot (warns once if unreadable)."""
-    modules: dict[str, str] = {}
+def _read_go_modules(sdir: Path, tree: dict) -> dict[str, str | None]:
+    """``{directory: module path}`` for every go.mod in the snapshot (warns once if unreadable).
+
+    An unreadable go.mod maps to None: it still bounds the module above it."""
+    modules: dict[str, str | None] = {}
     bad: list[str] = []
     for entry in tree["files"]:
         if posixpath.basename(entry["path"]) != "go.mod":
@@ -402,8 +410,7 @@ def _read_go_modules(sdir: Path, tree: dict) -> dict[str, str]:
             module = None
         if module is None:
             bad.append(entry["path"])
-        else:
-            modules[posixpath.dirname(entry["path"])] = module
+        modules[posixpath.dirname(entry["path"])] = module
     if bad:
         print(f"aviso: no se pudo leer la línea `module` de {', '.join(bad)}; "
               "los imports de Go de ese módulo quedan sin resolver", file=sys.stderr)

@@ -28,8 +28,8 @@ Cómo seguir el flujo:
 - Lee los blobs como **UTF-8** (con Read, sin recodificar). **Nunca** afirmes que el archivo
   tiene problemas de codificación o acentos corruptos: si ves caracteres raros, es tu lectura,
   no el archivo.
-- Lee **completo** cada archivo antes de explicarlo (en partes, con `offset`/`limit`, si es
-  largo). Nunca expliques secciones solo por sus títulos o por lo que parezca que contienen.
+- Cuando abras un blob, léelo completo (en partes si es largo) antes de afirmar algo de él; no
+  expliques secciones solo por su título.
 - Comprueba cada `[[ref:…]]` que escribas contra `symbols.json` del snapshot (o con
   ``readcode context`` del archivo destino) antes de darla por buena.
 

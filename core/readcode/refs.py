@@ -241,32 +241,40 @@ def _candidates(files: dict, paths: list[str], symbol: str) -> list[tuple[str, R
     return result
 
 
-def _go_dir_files(files: dict, directory: str, include_tests: bool) -> list[str]:
-    """`.go` files directly in `directory` ("" = repo root); subfolders are other packages."""
-    out = []
+def go_package_index(files: dict) -> dict[str, list[str]]:
+    """`{directory: sorted .go files directly in it}` ("" = repo root); build once per symbols dict."""
+    index: dict[str, list[str]] = {}
     for p in sorted(files):
         d, _, name = p.rpartition("/")
-        if d == directory and name.endswith(".go") and (include_tests or not name.endswith("_test.go")):
-            out.append(p)
-    return out
+        if name.endswith(".go"):
+            index.setdefault(d, []).append(p)
+    return index
 
 
-def _go_tiers(current_path: str, imports: list[dict], files: dict) -> list[list[str]]:
+def go_package_files(index: dict[str, list[str]], directory: str, include_tests: bool) -> list[str]:
+    """`.go` files directly in `directory` ("" = repo root); subfolders are other packages."""
+    return [p for p in index.get(directory, [])
+            if include_tests or not p.endswith("_test.go")]
+
+
+def _go_tiers(current_path: str, imports: list[dict], files: dict,
+              index: dict[str, list[str]]) -> list[list[str]]:
     """Go: file -> same package -> packages of imports (`resolvedDir`) -> whole repo.
 
     `_test.go` files only count when the current file is itself a test."""
     tests = current_path.endswith("_test.go")
-    same = [p for p in _go_dir_files(files, current_path.rpartition("/")[0], tests)
+    same = [p for p in go_package_files(index, current_path.rpartition("/")[0], tests)
             if p != current_path]
     imported: list[str] = []
     for i in imports:
         if i.get("resolvedDir") is not None:
-            imported += _go_dir_files(files, i["resolvedDir"].strip("/"), tests)
+            imported += go_package_files(index, i["resolvedDir"].strip("/"), tests)
     return [[current_path], same, list(dict.fromkeys(imported)), sorted(files)]
 
 
 def resolve(marker: Marker, current_path: str, tree: dict, symbols: dict,
-            diagrams: set[str] | None = None) -> Resolution:
+            diagrams: set[str] | None = None,
+            go_index: dict[str, list[str]] | None = None) -> Resolution:
     """Resolve one marker against tree.json / symbols.json contents (dicts).
 
     lines: exact iff the file is in the tree and 1 <= start <= end <= lines.
@@ -279,6 +287,7 @@ def resolve(marker: Marker, current_path: str, tree: dict, symbols: dict,
     archify: target "diagrams/<name>.html"; exact unless `diagrams` is given
     and lacks the name (names compared without ".html"/".mmd").
     invalid: broken.
+    `go_index` (from `go_package_index`) avoids rescanning the files per marker.
     """
     base = Resolution(marker.raw, marker.kind, "broken")
     if marker.kind == "invalid":
@@ -311,7 +320,9 @@ def resolve(marker: Marker, current_path: str, tree: dict, symbols: dict,
     imports = files.get(current_path, {}).get("imports", [])
     imported = [i["resolved"] for i in imports if i.get("resolved")]
     if (current_path or "").endswith(".go"):
-        tiers = _go_tiers(current_path, imports, files)
+        if go_index is None:
+            go_index = go_package_index(files)
+        tiers = _go_tiers(current_path, imports, files, go_index)
     else:
         tiers = [[current_path], list(dict.fromkeys(imported)), sorted(files)]
     for t, paths in enumerate(tiers):
@@ -330,5 +341,7 @@ def resolve(marker: Marker, current_path: str, tree: dict, symbols: dict,
 
 def resolve_all(markdown: str, current_path: str, tree: dict, symbols: dict,
                 diagrams: set[str] | None = None) -> list[tuple[Marker, Resolution]]:
-    return [(m, resolve(m, current_path, tree, symbols, diagrams))
+    go_index = (go_package_index(symbols.get("files", {}))
+                if current_path.endswith(".go") else None)
+    return [(m, resolve(m, current_path, tree, symbols, diagrams, go_index))
             for m in parse_markers(markdown)]

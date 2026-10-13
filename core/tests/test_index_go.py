@@ -114,3 +114,19 @@ def test_parse_go_module_variants():
     assert _parse_go_module("﻿module a.b/c\n") == "a.b/c"
     assert _parse_go_module("module (\n\ta.b/c // x\n)\n") == "a.b/c"
     assert _parse_go_module('module "a.b//c"\n') == "a.b//c"
+
+
+def test_go_blank_identifiers_are_not_defs(tmp_path):
+    src = ("package a\n\ntype I interface{}\ntype T struct{}\n\nvar _ I = (*T)(nil)\n"
+           "var _, y = f()\n\nfunc f() (int, int) { return 1, 2 }\n")
+    sym, _ = _index(tmp_path, {"go.mod": "module m\n", "a.go": src})
+    names = [d["name"] for d in sym["files"]["a.go"]["defs"]]
+    assert "_" not in names and "y" in names
+
+
+def test_go_unreadable_nested_go_mod_still_bounds_outer_module(tmp_path):
+    files = dict(FILES, **{"sub/go.mod": "go 1.22\n"})  # no module directive
+    sym, r = _index(tmp_path, files)
+    foo = {i["module"]: i for i in sym["files"]["cmd/foo/foo.go"]["imports"]}
+    assert "resolvedDir" not in foo["github.com/x/y/sub/pkg"]  # not claimed by the root module
+    assert "línea `module` de sub/go.mod" in r.output

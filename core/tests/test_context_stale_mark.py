@@ -298,8 +298,7 @@ def test_context_go_package_importers_and_neighbour_defs(tmp_path):
     assert ctx["internal/app/app_test.go"]["importedBy"] == ["main_test.go"]
     assert "github.com/x/y/internal/app -> internal/app/" in main_go["imports"]
     nd = main_go["neighbourDefs"]
-    assert "internal/app/app.go#App.Start (method) L7-7" in nd or any(
-        n.startswith("internal/app/app.go#App.Start (method)") for n in nd)
+    assert "internal/app/app.go#App.Start (method) L7-7" in nd
     assert any(n.startswith("internal/app/app.go#New (function)") for n in nd)
     assert any(n.startswith("internal/app/util.go#ErrX") for n in nd)
     assert not any("app_test.go" in n for n in nd)  # main.go is not a test
@@ -337,3 +336,11 @@ def test_context_non_go_neighbour_defs_use_resolved_imports():
     assert billing["truncated"] is False
     assert billing["neighbourDefs"]
     assert all(n.startswith("app/models.py#") for n in billing["neighbourDefs"])
+
+
+def test_context_go_root_module_import_shown_as_raiz(tmp_path):
+    files = dict(GO_FILES)
+    files["cmd/x.go"] = 'package main\n\nimport "github.com/x/y"\n'
+    kb, sha = _go_kb(tmp_path, files)
+    ctx = file_context(kb, "demo", sha, ["cmd/x.go"])[0]
+    assert ctx["imports"] == ["github.com/x/y -> (raíz)"]

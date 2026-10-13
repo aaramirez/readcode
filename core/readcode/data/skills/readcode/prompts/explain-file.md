@@ -23,7 +23,8 @@ readcode context <KB> <STUDY> --sha <SHA> <path1> <path2> ... --json
 Te da por archivo: `blobFile` (el contenido **exacto** del snapshot: léelo con Read, sus números
 de línea son los que valen), `blobHash`, `defs` (definiciones con rango, de tree-sitter: son
 **sugerencias** de límites de bloque), `imports`, `importedBy`, `usedBy` (quién usa sus
-definiciones), `graphNeighbours` (si hay grafo) y si ya existe explicación.
+definiciones), `neighbourDefs` (definiciones de los vecinos, ver abajo),
+`graphNeighbours` (si hay grafo) y si ya existe explicación.
 
 Lee también lo necesario de los vecinos (sus blobs o sus explicaciones ya escritas en
 `<SNAP>/explain/`) para explicar bien las relaciones. No leas el working copy del repo.

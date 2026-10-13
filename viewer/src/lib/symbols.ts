@@ -1,6 +1,11 @@
 // Symbol navigation over symbols.json: name resolution with the same tiering
-// as core/readcode/refs.py `resolve` (current file -> imported files -> whole
-// repo; the first tier with matches decides) and "find usages" of a definition.
+// as core/readcode/refs.py `resolve` and "find usages" of a definition.
+// Tiers (the first one with matches decides):
+//   non-Go: current file -> imported files -> whole repo
+//   Go:     current file -> same package (other .go files directly in its folder)
+//           -> .go files directly in each import's `resolvedDir` -> whole repo
+//           (`_test.go` files only count in the package tiers when the current
+//           file is itself a test).
 
 import type { Range, SymbolDef, Symbols } from './types';
 
@@ -36,15 +41,55 @@ function cmpRange(a: Range, b: Range): number {
   return a[0] - b[0] || a[1] - b[1];
 }
 
+const goIndexCache = new WeakMap<Symbols, Map<string, string[]>>();
+
+/** `{directory: sorted .go files directly in it}` ("" = repo root), built once per symbols object. */
+function goPackageIndex(symbols: Symbols): Map<string, string[]> {
+  let index = goIndexCache.get(symbols);
+  if (!index) {
+    index = new Map();
+    for (const p of Object.keys(symbols.files).sort()) {
+      const slash = p.lastIndexOf('/');
+      if (!p.slice(slash + 1).endsWith('.go')) continue;
+      const dir = p.slice(0, Math.max(slash, 0));
+      const list = index.get(dir);
+      if (list) list.push(p);
+      else index.set(dir, [p]);
+    }
+    goIndexCache.set(symbols, index);
+  }
+  return index;
+}
+
+function goPackageFiles(index: Map<string, string[]>, dir: string, includeTests: boolean): string[] {
+  return (index.get(dir) ?? []).filter((p) => includeTests || !p.endsWith('_test.go'));
+}
+
+function resolutionTiers(symbols: Symbols, currentPath: string): string[][] {
+  const imports = symbols.files[currentPath]?.imports ?? [];
+  const all = Object.keys(symbols.files).sort();
+  if (!currentPath.endsWith('.go')) {
+    const imported = imports.map((i) => i.resolved).filter((p): p is string => !!p);
+    return [[currentPath], [...new Set(imported)], all];
+  }
+  const index = goPackageIndex(symbols);
+  const tests = currentPath.endsWith('_test.go');
+  const same = goPackageFiles(index, currentPath.slice(0, Math.max(currentPath.lastIndexOf('/'), 0)), tests).filter(
+    (p) => p !== currentPath,
+  );
+  const imported: string[] = [];
+  for (const i of imports) {
+    if (i.resolvedDir !== undefined) imported.push(...goPackageFiles(index, i.resolvedDir.replace(/^\/+|\/+$/g, ''), tests));
+  }
+  return [[currentPath], same, [...new Set(imported)], all];
+}
+
 /** Resolve a bare name seen in `currentPath` to its definition(s). */
 export function resolveName(symbols: Symbols, currentPath: string, name: string): NameResolution {
-  const imported = (symbols.files[currentPath]?.imports ?? [])
-    .map((i) => i.resolved)
-    .filter((p): p is string => !!p);
-  const tiers = [[currentPath], [...new Set(imported)], Object.keys(symbols.files).sort()];
+  const tiers = resolutionTiers(symbols, currentPath);
   for (let t = 0; t < tiers.length; t++) {
     const found = candidates(symbols, tiers[t], name);
-    if (t === 2) found.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : cmpRange(a.def.range, b.def.range)));
+    if (t === tiers.length - 1) found.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : cmpRange(a.def.range, b.def.range)));
     if (found.length === 1) return { status: 'exact', candidates: found };
     if (found.length > 1) return { status: 'ambiguous', candidates: found };
   }

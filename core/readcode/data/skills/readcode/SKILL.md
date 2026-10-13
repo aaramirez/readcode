@@ -104,7 +104,8 @@ No pegues código ni JSON en el mensaje: el subagente lee lo que necesita. En la
 Comandos auxiliares (solo lectura):
 
 - `readcode context <KB> <STUDY> --sha <SHA> <path>... --json`: por archivo, el blob exacto del
-  snapshot, defs, imports, quién lo importa o usa, vecinos en el grafo y si ya está explicado.
+  snapshot, defs, imports, quién lo importa o usa, `neighbourDefs` (definiciones de los archivos
+  vecinos: imports y, en Go, mismo paquete), vecinos en el grafo y si ya está explicado.
   Lo usan los subagentes.
 - `readcode stale <KB> <STUDY> <shaA> <shaB> --json`: documentos heredados que pueden haber
   quedado viejos tras un `update` (ver abajo).
