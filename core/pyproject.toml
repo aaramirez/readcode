@@ -17,7 +17,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest"]
+dev = ["pytest", "pyyaml"]
 
 [project.scripts]
 readcode = "readcode.cli:app"

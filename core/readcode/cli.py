@@ -199,3 +199,20 @@ def serve(
         pass
     finally:
         server.server_close()
+
+
+@app.command("install-skill")
+def install_skill_cmd(
+    dest: Annotated[Optional[Path], typer.Option(
+        "--dest", help="Directorio de skills de Claude Code (por defecto ~/.claude/skills).")] = None,
+    force: Annotated[bool, typer.Option("--force", help="Sobrescribe una instalación existente.")] = False,
+) -> None:
+    """Instala la skill /readcode de Claude Code (copia skills/readcode)."""
+    from readcode.install_skill import InstallSkillError, install_skill
+
+    try:
+        path = install_skill(dest, force=force)
+    except (InstallSkillError, OSError) as exc:
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(1)
+    typer.echo(f"Skill instalada en {path}")
