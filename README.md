@@ -64,7 +64,7 @@ La fuente de verdad son los JSON Schema de [`core/readcode/data/schemas/`](core/
 <kb>/<estudio>/study.json
 <kb>/<estudio>/blobs/<2 primeros>/<hash>.txt           contenido deduplicado por sha256
 <kb>/<estudio>/snapshots/<sha>/{tree.json, symbols.json, overview.md, issues.json,
-                                explain/<ruta>.json, dirs/<ruta>.json,
+                                dir-root.json, explain/<ruta>.json, dirs/<ruta>.json,
                                 tours/<id>.json, graph/graph.json, diagrams/}
 <kb>/<estudio>/diffs/<shaA>..<shaB>/{changes.json, explain.md, explain/<ruta>.json}
 ```
@@ -77,6 +77,10 @@ Marcadores en el Markdown de las explicaciones:
 | `[[ref:ruta:L10-31]]` | enlace a un rango de líneas |
 | `[[archify:nombre]]` | embebe `diagrams/nombre.html` |
 | ```` ```mermaid ```` | diagrama Mermaid en línea |
+
+`dir-root.json` es el resumen de la raíz del repo; vive fuera de `dirs/` para no chocar con ninguna ruta. Los kbs de v1 lo tenían en `dirs/_root.json`: se siguen leyendo, `validate` avisa (`legacy-root`) y `readcode migrate` los renombra.
+
+En `changes.json`, un cambio con `eolOnly: true` es un archivo modificado cuyos hunks están vacíos porque solo cambian los finales de línea (CRLF/LF); el visor lo etiqueta como tal. El campo es opcional: para recalcularlo en diffs viejos hay que volver a correr `readcode diff`.
 
 Las referencias se resuelven en este orden: mismo archivo, archivos importados, todo el repo; si son ambiguas se conservan todos los candidatos y `readcode validate` informa las rotas.
 
