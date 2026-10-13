@@ -1,0 +1,2 @@
+SELECT * FROM invoices WHERE user_id = 1;
+SELECT name FROM users ORDER BY name;

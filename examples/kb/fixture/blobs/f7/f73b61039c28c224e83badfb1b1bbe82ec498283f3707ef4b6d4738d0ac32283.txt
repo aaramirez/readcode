@@ -1,0 +1,5 @@
+from app.services.billing import refund
+
+
+def process_refund(user, amount):
+    return refund(user, amount)

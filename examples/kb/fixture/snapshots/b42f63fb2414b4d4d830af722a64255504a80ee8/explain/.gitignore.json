@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "path": ".gitignore",
+  "blobHash": "ab95578f5893445b0e94f70157ceb5b200e5a2055776335256e980669b53ccc4",
+  "summary": "Lista de patrones que git no debe versionar: los logs (`*.log`) y el archivo de secretos local\n(`.env`). Es tan relevante por lo que **no** ignora como por lo que sí: `node_modules/` no aparece,\ny por eso el repositorio terminó con `node_modules/junk.js` comiteado (readcode lo excluye por su\ncuenta, así que no aparece en este estudio).",
+  "blocks": [
+    {
+      "id": "b1",
+      "range": [
+        1,
+        2
+      ],
+      "title": "Logs y secretos fuera de git",
+      "body": "Dos reglas, dos motivos distintos:\n\n- `*.log` evita ruido: los logs cambian en cada ejecución y no aportan nada al historial.\n- `.env` es una regla de **seguridad**: ahí suelen vivir tokens y contraseñas locales. Si algún\n  día la autenticación de [[ref:app/services/auth.py#process]] usara un secreto real, debería\n  leerse de ese archivo y nunca del código.\n\nFalta una tercera regla habitual en un repo con TypeScript (`node_modules/`); su ausencia explica\npor qué hay dependencias versionadas por accidente."
+    }
+  ]
+}

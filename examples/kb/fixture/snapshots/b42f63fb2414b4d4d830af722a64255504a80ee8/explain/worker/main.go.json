@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "path": "worker/main.go",
+  "blobHash": "96d108fae97592c31e87806693c305aa72ffadd6becfdadc3bdbd37c33fe0fbe",
+  "summary": "Programa del worker en Go: crea una cola, encola un trabajo y lo saca de nuevo. Es un\nesqueleto que muestra cómo se usaría [[ref:worker/queue.go#Queue]].",
+  "blocks": [
+    {
+      "id": "b1",
+      "range": [
+        1,
+        3
+      ],
+      "title": "Paquete main e imports",
+      "body": "`package main` convierte el directorio en un ejecutable. Solo importa `fmt`; `NewQueue` no se\nimporta porque [[ref:worker/queue.go#NewQueue]] vive en el **mismo paquete**: en Go todos los\narchivos de un directorio con el mismo `package` comparten espacio de nombres."
+    },
+    {
+      "id": "b2",
+      "range": [
+        5,
+        9
+      ],
+      "title": "main(): ciclo push/pop",
+      "body": "Encola `\"job-1\"` con [[ref:worker/queue.go#Queue.Push]] y lo recupera con\n[[ref:worker/queue.go#Queue.Pop]]. Como la cola es FIFO, imprime `job-1`. Un worker real haría\n`Pop` en un bucle y procesaría cada trabajo; aquí solo se demuestra la API."
+    }
+  ]
+}

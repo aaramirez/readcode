@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "path": "web/src/index.ts",
+  "blobHash": "8b6b192ea20944df148b0847a63925e18a5837b9ba02a9dbbf29b27a68022061",
+  "summary": "Punto de entrada del frontend: pide la factura `\"1\"` y escribe su total en consola. Es un\nscript de demostración más que una interfaz.",
+  "blocks": [
+    {
+      "id": "b1",
+      "range": [
+        1,
+        3
+      ],
+      "title": "Llamada al arrancar",
+      "body": "Al cargarse el módulo se ejecuta [[ref:web/src/api.ts#fetchInvoice]] y, cuando la promesa se\nresuelve, se lee `r.data.total`. El acceso compila porque `r` está tipado como\n`ApiResponse<Invoice>`, aunque, como se explica en `api.ts`, nada garantiza que el servidor\ndevuelva esa forma.\n\nNo hay `.catch`: si la petición falla, el error queda como *unhandled rejection*."
+    }
+  ]
+}

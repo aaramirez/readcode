@@ -1,0 +1,9 @@
+package main
+
+import "fmt"
+
+func main() {
+	q := NewQueue()
+	q.Push("job-1")
+	fmt.Println(q.Pop())
+}

@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "path": "app/services/refunds.py",
+  "summary": "Archivo nuevo con una sola función, [[ref:app/services/refunds.py#process_refund]], que delega\nen `billing.refund`. Crea un módulo con nombre de caso de uso (\"reembolsos\") para que la lógica\npueda crecer aquí (autorización, límites) sin engordar `billing.py`. Al ser un archivo nuevo no\nhay hunks que comparar: todo su contenido es el cambio.",
+  "hunks": []
+}

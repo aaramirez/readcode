@@ -1,0 +1,11 @@
+import { ApiResponse, Invoice } from "./types";
+
+export async function fetchInvoice(id: string): Promise<ApiResponse<Invoice>> {
+  const res = await fetch(`/api/invoices/${id}`);
+  return res.json();
+}
+
+export async function refundInvoice(id: string): Promise<ApiResponse<Invoice>> {
+  const res = await fetch(`/api/invoices/${id}/refund`, { method: "POST" });
+  return res.json();
+}

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "path": "app/services",
+  "summary": "Servicios de la app Python. Cada módulo expone una función `process` con la misma idea\n(\"transforma la entrada del paso anterior\") pero significado distinto: autenticar\n([[ref:app/services/auth.py#process]]) o facturar ([[ref:app/services/billing.py#process]]).",
+  "children": [
+    {
+      "path": "app/services/auth.py",
+      "kind": "file",
+      "oneLine": "Token de juguete a partir del nombre; muta la petición."
+    },
+    {
+      "path": "app/services/billing.py",
+      "kind": "file",
+      "oneLine": "Suma importes y construye una Invoice; devuelve el total."
+    }
+  ]
+}

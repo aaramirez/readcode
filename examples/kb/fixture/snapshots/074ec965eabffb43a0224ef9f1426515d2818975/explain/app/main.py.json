@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "path": "app/main.py",
+  "blobHash": "3a898b6d25440f41e1dce7421361b9c67c67b89525235af1b7b45f2e81fd1938",
+  "summary": "Punto de entrada de la aplicación Python. Orquesta el único caso de uso del sistema:\n**autenticar a un usuario y facturarle una lista de importes**. No contiene lógica de negocio\npropia; delega todo en los servicios `auth` y `billing`, lo que lo convierte en el mejor lugar\npara empezar a leer.",
+  "blocks": [
+    {
+      "id": "b1",
+      "range": [
+        1,
+        1
+      ],
+      "title": "Importar módulos, no funciones",
+      "body": "Se importan los **módulos** `billing` y `auth`, no sus funciones. No es un detalle de estilo:\nambos módulos exponen una función llamada `process`\n([[ref:app/services/auth.py#process]] y [[ref:app/services/billing.py#process]]).\nCon `from app.services.auth import process` el segundo import pisaría al primero; calificando\ncon el nombre del módulo (`auth.process`, `billing.process`) las dos conviven sin ambigüedad."
+    },
+    {
+      "id": "b2",
+      "range": [
+        4,
+        7
+      ],
+      "title": "main(): el flujo completo en tres líneas",
+      "body": "El orden importa porque cada paso consume la salida del anterior:\n\n1. [[ref:app/main.py:L5]] — `auth.process` recibe un diccionario con el nombre y lo devuelve\n   **el mismo objeto** enriquecido con un `token`.\n2. [[ref:app/main.py:L6]] — `billing.process` usa ese usuario (solo lee `user[\"name\"]`) y la\n   lista `[10, 20, 30]`, y devuelve únicamente el total (60).\n3. Se imprime `total=60`.\n\n```mermaid\nsequenceDiagram\n    participant M as main()\n    participant A as auth.process\n    participant B as billing.process\n    participant I as Invoice\n    M->>A: {\"name\": \"ana\"}\n    A-->>M: {\"name\": \"ana\", \"token\": \"...\"}\n    M->>B: user, [10, 20, 30]\n    B->>I: Invoice(\"ana\", 60)\n    B-->>M: 60\n```\n\nObserva que el `token` que añade la autenticación nunca se verifica: `billing` no lo mira.\nEn este código la \"autenticación\" es decorativa; en un sistema real `billing` debería rechazar\nusuarios sin token válido."
+    },
+    {
+      "id": "b3",
+      "range": [
+        10,
+        11
+      ],
+      "title": "Guardia de ejecución directa",
+      "body": "`if __name__ == \"__main__\"` hace que `main()` solo corra al ejecutar el archivo\n(`python -m app.main`), no al importarlo. Así los tests u otros módulos pueden importar `main`\nsin disparar la facturación como efecto secundario."
+    }
+  ]
+}

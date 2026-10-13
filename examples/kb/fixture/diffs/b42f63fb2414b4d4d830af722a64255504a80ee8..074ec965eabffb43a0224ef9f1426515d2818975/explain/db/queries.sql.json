@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "path": "db/queries.sql",
+  "summary": "Se elimina el archivo de consultas de exploración. Eran dos `SELECT` escritos a mano\n([[ref:db/queries.sql:L1-2]]), uno con el `user_id` fijo, que ningún código usaba. Quitarlo deja\nen `db/` solo el esquema ([[ref:db/schema.sql#invoices]]), que es la fuente de verdad del modelo\nde datos. Al ser un borrado no hay hunks: desaparece el archivo entero.",
+  "hunks": []
+}

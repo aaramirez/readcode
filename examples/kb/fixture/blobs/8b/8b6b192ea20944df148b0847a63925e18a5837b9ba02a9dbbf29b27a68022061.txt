@@ -1,0 +1,3 @@
+import { fetchInvoice } from "./api";
+
+fetchInvoice("1").then((r) => console.log(r.data.total));

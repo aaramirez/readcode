@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "path": "db/queries.sql",
+  "blobHash": "88f9297ecabe1287d1b2641979cc2fccd5f3572842cb1cf81ba323594dc60409",
+  "summary": "Consultas sueltas de exploración sobre el esquema de [[ref:db/schema.sql#users]] y\n[[ref:db/schema.sql#invoices]]. No las usa ningún código del repo: son notas ejecutables.",
+  "blocks": [
+    {
+      "id": "b1",
+      "range": [
+        1,
+        2
+      ],
+      "title": "Dos consultas de ejemplo",
+      "body": "- La primera lista las facturas del usuario 1, con el `user_id` **escrito a mano**; en código\n  real sería un parámetro (`WHERE user_id = ?`) para evitar inyección SQL.\n- La segunda lista nombres de usuario ordenados.\n\nQue estén en un archivo aparte y no en la app indica que el acceso a datos todavía no existe:\nla app Python no tiene capa de persistencia."
+    }
+  ]
+}

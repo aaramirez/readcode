@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "path": "web/src/types.ts",
+  "blobHash": "dc169d3263a0e4733c04ca386294cd9f0a3db6ef3f257c287a8291f14e151165",
+  "summary": "Contratos de datos compartidos por el frontend. Duplican **a mano** la forma del modelo\nPython [[ref:app/models.py#Invoice]]: si el backend renombra un campo, este archivo no se\nentera. Es la frontera entre los dos lenguajes.",
+  "blocks": [
+    {
+      "id": "b1",
+      "range": [
+        1,
+        4
+      ],
+      "title": "Invoice: espejo del modelo Python",
+      "body": "Mismos campos que la clase Python (`owner`, `total`) con tipos explícitos. Al ser una\n`interface`, no genera código: solo existe para el compilador."
+    },
+    {
+      "id": "b2",
+      "range": [
+        6,
+        9
+      ],
+      "title": "ApiResponse<T>: sobre genérico",
+      "body": "Envuelve cualquier carga útil con un indicador `ok`. El parámetro `T` permite reutilizar el\nmismo sobre para facturas, usuarios o listas (`ApiResponse<Invoice[]>`), de modo que el código\nque comprueba `ok` se escribe una sola vez."
+    }
+  ]
+}

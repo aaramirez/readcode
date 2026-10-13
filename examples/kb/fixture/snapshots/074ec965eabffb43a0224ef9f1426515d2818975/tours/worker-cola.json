@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "id": "worker-cola",
+  "title": "El worker y su cola en Go",
+  "description": "Cómo usa el worker la cola FIFO de [[ref:worker/queue.go#Queue]] y qué límites tiene esa implementación.",
+  "steps": [
+    {
+      "path": "worker/main.go",
+      "range": [
+        5,
+        9
+      ],
+      "title": "El programa: push y pop",
+      "body": "`main()` crea la cola, encola `\"job-1\"` y lo vuelve a sacar. No importa nada para usar\n`NewQueue`: está en el mismo paquete `main`."
+    },
+    {
+      "path": "worker/queue.go",
+      "range": [
+        3,
+        5
+      ],
+      "title": "La estructura",
+      "body": "La cola es un slice de strings privado (`items` en minúscula). Solo los métodos pueden tocarlo."
+    },
+    {
+      "path": "worker/queue.go",
+      "range": [
+        7,
+        9
+      ],
+      "title": "El constructor",
+      "body": "Devuelve un puntero a una cola vacía. El slice `nil` ya es utilizable con `append`."
+    },
+    {
+      "path": "worker/queue.go",
+      "range": [
+        11,
+        13
+      ],
+      "title": "Encolar",
+      "body": "`append` puede devolver un slice nuevo; por eso el receptor es `*Queue` y el resultado se\nguarda en `q.items`."
+    },
+    {
+      "path": "worker/queue.go",
+      "range": [
+        15,
+        19
+      ],
+      "title": "Desencolar y sus riesgos",
+      "body": "Saca el primero y avanza el slice. Con la cola vacía, `q.items[0]` provoca un *panic*; y sin\nmutex no es segura entre goroutines. Ver [[ref:worker/queue.go#Queue.Pop]]."
+    }
+  ]
+}

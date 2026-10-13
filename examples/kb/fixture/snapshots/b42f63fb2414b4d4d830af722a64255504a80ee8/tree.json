@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "sha": "b42f63fb2414b4d4d830af722a64255504a80ee8",
+  "files": [
+    {
+      "path": ".gitignore",
+      "blob": "ab95578f5893445b0e94f70157ceb5b200e5a2055776335256e980669b53ccc4",
+      "language": null,
+      "lines": 2,
+      "bytes": 11,
+      "indexed": false
+    },
+    {
+      "path": "README.md",
+      "blob": "c28f52b915a96c70de6acdd2577974b71dada0902faa1efa322ffc9e45d21fe9",
+      "language": "markdown",
+      "lines": 3,
+      "bytes": 63,
+      "indexed": false
+    },
+    {
+      "path": "app/main.py",
+      "blob": "3a898b6d25440f41e1dce7421361b9c67c67b89525235af1b7b45f2e81fd1938",
+      "language": "python",
+      "lines": 11,
+      "bytes": 210,
+      "indexed": true
+    },
+    {
+      "path": "app/models.py",
+      "blob": "17ac3973443a58674692275901828080c16b45636bad7e04e2df62bf13137d4a",
+      "language": "python",
+      "lines": 7,
+      "bytes": 177,
+      "indexed": true
+    },
+    {
+      "path": "app/services/auth.py",
+      "blob": "5ab7b12514cb5aa87fd9d4ea34d25407ffe7b241d20f67d19d6aeb9e725db80d",
+      "language": "python",
+      "lines": 7,
+      "bytes": 145,
+      "indexed": true
+    },
+    {
+      "path": "app/services/billing.py",
+      "blob": "146ecca5d11de0f54210f70fba35010ab03b29a5ed47e3eb0028a61da64b344a",
+      "language": "python",
+      "lines": 10,
+      "bytes": 192,
+      "indexed": true
+    },
+    {
+      "path": "db/queries.sql",
+      "blob": "88f9297ecabe1287d1b2641979cc2fccd5f3572842cb1cf81ba323594dc60409",
+      "language": "sql",
+      "lines": 2,
+      "bytes": 80,
+      "indexed": true
+    },
+    {
+      "path": "db/schema.sql",
+      "blob": "0fe0b3d3eeee8bd10b5228bd655a1c34586bc7390ed15feb06067a9dab4b4c72",
+      "language": "sql",
+      "lines": 10,
+      "bytes": 199,
+      "indexed": true
+    },
+    {
+      "path": "web/src/api.ts",
+      "blob": "c39d739a52fdbd99c8531caac4da84d11d64f3109dfad4c4d33c8af9759e40c7",
+      "language": "typescript",
+      "lines": 6,
+      "bytes": 202,
+      "indexed": true
+    },
+    {
+      "path": "web/src/index.ts",
+      "blob": "8b6b192ea20944df148b0847a63925e18a5837b9ba02a9dbbf29b27a68022061",
+      "language": "typescript",
+      "lines": 3,
+      "bytes": 97,
+      "indexed": true
+    },
+    {
+      "path": "web/src/types.ts",
+      "blob": "dc169d3263a0e4733c04ca386294cd9f0a3db6ef3f257c287a8291f14e151165",
+      "language": "typescript",
+      "lines": 9,
+      "bytes": 126,
+      "indexed": true
+    },
+    {
+      "path": "worker/main.go",
+      "blob": "96d108fae97592c31e87806693c305aa72ffadd6becfdadc3bdbd37c33fe0fbe",
+      "language": "go",
+      "lines": 9,
+      "bytes": 100,
+      "indexed": true
+    },
+    {
+      "path": "worker/queue.go",
+      "blob": "8e2facf12fa7f6c30d4a6e35d962dd1314823ff01c12c0a849bcbebebeb0c838",
+      "language": "go",
+      "lines": 19,
+      "bytes": 259,
+      "indexed": true
+    }
+  ],
+  "excluded": [
+    {
+      "path": "assets/logo.bin",
+      "reason": "binary"
+    },
+    {
+      "path": "node_modules/junk.js",
+      "reason": "default"
+    },
+    {
+      "path": "package-lock.json",
+      "reason": "default"
+    }
+  ]
+}

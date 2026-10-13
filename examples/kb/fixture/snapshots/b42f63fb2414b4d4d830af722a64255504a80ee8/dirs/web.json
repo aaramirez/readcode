@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "path": "web",
+  "summary": "Frontend web. Solo contiene `src/`; no hay configuración de build ni `package.json` propio,\nlo que confirma que es una pieza de demostración.",
+  "children": [
+    {
+      "path": "web/src",
+      "kind": "dir",
+      "oneLine": "Tipos, cliente HTTP y punto de entrada del frontend."
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "name": "fixture",
+  "title": "Fixture multilenguaje",
+  "repo": {
+    "url": "examples/fixture-repo"
+  },
+  "language": "es",
+  "exclude": [],
+  "tools": {
+    "graphify": true,
+    "archify": true
+  },
+  "snapshots": [
+    {
+      "sha": "b42f63fb2414b4d4d830af722a64255504a80ee8",
+      "date": "2026-01-10T10:00:00Z",
+      "message": "initial",
+      "status": "explained"
+    },
+    {
+      "sha": "074ec965eabffb43a0224ef9f1426515d2818975",
+      "date": "2026-01-11T10:00:00Z",
+      "message": "feature: refunds",
+      "status": "explained"
+    }
+  ]
+}

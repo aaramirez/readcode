@@ -1,0 +1,7 @@
+class Invoice:
+    def __init__(self, owner, total):
+        self.owner = owner
+        self.total = total
+
+    def describe(self):
+        return f"{self.owner}: {self.total}"

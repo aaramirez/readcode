@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "path": "",
+  "summary": "Repositorio de ejemplo con **tres programas independientes** en tres lenguajes y un esquema\nSQL. La pieza central es la app Python de facturación (`app/`); el frontend (`web/`) consume una\nAPI de facturas que no está en el repo, y el worker (`worker/`) es un experimento aislado.\nVer la [[archify:arquitectura]] para el mapa completo.",
+  "children": [
+    {
+      "path": ".gitignore",
+      "kind": "file",
+      "oneLine": "Ignora logs y .env (pero no node_modules)."
+    },
+    {
+      "path": "README.md",
+      "kind": "file",
+      "oneLine": "Presentación del repositorio de prueba."
+    },
+    {
+      "path": "app",
+      "kind": "dir",
+      "oneLine": "App Python de facturación: main, servicios y modelo."
+    },
+    {
+      "path": "db",
+      "kind": "dir",
+      "oneLine": "Esquema SQL y consultas de exploración."
+    },
+    {
+      "path": "web",
+      "kind": "dir",
+      "oneLine": "Frontend TypeScript que consulta facturas por HTTP."
+    },
+    {
+      "path": "worker",
+      "kind": "dir",
+      "oneLine": "Worker Go con una cola FIFO en memoria."
+    }
+  ]
+}

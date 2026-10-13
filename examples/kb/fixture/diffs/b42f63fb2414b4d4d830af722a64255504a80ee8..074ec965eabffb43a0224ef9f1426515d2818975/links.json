@@ -1,0 +1,136 @@
+{
+  "schemaVersion": 1,
+  "sha": "074ec965eabffb43a0224ef9f1426515d2818975",
+  "docs": {
+    "explain.md": [
+      {
+        "raw": "[[ref:app/services/billing.py#refund]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/services/billing.py",
+        "range": [
+          13,
+          15
+        ]
+      },
+      {
+        "raw": "[[ref:app/models.py#Invoice]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/models.py",
+        "range": [
+          1,
+          7
+        ]
+      },
+      {
+        "raw": "[[ref:app/services/refunds.py#process_refund]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/services/refunds.py",
+        "range": [
+          4,
+          5
+        ]
+      },
+      {
+        "raw": "[[ref:db/queries.sql:L1-2]]",
+        "kind": "lines",
+        "status": "exact",
+        "target": "db/queries.sql",
+        "range": [
+          1,
+          2
+        ]
+      },
+      {
+        "raw": "[[ref:app/services/auth.py#process]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/services/auth.py",
+        "range": [
+          5,
+          7
+        ]
+      }
+    ],
+    "explain/app/services/billing.py.json": [
+      {
+        "raw": "[[ref:app/services/billing.py:L13-15]]",
+        "kind": "lines",
+        "status": "exact",
+        "target": "app/services/billing.py",
+        "range": [
+          13,
+          15
+        ]
+      },
+      {
+        "raw": "[[ref:app/services/billing.py#refund]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/services/billing.py",
+        "range": [
+          13,
+          15
+        ]
+      }
+    ],
+    "explain/app/services/refunds.py.json": [
+      {
+        "raw": "[[ref:app/services/refunds.py#process_refund]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/services/refunds.py",
+        "range": [
+          4,
+          5
+        ]
+      }
+    ],
+    "explain/db/queries.sql.json": [
+      {
+        "raw": "[[ref:db/queries.sql:L1-2]]",
+        "kind": "lines",
+        "status": "exact",
+        "target": "db/queries.sql",
+        "range": [
+          1,
+          2
+        ]
+      },
+      {
+        "raw": "[[ref:db/schema.sql#invoices]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "db/schema.sql",
+        "range": [
+          6,
+          10
+        ]
+      }
+    ],
+    "explain/web/src/api.ts.json": [
+      {
+        "raw": "[[ref:web/src/api.ts#refundInvoice]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "web/src/api.ts",
+        "range": [
+          8,
+          11
+        ]
+      },
+      {
+        "raw": "[[ref:web/src/api.ts#fetchInvoice]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "web/src/api.ts",
+        "range": [
+          3,
+          6
+        ]
+      }
+    ]
+  }
+}

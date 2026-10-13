@@ -1,0 +1,9 @@
+export interface Invoice {
+  owner: string;
+  total: number;
+}
+
+export interface ApiResponse<T> {
+  ok: boolean;
+  data: T;
+}

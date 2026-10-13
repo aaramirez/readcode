@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "path": "worker/queue.go",
+  "blobHash": "8e2facf12fa7f6c30d4a6e35d962dd1314823ff01c12c0a849bcbebebeb0c838",
+  "summary": "Cola FIFO de strings en memoria implementada sobre un slice. Es mínima a propósito y tiene\nlímites importantes (vacía, concurrencia, memoria) que conviene conocer antes de usarla en un\nworker de verdad.",
+  "blocks": [
+    {
+      "id": "b1",
+      "range": [
+        3,
+        5
+      ],
+      "title": "Queue: un slice privado",
+      "body": "`items` empieza en minúscula, así que es **privado** al paquete: desde fuera solo se puede usar\nla cola a través de sus métodos."
+    },
+    {
+      "id": "b2",
+      "range": [
+        7,
+        9
+      ],
+      "title": "NewQueue(): constructor",
+      "body": "Devuelve `&Queue{}`, un puntero a una cola con `items` en `nil`. En Go un slice `nil` funciona\ncon `append` y `len`, por eso no hace falta inicializarlo. Se devuelve un puntero para que todas\nlas llamadas operen sobre la misma cola."
+    },
+    {
+      "id": "b3",
+      "range": [
+        11,
+        13
+      ],
+      "title": "Push(): receptor puntero obligatorio",
+      "body": "`append` puede **reasignar** el array subyacente y devuelve un slice nuevo; hay que guardarlo\nen `q.items`. Con un receptor por valor (`func (q Queue)`) la asignación se haría sobre una\ncopia y el elemento se perdería. Por eso `Push` y `Pop` usan `*Queue`."
+    },
+    {
+      "id": "b4",
+      "range": [
+        15,
+        19
+      ],
+      "title": "Pop(): FIFO por re-slicing",
+      "body": "Toma el primer elemento y avanza el slice con `q.items[1:]`.\n\n```mermaid\nflowchart LR\n    A[\"items = [j1, j2, j3]\"] -->|\"Pop() devuelve j1\"| B[\"items = [j2, j3]\"]\n    B -->|\"Pop() devuelve j2\"| C[\"items = [j3]\"]\n```\n\nTres límites:\n\n- **Cola vacía**: `q.items[0]` provoca un *panic* (index out of range). Lo idiomático sería\n  devolver `(string, bool)`.\n- **Memoria**: re-slicing no libera el array; los elementos ya sacados siguen referenciados hasta\n  que un `append` reasigne.\n- **Concurrencia**: no hay `sync.Mutex`; dos goroutines haciendo `Push`/`Pop` a la vez\n  corromperían el slice."
+    }
+  ]
+}

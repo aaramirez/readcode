@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "id": "flujo-facturacion",
+  "title": "Flujo de facturación",
+  "description": "Recorre la app Python desde [[ref:app/main.py#main]] hasta el total impreso, pasando por autenticación, facturación y el modelo `Invoice`.",
+  "steps": [
+    {
+      "path": "app/main.py",
+      "range": [
+        4,
+        7
+      ],
+      "title": "Todo empieza en main()",
+      "body": "`main()` es el guion completo: autenticar y facturar. Las dos llamadas se distinguen por el\nmódulo porque ambas funciones se llaman `process`. Las dos llamadas están en [[ref:app/main.py:L5-6]]; sigamos primero la de la línea 5."
+    },
+    {
+      "path": "app/services/auth.py",
+      "range": [
+        5,
+        7
+      ],
+      "title": "Autenticación: añadir un token",
+      "body": "`process` recibe `{\"name\": \"ana\"}`, le añade un token calculado por\n[[ref:app/services/auth.py#hash_token]] y devuelve **el mismo diccionario**. El token no se\nvolverá a mirar en todo el flujo."
+    },
+    {
+      "path": "app/services/billing.py",
+      "range": [
+        8,
+        10
+      ],
+      "title": "Facturación: del usuario al total",
+      "body": "De vuelta en `main()`, el usuario autenticado pasa a facturación junto con los importes.\nAquí se combinan el nombre del usuario y el resultado de\n[[ref:app/services/billing.py#compute_total]]."
+    },
+    {
+      "path": "app/models.py",
+      "range": [
+        1,
+        4
+      ],
+      "title": "El modelo Invoice",
+      "body": "La factura solo guarda dueño y total. No valida nada: cualquier regla de negocio vive en\n`billing`. Su forma se repite en [[ref:web/src/types.ts#Invoice]] y en la tabla\n[[ref:db/schema.sql#invoices]]."
+    },
+    {
+      "path": "app/main.py",
+      "range": [
+        6,
+        7
+      ],
+      "title": "Vuelta a main(): imprimir el total",
+      "body": "`billing.process` devuelve solo el total (60), que se imprime. El objeto `Invoice` ya se ha\ndescartado: el resultado observable del programa es una línea `total=60`."
+    }
+  ]
+}

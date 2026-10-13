@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "from": "b42f63fb2414b4d4d830af722a64255504a80ee8",
+  "to": "074ec965eabffb43a0224ef9f1426515d2818975",
+  "files": [
+    {
+      "path": "app/services/billing.py",
+      "status": "modified",
+      "fromBlob": "146ecca5d11de0f54210f70fba35010ab03b29a5ed47e3eb0028a61da64b344a",
+      "toBlob": "c33ad830db7326b15a6477cb1558b0a7d1d0098436c6be7a1d91944d5a0c7834",
+      "hunks": [
+        {
+          "fromRange": null,
+          "toRange": [
+            11,
+            15
+          ],
+          "header": "@@ -11,0 +11,5 @@"
+        }
+      ]
+    },
+    {
+      "path": "app/services/refunds.py",
+      "status": "added",
+      "toBlob": "f73b61039c28c224e83badfb1b1bbe82ec498283f3707ef4b6d4738d0ac32283",
+      "hunks": []
+    },
+    {
+      "path": "db/queries.sql",
+      "status": "deleted",
+      "fromBlob": "88f9297ecabe1287d1b2641979cc2fccd5f3572842cb1cf81ba323594dc60409",
+      "hunks": []
+    },
+    {
+      "path": "web/src/api.ts",
+      "status": "modified",
+      "fromBlob": "c39d739a52fdbd99c8531caac4da84d11d64f3109dfad4c4d33c8af9759e40c7",
+      "toBlob": "6d7d2ad5acb463beeee84a8762cfad394de8ef090e186b624c70f2c1b58b9607",
+      "hunks": [
+        {
+          "fromRange": null,
+          "toRange": [
+            7,
+            11
+          ],
+          "header": "@@ -7,0 +7,5 @@"
+        }
+      ]
+    }
+  ]
+}

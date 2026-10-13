@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "path": "app/services/auth.py",
+  "blobHash": "5ab7b12514cb5aa87fd9d4ea34d25407ffe7b241d20f67d19d6aeb9e725db80d",
+  "summary": "\"Autenticación\" de juguete: genera un token a partir del nombre del usuario y lo pega en el\ndiccionario de la petición. Sirve para mostrar la forma del flujo, pero **no es seguro ni\nestable**; los dos bloques explican por qué.",
+  "blocks": [
+    {
+      "id": "b1",
+      "range": [
+        1,
+        2
+      ],
+      "title": "hash_token(): un hash que cambia en cada ejecución",
+      "body": "Usa el `hash()` incorporado de Python. Dos problemas:\n\n- **No es criptográfico**: es rápido y predecible, pensado para diccionarios, no para secretos.\n- **No es estable entre procesos**: desde Python 3.3 el hash de los `str` se aleatoriza en cada\n  arranque (`PYTHONHASHSEED`). El mismo nombre produce tokens distintos en dos ejecuciones, así\n  que el token no podría guardarse y verificarse después.\n\nPara un token real se usaría `secrets.token_urlsafe()` o un HMAC con una clave leída de `.env`."
+    },
+    {
+      "id": "b2",
+      "range": [
+        5,
+        7
+      ],
+      "title": "process(): muta y devuelve el mismo diccionario",
+      "body": "`process` **modifica la petición recibida** (añade `request[\"token\"]`) y además la devuelve.\nDevolverla permite encadenar (`user = auth.process(...)` en [[ref:app/main.py:L5]]), pero\nquien llama debe saber que su diccionario original también cambió: no hay copia.\n\nComparte nombre con [[ref:app/services/billing.py#process]]; por eso `main.py` llama a ambas\ncalificadas con el módulo."
+    }
+  ]
+}

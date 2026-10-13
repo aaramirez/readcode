@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Fixture multilenguaje: arquitectura",
+    "subtitle": "Tres programas independientes (Python, TypeScript, Go) y un esquema SQL",
+    "output": "arquitectura.html",
+    "quality_profile": "standard"
+  },
+  "components": [
+    { "id": "navegador", "type": "external", "label": "Navegador", "sublabel": "ejecuta index.ts", "pos": [40, 110], "size": [130, 60] },
+    { "id": "web-index", "type": "frontend", "label": "index.ts", "sublabel": "punto de entrada web", "pos": [250, 110], "size": [130, 60] },
+    { "id": "web-api", "type": "frontend", "label": "api.ts", "sublabel": "fetchInvoice()", "pos": [460, 110], "size": [130, 60], "tag": "tipos: types.ts" },
+    { "id": "http-api", "type": "external", "label": "API HTTP", "sublabel": "/api/invoices (fuera del repo)", "pos": [670, 110], "size": [150, 60] },
+    { "id": "py-main", "type": "backend", "label": "app/main.py", "sublabel": "main()", "pos": [250, 300], "size": [130, 60] },
+    { "id": "py-auth", "type": "security", "label": "auth.py", "sublabel": "process(request)", "pos": [460, 240], "size": [130, 60], "tag": "token = hash(nombre)" },
+    { "id": "py-billing", "type": "backend", "label": "billing.py", "sublabel": "process(user, items)", "pos": [460, 360], "size": [130, 60] },
+    { "id": "py-models", "type": "backend", "label": "models.py", "sublabel": "class Invoice", "pos": [670, 360], "size": [130, 60] },
+    { "id": "sql-schema", "type": "database", "label": "db/schema.sql", "sublabel": "users, invoices", "pos": [880, 360], "size": [130, 60] },
+    { "id": "go-main", "type": "backend", "label": "worker/main.go", "sublabel": "main()", "pos": [250, 520], "size": [130, 60] },
+    { "id": "go-queue", "type": "messagebus", "label": "queue.go", "sublabel": "Queue FIFO en memoria", "pos": [460, 520], "size": [150, 60] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "web/ (TypeScript)", "wraps": ["web-index", "web-api"] },
+    { "kind": "region", "label": "app/ (Python)", "wraps": ["py-main", "py-auth", "py-billing", "py-models"] },
+    { "kind": "region", "label": "worker/ (Go)", "wraps": ["go-main", "go-queue"] }
+  ],
+  "connections": [
+    { "id": "nav-index", "from": "navegador", "to": "web-index", "label": "carga" },
+    { "id": "index-api", "from": "web-index", "to": "web-api", "label": "importa", "variant": "emphasis" },
+    { "id": "api-http", "from": "web-api", "to": "http-api", "label": "GET", "variant": "dashed" },
+    { "id": "main-auth", "from": "py-main", "to": "py-auth", "label": "1. autentica", "variant": "emphasis" },
+    { "id": "main-billing", "from": "py-main", "to": "py-billing", "label": "2. factura", "variant": "emphasis" },
+    { "id": "billing-models", "from": "py-billing", "to": "py-models", "label": "Invoice(...)" },
+    { "id": "models-schema", "from": "py-models", "to": "sql-schema", "label": "espejo", "variant": "dashed" },
+    { "id": "gomain-queue", "from": "go-main", "to": "go-queue", "label": "Push / Pop" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Web", "items": ["index.ts pide la factura 1 y muestra el total", "La API HTTP no vive en este repo"] },
+    { "dot": "emerald", "title": "Facturación (Python)", "items": ["main() encadena auth.process y billing.process", "Invoice es el único modelo de dominio"] },
+    { "dot": "amber", "title": "Worker (Go)", "items": ["Cola FIFO en memoria sin concurrencia", "No comparte código con app/ ni web/"] }
+  ]
+}

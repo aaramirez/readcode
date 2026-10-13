@@ -1,0 +1,14 @@
+sequenceDiagram
+    participant M as app/main.py main()
+    participant A as auth.process
+    participant B as billing.process
+    participant C as compute_total
+    participant I as Invoice
+    M->>A: {"name": "ana"}
+    A-->>M: usuario + token
+    M->>B: usuario, [10, 20, 30]
+    B->>C: [10, 20, 30]
+    C-->>B: 60
+    B->>I: Invoice("ana", 60)
+    B-->>M: 60
+    M->>M: print("total=60")

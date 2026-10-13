@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "path": "app/services/billing.py",
+  "blobHash": "146ecca5d11de0f54210f70fba35010ab03b29a5ed47e3eb0028a61da64b344a",
+  "summary": "Lógica de facturación: suma importes y construye una [[ref:app/models.py#Invoice]]. Separa\nel **cálculo** (`compute_total`, una función pura) de la **construcción del modelo**\n(`process`), lo que permite probar el cálculo sin tocar el modelo.",
+  "blocks": [
+    {
+      "id": "b1",
+      "range": [
+        1,
+        1
+      ],
+      "title": "Dependencia del modelo",
+      "body": "Importa la clase `Invoice` directamente (a diferencia de `main.py`, que importa módulos).\nAquí no hay conflicto de nombres, así que la forma corta es la más legible."
+    },
+    {
+      "id": "b2",
+      "range": [
+        4,
+        5
+      ],
+      "title": "compute_total(): el cálculo puro",
+      "body": "`sum(items)` sobre enteros. Que sea una función aparte, aunque sea de una línea, deja un punto\núnico donde añadir impuestos o descuentos sin tocar `process`. Con importes en coma flotante\nconvendría `decimal.Decimal`; el esquema SQL usa `INTEGER` para `total`\n([[ref:db/schema.sql:L9]]), lo que sugiere importes en unidades enteras (p. ej. céntimos)."
+    },
+    {
+      "id": "b3",
+      "range": [
+        8,
+        10
+      ],
+      "title": "process(): de usuario e importes a total",
+      "body": "Construye la factura con el nombre del usuario y el total calculado, y **devuelve solo el\ntotal**: el objeto `Invoice` se crea y se descarta en la misma función.\n\n```mermaid\nflowchart LR\n    U[\"user dict\"] -->|\"user['name']\"| I[\"Invoice(owner, total)\"]\n    L[\"items\"] --> C[\"compute_total\"] -->|\"sum\"| I\n    I -->|\".total\"| R((\"return\"))\n```\n\n¿Por qué crear el objeto si se tira? Porque el modelo es el lugar natural para crecer\n(guardar la factura, emitir un evento, validar). Hoy es un paso intermedio; el contrato público\nde la función es \"dame un usuario e importes y te doy el total\"."
+    }
+  ]
+}

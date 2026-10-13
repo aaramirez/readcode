@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "path": "app/services",
+  "summary": "Servicios de la app Python. `auth` y `billing` exponen cada uno una función `process`\n([[ref:app/services/auth.py#process]], [[ref:app/services/billing.py#process]]); `refunds`\nañade un punto de entrada propio para reembolsos que delega en\n[[ref:app/services/billing.py#refund]].",
+  "children": [
+    {
+      "path": "app/services/auth.py",
+      "kind": "file",
+      "oneLine": "Token de juguete a partir del nombre; muta la petición."
+    },
+    {
+      "path": "app/services/billing.py",
+      "kind": "file",
+      "oneLine": "Factura (process) y reembolsa (refund) usando Invoice."
+    },
+    {
+      "path": "app/services/refunds.py",
+      "kind": "file",
+      "oneLine": "Fachada process_refund() sobre billing.refund."
+    }
+  ]
+}

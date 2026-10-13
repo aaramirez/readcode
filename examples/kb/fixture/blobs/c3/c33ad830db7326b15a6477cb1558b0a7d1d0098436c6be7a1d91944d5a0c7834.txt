@@ -1,0 +1,15 @@
+from app.models import Invoice
+
+
+def compute_total(items):
+    return sum(items)
+
+
+def process(user, items):
+    invoice = Invoice(user["name"], compute_total(items))
+    return invoice.total
+
+
+def refund(user, amount):
+    invoice = Invoice(user["name"], -amount)
+    return invoice.total

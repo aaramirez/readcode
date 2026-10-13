@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "path": "app/services/refunds.py",
+  "blobHash": "f73b61039c28c224e83badfb1b1bbe82ec498283f3707ef4b6d4738d0ac32283",
+  "summary": "Servicio de reembolsos: una **fachada** de una función sobre\n[[ref:app/services/billing.py#refund]]. Existe para que el resto de la app pida reembolsos a un\nmódulo con nombre propio, aunque hoy la lógica siga viviendo en `billing`.",
+  "blocks": [
+    {
+      "id": "b1",
+      "range": [
+        1,
+        1
+      ],
+      "title": "Importa refund desde billing",
+      "body": "Importa la función directamente. Como este módulo **importa** `billing.py`, una referencia sin\nruta como [[ref:#process]] se resuelve aquí sin ambigüedad al `process` de facturación: la\nbúsqueda mira primero el propio archivo y luego los importados. Compáralo con `models.py`,\ndonde la misma referencia es ambigua."
+    },
+    {
+      "id": "b2",
+      "range": [
+        4,
+        5
+      ],
+      "title": "process_refund(): delegación pura",
+      "body": "Reenvía los argumentos a `refund` sin añadir nada. ¿Por qué no llamar a `refund`\ndirectamente? Porque fija el **punto de entrada** del caso de uso: si mañana los reembolsos\nnecesitan autorización o un límite, se añade aquí sin tocar `billing`.\n\nOjo: se llama `process_refund` y no `process`, lo que evita una tercera función `process` en\n`app/services/`. Ningún código la invoca todavía; [[ref:app/main.py#main]] sigue solo\nfacturando."
+    }
+  ]
+}

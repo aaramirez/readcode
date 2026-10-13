@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "path": "app",
+  "summary": "Aplicación Python de facturación y reembolsos. `main.py` orquesta, `services/` contiene la\nlógica y `models.py` el modelo de dominio. Las dependencias van en una sola dirección:\n`main → services → models`. El reembolso ya existe en `services/` pero `main.py` todavía no lo usa.",
+  "children": [
+    {
+      "path": "app/main.py",
+      "kind": "file",
+      "oneLine": "Punto de entrada: autentica y factura a un usuario de ejemplo."
+    },
+    {
+      "path": "app/models.py",
+      "kind": "file",
+      "oneLine": "Clase Invoice (owner, total); un total negativo es un reembolso."
+    },
+    {
+      "path": "app/services",
+      "kind": "dir",
+      "oneLine": "Servicios auth, billing y refunds."
+    }
+  ]
+}

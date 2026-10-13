@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "path": "app/services/billing.py",
+  "summary": "Se añade `refund()` al final del módulo, sin tocar `compute_total` ni `process`. Al añadir y no\nmodificar, el riesgo de romper la facturación existente es nulo.",
+  "hunks": [
+    {
+      "index": 0,
+      "body": "Las líneas [[ref:app/services/billing.py:L13-15]] definen\n[[ref:app/services/billing.py#refund]]: copia la estructura de `process` pero recibe un importe\nya calculado y lo **niega** al construir la `Invoice`. No pasa por `compute_total` porque un\nreembolso suele ser de una cantidad concreta, no de una lista de conceptos. No hay validación de\nsigno: `refund(user, -10)` crearía una factura positiva."
+    }
+  ]
+}

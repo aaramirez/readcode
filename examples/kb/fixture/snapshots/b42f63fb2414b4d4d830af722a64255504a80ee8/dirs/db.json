@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "path": "db",
+  "summary": "SQL del sistema: el esquema de tablas y un archivo de consultas de exploración. Ningún\nprograma del repo se conecta a la base de datos todavía.",
+  "children": [
+    {
+      "path": "db/queries.sql",
+      "kind": "file",
+      "oneLine": "Consultas de ejemplo sin parametrizar."
+    },
+    {
+      "path": "db/schema.sql",
+      "kind": "file",
+      "oneLine": "Tablas users e invoices unidas por clave foránea."
+    }
+  ]
+}

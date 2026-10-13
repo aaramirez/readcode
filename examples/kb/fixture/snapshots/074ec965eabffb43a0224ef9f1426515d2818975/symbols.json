@@ -1,0 +1,483 @@
+{
+  "schemaVersion": 1,
+  "sha": "074ec965eabffb43a0224ef9f1426515d2818975",
+  "files": {
+    "app/main.py": {
+      "defs": [
+        {
+          "name": "main",
+          "kind": "function",
+          "range": [
+            4,
+            7
+          ]
+        }
+      ],
+      "refs": [
+        {
+          "name": "process",
+          "line": 5,
+          "col": 16
+        },
+        {
+          "name": "process",
+          "line": 6,
+          "col": 20
+        },
+        {
+          "name": "print",
+          "line": 7,
+          "col": 4
+        },
+        {
+          "name": "main",
+          "line": 11,
+          "col": 4
+        }
+      ],
+      "imports": [
+        {
+          "module": "app.services.billing",
+          "line": 1,
+          "resolved": "app/services/billing.py"
+        },
+        {
+          "module": "app.services.auth",
+          "line": 1,
+          "resolved": "app/services/auth.py"
+        }
+      ]
+    },
+    "app/models.py": {
+      "defs": [
+        {
+          "name": "Invoice",
+          "kind": "class",
+          "range": [
+            1,
+            7
+          ]
+        },
+        {
+          "name": "__init__",
+          "kind": "method",
+          "range": [
+            2,
+            4
+          ],
+          "parent": "Invoice"
+        },
+        {
+          "name": "describe",
+          "kind": "method",
+          "range": [
+            6,
+            7
+          ],
+          "parent": "Invoice"
+        }
+      ],
+      "refs": [],
+      "imports": []
+    },
+    "app/services/auth.py": {
+      "defs": [
+        {
+          "name": "hash_token",
+          "kind": "function",
+          "range": [
+            1,
+            2
+          ]
+        },
+        {
+          "name": "process",
+          "kind": "function",
+          "range": [
+            5,
+            7
+          ]
+        }
+      ],
+      "refs": [
+        {
+          "name": "str",
+          "line": 2,
+          "col": 11
+        },
+        {
+          "name": "hash",
+          "line": 2,
+          "col": 15
+        },
+        {
+          "name": "hash_token",
+          "line": 6,
+          "col": 23
+        }
+      ],
+      "imports": []
+    },
+    "app/services/billing.py": {
+      "defs": [
+        {
+          "name": "compute_total",
+          "kind": "function",
+          "range": [
+            4,
+            5
+          ]
+        },
+        {
+          "name": "process",
+          "kind": "function",
+          "range": [
+            8,
+            10
+          ]
+        },
+        {
+          "name": "refund",
+          "kind": "function",
+          "range": [
+            13,
+            15
+          ]
+        }
+      ],
+      "refs": [
+        {
+          "name": "sum",
+          "line": 5,
+          "col": 11
+        },
+        {
+          "name": "Invoice",
+          "line": 9,
+          "col": 14
+        },
+        {
+          "name": "compute_total",
+          "line": 9,
+          "col": 36
+        },
+        {
+          "name": "Invoice",
+          "line": 14,
+          "col": 14
+        }
+      ],
+      "imports": [
+        {
+          "module": "app.models",
+          "line": 1,
+          "resolved": "app/models.py"
+        }
+      ]
+    },
+    "app/services/refunds.py": {
+      "defs": [
+        {
+          "name": "process_refund",
+          "kind": "function",
+          "range": [
+            4,
+            5
+          ]
+        }
+      ],
+      "refs": [
+        {
+          "name": "refund",
+          "line": 5,
+          "col": 11
+        }
+      ],
+      "imports": [
+        {
+          "module": "app.services.billing",
+          "line": 1,
+          "resolved": "app/services/billing.py"
+        }
+      ]
+    },
+    "db/schema.sql": {
+      "defs": [
+        {
+          "name": "users",
+          "kind": "table",
+          "range": [
+            1,
+            4
+          ]
+        },
+        {
+          "name": "invoices",
+          "kind": "table",
+          "range": [
+            6,
+            10
+          ]
+        }
+      ],
+      "refs": [],
+      "imports": []
+    },
+    "web/src/api.ts": {
+      "defs": [
+        {
+          "name": "fetchInvoice",
+          "kind": "function",
+          "range": [
+            3,
+            6
+          ]
+        },
+        {
+          "name": "refundInvoice",
+          "kind": "function",
+          "range": [
+            8,
+            11
+          ]
+        }
+      ],
+      "refs": [
+        {
+          "name": "Promise",
+          "line": 3,
+          "col": 48
+        },
+        {
+          "name": "ApiResponse",
+          "line": 3,
+          "col": 56
+        },
+        {
+          "name": "Invoice",
+          "line": 3,
+          "col": 68
+        },
+        {
+          "name": "fetch",
+          "line": 4,
+          "col": 20
+        },
+        {
+          "name": "json",
+          "line": 5,
+          "col": 13
+        },
+        {
+          "name": "Promise",
+          "line": 8,
+          "col": 49
+        },
+        {
+          "name": "ApiResponse",
+          "line": 8,
+          "col": 57
+        },
+        {
+          "name": "Invoice",
+          "line": 8,
+          "col": 69
+        },
+        {
+          "name": "fetch",
+          "line": 9,
+          "col": 20
+        },
+        {
+          "name": "json",
+          "line": 10,
+          "col": 13
+        }
+      ],
+      "imports": [
+        {
+          "module": "./types",
+          "line": 1,
+          "resolved": "web/src/types.ts"
+        }
+      ]
+    },
+    "web/src/index.ts": {
+      "defs": [],
+      "refs": [
+        {
+          "name": "fetchInvoice",
+          "line": 3,
+          "col": 0
+        },
+        {
+          "name": "then",
+          "line": 3,
+          "col": 18
+        },
+        {
+          "name": "log",
+          "line": 3,
+          "col": 38
+        }
+      ],
+      "imports": [
+        {
+          "module": "./api",
+          "line": 1,
+          "resolved": "web/src/api.ts"
+        }
+      ]
+    },
+    "web/src/types.ts": {
+      "defs": [
+        {
+          "name": "Invoice",
+          "kind": "interface",
+          "range": [
+            1,
+            4
+          ]
+        },
+        {
+          "name": "ApiResponse",
+          "kind": "interface",
+          "range": [
+            6,
+            9
+          ]
+        }
+      ],
+      "refs": [
+        {
+          "name": "T",
+          "line": 8,
+          "col": 8
+        }
+      ],
+      "imports": []
+    },
+    "worker/main.go": {
+      "defs": [
+        {
+          "name": "main",
+          "kind": "function",
+          "range": [
+            5,
+            9
+          ]
+        }
+      ],
+      "refs": [
+        {
+          "name": "NewQueue",
+          "line": 6,
+          "col": 6
+        },
+        {
+          "name": "Push",
+          "line": 7,
+          "col": 3
+        },
+        {
+          "name": "Println",
+          "line": 8,
+          "col": 5
+        },
+        {
+          "name": "Pop",
+          "line": 8,
+          "col": 15
+        }
+      ],
+      "imports": [
+        {
+          "module": "fmt",
+          "line": 3,
+          "resolved": null
+        }
+      ]
+    },
+    "worker/queue.go": {
+      "defs": [
+        {
+          "name": "Queue",
+          "kind": "struct",
+          "range": [
+            3,
+            5
+          ]
+        },
+        {
+          "name": "NewQueue",
+          "kind": "function",
+          "range": [
+            7,
+            9
+          ]
+        },
+        {
+          "name": "Push",
+          "kind": "method",
+          "range": [
+            11,
+            13
+          ],
+          "parent": "Queue"
+        },
+        {
+          "name": "Pop",
+          "kind": "method",
+          "range": [
+            15,
+            19
+          ],
+          "parent": "Queue"
+        }
+      ],
+      "refs": [
+        {
+          "name": "string",
+          "line": 4,
+          "col": 9
+        },
+        {
+          "name": "Queue",
+          "line": 7,
+          "col": 17
+        },
+        {
+          "name": "Queue",
+          "line": 8,
+          "col": 9
+        },
+        {
+          "name": "Queue",
+          "line": 11,
+          "col": 9
+        },
+        {
+          "name": "string",
+          "line": 11,
+          "col": 26
+        },
+        {
+          "name": "append",
+          "line": 12,
+          "col": 11
+        },
+        {
+          "name": "Queue",
+          "line": 15,
+          "col": 9
+        },
+        {
+          "name": "string",
+          "line": 15,
+          "col": 22
+        }
+      ],
+      "imports": []
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "path": "app",
+  "summary": "Aplicación Python de facturación. `main.py` orquesta, `services/` contiene la lógica y\n`models.py` el modelo de dominio. Las dependencias van en una sola dirección:\n`main → services → models`.",
+  "children": [
+    {
+      "path": "app/main.py",
+      "kind": "file",
+      "oneLine": "Punto de entrada: autentica y factura a un usuario de ejemplo."
+    },
+    {
+      "path": "app/models.py",
+      "kind": "file",
+      "oneLine": "Clase Invoice (owner, total), sin validación ni persistencia."
+    },
+    {
+      "path": "app/services",
+      "kind": "dir",
+      "oneLine": "Servicios auth y billing, ambos con una función process."
+    }
+  ]
+}

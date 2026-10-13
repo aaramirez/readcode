@@ -1,0 +1,11 @@
+from app.services import billing, auth
+
+
+def main():
+    user = auth.process({"name": "ana"})
+    total = billing.process(user, [10, 20, 30])
+    print(f"total={total}")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "path": "README.md",
+  "blobHash": "c28f52b915a96c70de6acdd2577974b71dada0902faa1efa322ffc9e45d21fe9",
+  "summary": "Presentación mínima del repositorio: declara que es una aplicación pequeña y **multilenguaje**\npensada para probar readcode. Esa intención explica decisiones que en un proyecto real serían\nraras, como que el worker en Go no hable con la app Python.",
+  "blocks": [
+    {
+      "id": "b1",
+      "range": [
+        1,
+        3
+      ],
+      "title": "Título y propósito",
+      "body": "El README no documenta cómo ejecutar nada; su función es contextual. Para orientarse conviene\nleer en cambio el punto de entrada de cada programa: [[ref:app/main.py#main]] (Python),\n[[ref:web/src/index.ts:L3]] (web) y [[ref:worker/main.go#main]] (Go)."
+    }
+  ]
+}

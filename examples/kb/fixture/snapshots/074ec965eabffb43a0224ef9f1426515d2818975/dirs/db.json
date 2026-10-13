@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "path": "db",
+  "summary": "SQL del sistema. Tras eliminar las consultas de exploración solo queda el esquema: el\ndirectorio pasa a describir el modelo de datos, no a guardar notas.",
+  "children": [
+    {
+      "path": "db/schema.sql",
+      "kind": "file",
+      "oneLine": "Tablas users e invoices unidas por clave foránea."
+    }
+  ]
+}

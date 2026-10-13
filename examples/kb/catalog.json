@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "studies": [
+    {
+      "name": "fixture",
+      "title": "Fixture multilenguaje",
+      "repo": {
+        "url": "examples/fixture-repo"
+      },
+      "snapshots": 2,
+      "updated": "2026-10-13T03:49:31Z"
+    }
+  ]
+}

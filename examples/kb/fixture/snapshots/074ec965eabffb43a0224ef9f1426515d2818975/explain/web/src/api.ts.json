@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "path": "web/src/api.ts",
+  "blobHash": "6d7d2ad5acb463beeee84a8762cfad394de8ef090e186b624c70f2c1b58b9607",
+  "summary": "Cliente HTTP del frontend. Encapsula las URLs de la API de facturas y tipa las respuestas con\n[[ref:web/src/types.ts#ApiResponse]] e [[ref:web/src/types.ts#Invoice]]. Ahora expone dos\noperaciones: consultar una factura y reembolsarla.",
+  "blocks": [
+    {
+      "id": "b1",
+      "range": [
+        1,
+        1
+      ],
+      "title": "Importa los contratos",
+      "body": "Solo importa **tipos**; en el JavaScript compilado este import desaparece. Su papel es que el\ncompilador compruebe que quien use `fetchInvoice` accede a campos que existen (`r.data.total`)."
+    },
+    {
+      "id": "b2",
+      "range": [
+        3,
+        6
+      ],
+      "title": "fetchInvoice(): tipado optimista",
+      "body": "Hace un `GET /api/invoices/<id>` y devuelve `res.json()`. El tipo de retorno\n`Promise<ApiResponse<Invoice>>` es una **promesa, no una comprobación**: `res.json()` devuelve\n`any`, y TypeScript acepta la afirmación sin validar nada en tiempo de ejecución.\n\nDos huecos a tener en cuenta:\n\n- No se mira `res.ok`; un 404 con cuerpo HTML hará fallar `res.json()` con un error poco claro.\n- El `id` se interpola sin `encodeURIComponent`; un id con `/` cambiaría la ruta.\n\nEl servidor que responde a `/api/invoices` no está en este repo."
+    },
+    {
+      "id": "b3",
+      "range": [
+        8,
+        11
+      ],
+      "title": "refundInvoice(): el reembolso desde la web",
+      "body": "`POST /api/invoices/<id>/refund`. Usa **POST** porque cambia estado en el servidor (un GET\npodría repetirse por cachés o prefetch del navegador y reembolsar dos veces).\n\nDevuelve `ApiResponse<Invoice>`: el servidor responde con la factura de reembolso, que, igual\nque en Python ([[ref:app/services/billing.py#refund]]), sería una `Invoice` de total negativo.\nHereda los mismos huecos que [[ref:web/src/api.ts#fetchInvoice]]: no comprueba `res.ok` ni\ncodifica el `id`. Con dos funciones casi idénticas, empieza a compensar extraer un helper\n`request<T>(url, init)` que centralice esa lógica."
+    }
+  ]
+}

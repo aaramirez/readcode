@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "path": "app/models.py",
+  "blobHash": "17ac3973443a58674692275901828080c16b45636bad7e04e2df62bf13137d4a",
+  "summary": "Define `Invoice`, el **único modelo de dominio** de la app Python: una factura con dueño y\ntotal. Es una clase de datos simple, sin validación ni persistencia; su forma (`owner`, `total`)\nse repite a mano en el frontend ([[ref:web/src/types.ts#Invoice]]) y se parece, pero no\ncoincide, con la tabla SQL ([[ref:db/schema.sql#invoices]]).",
+  "blocks": [
+    {
+      "id": "b1",
+      "range": [
+        1,
+        4
+      ],
+      "title": "Constructor: solo guarda datos",
+      "body": "`__init__` asigna `owner` y `total` sin comprobar nada: acepta totales negativos, strings o\n`None`. Esa permisividad es cómoda aquí (un reembolso podría modelarse como total negativo),\npero significa que cualquier validación tiene que vivir en quien construye la factura.\n\n¿Quién la construye? Una referencia sin ruta como [[ref:#process]] es **ambigua** desde este\narchivo, porque hay dos `process` en el repo y `models.py` no importa ninguno; solo el de\nfacturación ([[ref:app/services/billing.py#process]]) crea un `Invoice`.\n\nFíjate también en la diferencia con la tabla `invoices`: allí la factura apunta a un\n`user_id` entero, aquí a un `owner` que es el **nombre** del usuario. Si algún día se persiste,\nhabrá que resolver esa traducción."
+    },
+    {
+      "id": "b2",
+      "range": [
+        6,
+        7
+      ],
+      "title": "describe(): representación legible",
+      "body": "[[ref:app/models.py#Invoice.describe]] formatea la factura como `\"ana: 60\"`. Hoy nadie la\nllama (el flujo de [[ref:app/main.py#main]] imprime el total directamente); es el tipo de\nmétodo que existe para depurar o para logs."
+    }
+  ]
+}

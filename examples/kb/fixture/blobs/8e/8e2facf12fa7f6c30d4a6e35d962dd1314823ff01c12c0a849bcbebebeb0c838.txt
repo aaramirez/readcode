@@ -1,0 +1,19 @@
+package main
+
+type Queue struct {
+	items []string
+}
+
+func NewQueue() *Queue {
+	return &Queue{}
+}
+
+func (q *Queue) Push(item string) {
+	q.items = append(q.items, item)
+}
+
+func (q *Queue) Pop() string {
+	item := q.items[0]
+	q.items = q.items[1:]
+	return item
+}

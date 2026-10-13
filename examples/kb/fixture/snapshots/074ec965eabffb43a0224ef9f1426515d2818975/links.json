@@ -1,0 +1,710 @@
+{
+  "schemaVersion": 1,
+  "sha": "074ec965eabffb43a0224ef9f1426515d2818975",
+  "docs": {
+    "explain/.gitignore.json": [
+      {
+        "raw": "[[ref:app/services/auth.py#process]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/services/auth.py",
+        "range": [
+          5,
+          7
+        ]
+      }
+    ],
+    "explain/README.md.json": [
+      {
+        "raw": "[[ref:app/main.py#main]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/main.py",
+        "range": [
+          4,
+          7
+        ]
+      },
+      {
+        "raw": "[[ref:web/src/index.ts:L3]]",
+        "kind": "lines",
+        "status": "exact",
+        "target": "web/src/index.ts",
+        "range": [
+          3,
+          3
+        ]
+      },
+      {
+        "raw": "[[ref:worker/main.go#main]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "worker/main.go",
+        "range": [
+          5,
+          9
+        ]
+      }
+    ],
+    "explain/app/main.py.json": [
+      {
+        "raw": "[[ref:app/services/auth.py#process]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/services/auth.py",
+        "range": [
+          5,
+          7
+        ]
+      },
+      {
+        "raw": "[[ref:app/services/billing.py#process]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/services/billing.py",
+        "range": [
+          8,
+          10
+        ]
+      },
+      {
+        "raw": "[[ref:app/main.py:L5]]",
+        "kind": "lines",
+        "status": "exact",
+        "target": "app/main.py",
+        "range": [
+          5,
+          5
+        ]
+      },
+      {
+        "raw": "[[ref:app/main.py:L6]]",
+        "kind": "lines",
+        "status": "exact",
+        "target": "app/main.py",
+        "range": [
+          6,
+          6
+        ]
+      }
+    ],
+    "explain/app/models.py.json": [
+      {
+        "raw": "[[ref:web/src/types.ts#Invoice]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "web/src/types.ts",
+        "range": [
+          1,
+          4
+        ]
+      },
+      {
+        "raw": "[[ref:db/schema.sql#invoices]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "db/schema.sql",
+        "range": [
+          6,
+          10
+        ]
+      },
+      {
+        "raw": "[[ref:#process]]",
+        "kind": "symbol",
+        "status": "ambiguous",
+        "candidates": [
+          {
+            "target": "app/services/auth.py",
+            "range": [
+              5,
+              7
+            ]
+          },
+          {
+            "target": "app/services/billing.py",
+            "range": [
+              8,
+              10
+            ]
+          }
+        ]
+      },
+      {
+        "raw": "[[ref:app/services/billing.py#process]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/services/billing.py",
+        "range": [
+          8,
+          10
+        ]
+      },
+      {
+        "raw": "[[ref:app/models.py#Invoice.describe]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/models.py",
+        "range": [
+          6,
+          7
+        ]
+      },
+      {
+        "raw": "[[ref:app/main.py#main]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/main.py",
+        "range": [
+          4,
+          7
+        ]
+      }
+    ],
+    "explain/app/services/auth.py.json": [
+      {
+        "raw": "[[ref:app/main.py:L5]]",
+        "kind": "lines",
+        "status": "exact",
+        "target": "app/main.py",
+        "range": [
+          5,
+          5
+        ]
+      },
+      {
+        "raw": "[[ref:app/services/billing.py#process]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/services/billing.py",
+        "range": [
+          8,
+          10
+        ]
+      }
+    ],
+    "explain/app/services/billing.py.json": [
+      {
+        "raw": "[[ref:app/models.py#Invoice]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/models.py",
+        "range": [
+          1,
+          7
+        ]
+      },
+      {
+        "raw": "[[ref:db/schema.sql:L9]]",
+        "kind": "lines",
+        "status": "exact",
+        "target": "db/schema.sql",
+        "range": [
+          9,
+          9
+        ]
+      },
+      {
+        "raw": "[[ref:app/models.py#Invoice]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/models.py",
+        "range": [
+          1,
+          7
+        ]
+      },
+      {
+        "raw": "[[ref:db/schema.sql#invoices]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "db/schema.sql",
+        "range": [
+          6,
+          10
+        ]
+      },
+      {
+        "raw": "[[ref:app/services/billing.py#process]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/services/billing.py",
+        "range": [
+          8,
+          10
+        ]
+      },
+      {
+        "raw": "[[ref:app/services/billing.py:L8-10]]",
+        "kind": "lines",
+        "status": "exact",
+        "target": "app/services/billing.py",
+        "range": [
+          8,
+          10
+        ]
+      }
+    ],
+    "explain/app/services/refunds.py.json": [
+      {
+        "raw": "[[ref:app/services/billing.py#refund]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/services/billing.py",
+        "range": [
+          13,
+          15
+        ]
+      },
+      {
+        "raw": "[[ref:#process]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/services/billing.py",
+        "range": [
+          8,
+          10
+        ]
+      },
+      {
+        "raw": "[[ref:app/main.py#main]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/main.py",
+        "range": [
+          4,
+          7
+        ]
+      }
+    ],
+    "explain/db/schema.sql.json": [
+      {
+        "raw": "[[ref:app/main.py:L5]]",
+        "kind": "lines",
+        "status": "exact",
+        "target": "app/main.py",
+        "range": [
+          5,
+          5
+        ]
+      },
+      {
+        "raw": "[[ref:app/models.py#Invoice]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/models.py",
+        "range": [
+          1,
+          7
+        ]
+      }
+    ],
+    "explain/web/src/api.ts.json": [
+      {
+        "raw": "[[ref:web/src/types.ts#ApiResponse]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "web/src/types.ts",
+        "range": [
+          6,
+          9
+        ]
+      },
+      {
+        "raw": "[[ref:web/src/types.ts#Invoice]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "web/src/types.ts",
+        "range": [
+          1,
+          4
+        ]
+      },
+      {
+        "raw": "[[ref:app/services/billing.py#refund]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/services/billing.py",
+        "range": [
+          13,
+          15
+        ]
+      },
+      {
+        "raw": "[[ref:web/src/api.ts#fetchInvoice]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "web/src/api.ts",
+        "range": [
+          3,
+          6
+        ]
+      }
+    ],
+    "explain/web/src/index.ts.json": [
+      {
+        "raw": "[[ref:web/src/api.ts#fetchInvoice]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "web/src/api.ts",
+        "range": [
+          3,
+          6
+        ]
+      }
+    ],
+    "explain/web/src/types.ts.json": [
+      {
+        "raw": "[[ref:app/models.py#Invoice]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/models.py",
+        "range": [
+          1,
+          7
+        ]
+      }
+    ],
+    "explain/worker/main.go.json": [
+      {
+        "raw": "[[ref:worker/queue.go#Queue]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "worker/queue.go",
+        "range": [
+          3,
+          5
+        ]
+      },
+      {
+        "raw": "[[ref:worker/queue.go#NewQueue]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "worker/queue.go",
+        "range": [
+          7,
+          9
+        ]
+      },
+      {
+        "raw": "[[ref:worker/queue.go#Queue.Push]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "worker/queue.go",
+        "range": [
+          11,
+          13
+        ]
+      },
+      {
+        "raw": "[[ref:worker/queue.go#Queue.Pop]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "worker/queue.go",
+        "range": [
+          15,
+          19
+        ]
+      }
+    ],
+    "explain/worker/queue.go.json": [],
+    "dirs/_root.json": [
+      {
+        "raw": "[[archify:arquitectura]]",
+        "kind": "archify",
+        "status": "exact",
+        "target": "diagrams/arquitectura.html"
+      }
+    ],
+    "dirs/app.json": [],
+    "dirs/app/services.json": [
+      {
+        "raw": "[[ref:app/services/auth.py#process]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/services/auth.py",
+        "range": [
+          5,
+          7
+        ]
+      },
+      {
+        "raw": "[[ref:app/services/billing.py#process]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/services/billing.py",
+        "range": [
+          8,
+          10
+        ]
+      },
+      {
+        "raw": "[[ref:app/services/billing.py#refund]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/services/billing.py",
+        "range": [
+          13,
+          15
+        ]
+      }
+    ],
+    "dirs/db.json": [],
+    "dirs/web.json": [],
+    "dirs/web/src.json": [],
+    "dirs/worker.json": [],
+    "tours/flujo-facturacion.json": [
+      {
+        "raw": "[[ref:app/main.py#main]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/main.py",
+        "range": [
+          4,
+          7
+        ]
+      },
+      {
+        "raw": "[[ref:app/services/billing.py#refund]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/services/billing.py",
+        "range": [
+          13,
+          15
+        ]
+      },
+      {
+        "raw": "[[ref:app/main.py:L5-6]]",
+        "kind": "lines",
+        "status": "exact",
+        "target": "app/main.py",
+        "range": [
+          5,
+          6
+        ]
+      },
+      {
+        "raw": "[[ref:app/services/auth.py#hash_token]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/services/auth.py",
+        "range": [
+          1,
+          2
+        ]
+      },
+      {
+        "raw": "[[ref:app/services/billing.py#compute_total]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/services/billing.py",
+        "range": [
+          4,
+          5
+        ]
+      },
+      {
+        "raw": "[[ref:web/src/types.ts#Invoice]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "web/src/types.ts",
+        "range": [
+          1,
+          4
+        ]
+      },
+      {
+        "raw": "[[ref:db/schema.sql#invoices]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "db/schema.sql",
+        "range": [
+          6,
+          10
+        ]
+      },
+      {
+        "raw": "[[ref:app/services/billing.py#refund]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/services/billing.py",
+        "range": [
+          13,
+          15
+        ]
+      }
+    ],
+    "tours/worker-cola.json": [
+      {
+        "raw": "[[ref:worker/queue.go#Queue]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "worker/queue.go",
+        "range": [
+          3,
+          5
+        ]
+      },
+      {
+        "raw": "[[ref:worker/queue.go#Queue.Pop]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "worker/queue.go",
+        "range": [
+          15,
+          19
+        ]
+      }
+    ],
+    "overview.md": [
+      {
+        "raw": "[[archify:arquitectura]]",
+        "kind": "archify",
+        "status": "exact",
+        "target": "diagrams/arquitectura.html"
+      },
+      {
+        "raw": "[[ref:app/main.py#main]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/main.py",
+        "range": [
+          4,
+          7
+        ]
+      },
+      {
+        "raw": "[[ref:web/src/index.ts:L3]]",
+        "kind": "lines",
+        "status": "exact",
+        "target": "web/src/index.ts",
+        "range": [
+          3,
+          3
+        ]
+      },
+      {
+        "raw": "[[ref:worker/main.go#main]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "worker/main.go",
+        "range": [
+          5,
+          9
+        ]
+      },
+      {
+        "raw": "[[ref:db/schema.sql#invoices]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "db/schema.sql",
+        "range": [
+          6,
+          10
+        ]
+      },
+      {
+        "raw": "[[ref:app/main.py#main]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/main.py",
+        "range": [
+          4,
+          7
+        ]
+      },
+      {
+        "raw": "[[ref:app/services/auth.py#process]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/services/auth.py",
+        "range": [
+          5,
+          7
+        ]
+      },
+      {
+        "raw": "[[ref:app/services/billing.py#process]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/services/billing.py",
+        "range": [
+          8,
+          10
+        ]
+      },
+      {
+        "raw": "[[ref:app/services/billing.py#compute_total]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/services/billing.py",
+        "range": [
+          4,
+          5
+        ]
+      },
+      {
+        "raw": "[[ref:app/models.py#Invoice]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/models.py",
+        "range": [
+          1,
+          7
+        ]
+      },
+      {
+        "raw": "[[ref:app/services/refunds.py#process_refund]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/services/refunds.py",
+        "range": [
+          4,
+          5
+        ]
+      },
+      {
+        "raw": "[[ref:app/services/billing.py#refund]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/services/billing.py",
+        "range": [
+          13,
+          15
+        ]
+      },
+      {
+        "raw": "[[ref:#process]]",
+        "kind": "symbol",
+        "status": "ambiguous",
+        "candidates": [
+          {
+            "target": "app/services/auth.py",
+            "range": [
+              5,
+              7
+            ]
+          },
+          {
+            "target": "app/services/billing.py",
+            "range": [
+              8,
+              10
+            ]
+          }
+        ]
+      },
+      {
+        "raw": "[[ref:worker/queue.go#Queue]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "worker/queue.go",
+        "range": [
+          3,
+          5
+        ]
+      }
+    ]
+  }
+}

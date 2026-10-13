@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "path": "web/src/api.ts",
+  "summary": "Se añade `refundInvoice()` debajo de `fetchInvoice()`, con la misma forma y el mismo tipo de\nretorno. Es el lado cliente del reembolso.",
+  "hunks": [
+    {
+      "index": 0,
+      "body": "[[ref:web/src/api.ts#refundInvoice]] hace `POST /api/invoices/<id>/refund`. Usa POST porque\naltera estado (un GET podría repetirse por caché o prefetch). Devuelve `ApiResponse<Invoice>`,\ncoherente con que en Python el reembolso sea una `Invoice` negativa. Hereda los huecos de\n[[ref:web/src/api.ts#fetchInvoice]]: sin `res.ok` ni `encodeURIComponent`."
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "path": "web/src/api.ts",
+  "blobHash": "c39d739a52fdbd99c8531caac4da84d11d64f3109dfad4c4d33c8af9759e40c7",
+  "summary": "Cliente HTTP del frontend. Encapsula la URL de la API de facturas y tipa la respuesta con\nlos contratos de [[ref:web/src/types.ts#ApiResponse]] e [[ref:web/src/types.ts#Invoice]].",
+  "blocks": [
+    {
+      "id": "b1",
+      "range": [
+        1,
+        1
+      ],
+      "title": "Importa los contratos",
+      "body": "Solo importa **tipos**; en el JavaScript compilado este import desaparece. Su papel es que el\ncompilador compruebe que quien use `fetchInvoice` accede a campos que existen (`r.data.total`)."
+    },
+    {
+      "id": "b2",
+      "range": [
+        3,
+        6
+      ],
+      "title": "fetchInvoice(): tipado optimista",
+      "body": "Hace un `GET /api/invoices/<id>` y devuelve `res.json()`. El tipo de retorno\n`Promise<ApiResponse<Invoice>>` es una **promesa, no una comprobación**: `res.json()` devuelve\n`any`, y TypeScript acepta la afirmación sin validar nada en tiempo de ejecución.\n\nDos huecos a tener en cuenta:\n\n- No se mira `res.ok`; un 404 con cuerpo HTML hará fallar `res.json()` con un error poco claro.\n- El `id` se interpola sin `encodeURIComponent`; un id con `/` cambiaría la ruta.\n\nEl servidor que responde a `/api/invoices` no está en este repo."
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "path": "web/src",
+  "summary": "Código fuente del frontend en TypeScript: contratos (`types.ts`), cliente HTTP (`api.ts`) y\npunto de entrada (`index.ts`). El flujo es `index → api → types`.",
+  "children": [
+    {
+      "path": "web/src/api.ts",
+      "kind": "file",
+      "oneLine": "fetchInvoice(): GET a /api/invoices con tipado optimista."
+    },
+    {
+      "path": "web/src/index.ts",
+      "kind": "file",
+      "oneLine": "Pide la factura 1 al cargar y muestra su total."
+    },
+    {
+      "path": "web/src/types.ts",
+      "kind": "file",
+      "oneLine": "Interfaces Invoice y ApiResponse<T>."
+    }
+  ]
+}

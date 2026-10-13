@@ -1,0 +1,7 @@
+def hash_token(token):
+    return str(hash(token))
+
+
+def process(request):
+    request["token"] = hash_token(request["name"])
+    return request

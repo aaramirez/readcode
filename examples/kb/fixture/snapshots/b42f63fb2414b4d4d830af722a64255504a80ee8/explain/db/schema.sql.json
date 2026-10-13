@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "path": "db/schema.sql",
+  "blobHash": "0fe0b3d3eeee8bd10b5228bd655a1c34586bc7390ed15feb06067a9dab4b4c72",
+  "summary": "Esquema relacional de dos tablas: `users` e `invoices`, unidas por una clave foránea. Es el\nmodelo de datos \"objetivo\" del sistema, aunque hoy ningún código lo lee ni lo escribe.",
+  "blocks": [
+    {
+      "id": "b1",
+      "range": [
+        1,
+        4
+      ],
+      "title": "Tabla users",
+      "body": "Identificador entero y `name` obligatorio. Es la fuente de los nombres que en Python viajan\ncomo `user[\"name\"]` ([[ref:app/main.py:L5]])."
+    },
+    {
+      "id": "b2",
+      "range": [
+        6,
+        10
+      ],
+      "title": "Tabla invoices y su relación con users",
+      "body": "`user_id ... REFERENCES users(id)` garantiza que no exista una factura de un usuario\ninexistente. Compárala con [[ref:app/models.py#Invoice]]: el modelo Python guarda el\n**nombre** (`owner`) en vez del id, de modo que mapear uno a otro requeriría buscar el usuario\npor nombre, y `name` no es único en la tabla.\n\n`total INTEGER NOT NULL` no tiene `CHECK (total >= 0)`: el esquema admite totales negativos."
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "path": "worker",
+  "summary": "Worker en Go: un ejecutable (`main.go`) y una cola FIFO en memoria (`queue.go`) en el mismo\npaquete `main`. No se comunica con la app Python ni con la web.",
+  "children": [
+    {
+      "path": "worker/main.go",
+      "kind": "file",
+      "oneLine": "Encola y desencola un trabajo de ejemplo."
+    },
+    {
+      "path": "worker/queue.go",
+      "kind": "file",
+      "oneLine": "Queue FIFO sobre un slice; Push y Pop con receptor puntero."
+    }
+  ]
+}
