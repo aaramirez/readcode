@@ -54,3 +54,18 @@ def test_init_bad_inputs(tmp_path):
     assert r.exit_code != 0
     r = runner.invoke(app, ["init", str(tmp_path), "Bad Name", "--repo", "https://e.com/r"])
     assert r.exit_code != 0
+
+
+def test_init_strips_credentials(tmp_path, fixture_repo):
+    repo, _, _ = fixture_repo
+    r = runner.invoke(app, ["init", str(tmp_path), "a", "--repo", "https://user:tok3n@github.com/x/y.git"])
+    assert r.exit_code == 0, r.output
+    assert kbio.read_json(tmp_path / "a" / "study.json")["repo"]["url"] == "https://github.com/x/y.git"
+    clone = tmp_path / "clone"
+    subprocess.run(["git", "clone", "-q", str(repo), str(clone)], check=True)
+    subprocess.run(["git", "-C", str(clone), "remote", "set-url", "origin",
+                    "https://u:secret@example.com/r.git"], check=True)
+    runner.invoke(app, ["init", str(tmp_path), "b", "--repo", str(clone)])
+    text = (tmp_path / "b" / "study.json").read_text(encoding="utf-8")
+    assert "secret" not in text
+    assert kbio.read_json(tmp_path / "b" / "study.json")["repo"]["url"] == "https://example.com/r.git"

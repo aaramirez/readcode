@@ -1,10 +1,13 @@
-"""``readcode snapshot``: materialize a git revision into blobs + tree.json."""
+"""``readcode snapshot``: materialize a git revision into blobs + tree.json.
+
+Blob bytes come straight from the git object database (``ls-tree`` + ``cat-file``), so they
+are never affected by core.autocrlf, .gitattributes or filters: the same commit yields the
+same blob hashes on every machine.
+"""
 
 from __future__ import annotations
 
 import subprocess
-import tarfile
-import tempfile
 from datetime import datetime
 from pathlib import Path, PurePosixPath
 
@@ -41,22 +44,20 @@ def _spec(lines: list[str]) -> pathspec.PathSpec:
         return pathspec.PathSpec.from_lines("gitwildmatch", lines)
 
 
-def _git(repo: Path, *args: str, stdout_file: Path | None = None) -> str:
+def _run_git(repo: Path, *args: str) -> bytes:
     cmd = ["git", "-C", str(repo), *args]
     try:
-        if stdout_file is not None:
-            with open(stdout_file, "wb") as fh:
-                result = subprocess.run(cmd, stdout=fh, stderr=subprocess.PIPE)
-            err = result.stderr.decode("utf-8", "replace")
-            out = ""
-        else:
-            result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8")
-            err, out = result.stderr, result.stdout
+        result = subprocess.run(cmd, capture_output=True)
     except OSError as exc:
         raise SnapshotError(f"Could not run git: {exc}") from exc
     if result.returncode != 0:
-        raise SnapshotError(f"git {' '.join(args)} failed: {err.strip()}")
-    return out.strip()
+        err = result.stderr.decode("utf-8", "replace").strip()
+        raise SnapshotError(f"git {' '.join(args)} failed: {err}")
+    return result.stdout
+
+
+def _git(repo: Path, *args: str) -> str:
+    return _run_git(repo, *args).decode("utf-8").strip()
 
 
 def detect_language(path: str) -> str | None:
@@ -70,28 +71,54 @@ def count_lines(data: bytes) -> int:
     return n if data.endswith(b"\n") else n + 1
 
 
-def _safe_extract(tar_path: Path, dest: Path) -> list[str]:
-    """Extract regular files only; reject absolute or '..' paths. Returns relative posix paths."""
-    paths: list[str] = []
-    root = dest.resolve()
-    with tarfile.open(tar_path) as tar:
-        for member in tar:
-            if not member.isfile():
-                continue  # directories, symlinks, pax headers, submodule stubs
-            pure = PurePosixPath(member.name)
-            if pure.is_absolute() or ".." in pure.parts or member.name.startswith(("/", "\\")):
-                raise SnapshotError(f"Unsafe path in archive: {member.name!r}")
-            target = (dest / member.name).resolve()
-            if root not in target.parents:
-                raise SnapshotError(f"Unsafe path in archive: {member.name!r}")
-            target.parent.mkdir(parents=True, exist_ok=True)
-            src = tar.extractfile(member)
-            assert src is not None
-            with src, open(target, "wb") as out:
-                while chunk := src.read(1 << 20):
-                    out.write(chunk)
-            paths.append(member.name)
-    return paths
+def _list_blobs(repo: Path, sha: str) -> list[tuple[str, str, int]]:
+    """(path, blob oid, size) for regular files; submodules and symlinks are skipped."""
+    out = _run_git(repo, "ls-tree", "-r", "-l", "-z", "--full-tree", sha)
+    entries = []
+    for rec in out.split(b"\0"):
+        if not rec:
+            continue
+        meta, _, raw_path = rec.partition(b"\t")
+        mode, otype, oid, size = meta.decode("ascii").split()
+        if otype != "blob" or mode == "120000":
+            continue
+        entries.append((raw_path.decode("utf-8", "replace"), oid, int(size)))
+    return sorted(entries)
+
+
+class _BlobReader:
+    """Raw blob bytes via one `git cat-file --batch` process (no eol/filter conversion)."""
+
+    def __init__(self, repo: Path):
+        try:
+            self._proc = subprocess.Popen(
+                ["git", "-C", str(repo), "cat-file", "--batch"],
+                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            )
+        except OSError as exc:
+            raise SnapshotError(f"Could not run git: {exc}") from exc
+
+    def read(self, oid: str) -> bytes:
+        proc = self._proc
+        assert proc.stdin is not None and proc.stdout is not None
+        proc.stdin.write(oid.encode("ascii") + b"\n")
+        proc.stdin.flush()
+        header = proc.stdout.readline().split()
+        if len(header) != 3 or header[1] != b"blob":
+            raise SnapshotError(f"git cat-file could not read blob {oid}")
+        size = int(header[2])
+        data = proc.stdout.read(size)
+        proc.stdout.read(1)  # trailing newline
+        if len(data) != size:
+            raise SnapshotError(f"Short read for blob {oid}")
+        return data
+
+    def close(self) -> None:
+        if self._proc.stdin:
+            self._proc.stdin.close()
+        if self._proc.stdout:
+            self._proc.stdout.close()
+        self._proc.wait()
 
 
 def _default_excluded(path: str) -> bool:
@@ -106,13 +133,12 @@ def _default_excluded(path: str) -> bool:
 class _GitignoreMatcher:
     """Applies every .gitignore on the path from the repo root down (no cross-file negation)."""
 
-    def __init__(self, root: Path, paths: list[str]):
-        self._specs: dict[str, pathspec.PathSpec] = {}
-        for p in paths:
-            if PurePosixPath(p).name == ".gitignore":
-                base = str(PurePosixPath(p).parent)
-                lines = (root / p).read_text(encoding="utf-8", errors="replace").splitlines()
-                self._specs["" if base == "." else base] = _spec(lines)
+    def __init__(self, gitignores: dict[str, bytes]):
+        """``gitignores`` maps a directory ("" for root) to its .gitignore bytes."""
+        self._specs = {
+            base: _spec(raw.decode("utf-8", "replace").splitlines())
+            for base, raw in gitignores.items()
+        }
 
     def matches(self, path: str) -> bool:
         parts = PurePosixPath(path).parts
@@ -147,7 +173,7 @@ def snapshot_study(kb: Path, study: str, rev: str, repo_path: Path | None = None
     if not repo_path.is_dir():
         raise SnapshotError(f"Repo path is not a directory: {repo_path}")
 
-    sha = _git(repo_path, "rev-parse", "--verify", f"{rev}^{{commit}}")
+    sha = _git(repo_path, "rev-parse", "--verify", "--end-of-options", f"{rev}^{{commit}}")
     date = _git(repo_path, "show", "-s", "--format=%cI", sha)
     message = _git(repo_path, "show", "-s", "--format=%s", sha)
 
@@ -155,17 +181,17 @@ def snapshot_study(kb: Path, study: str, rev: str, repo_path: Path | None = None
     files: list[dict] = []
     excluded: list[dict] = []
 
-    with tempfile.TemporaryDirectory(prefix="readcode-") as tmp:
-        tmp_dir = Path(tmp)
-        tar_path = tmp_dir / "archive.tar"
-        _git(repo_path, "archive", "--format=tar", sha, stdout_file=tar_path)
-        root = tmp_dir / "tree"
-        root.mkdir()
-        paths = sorted(_safe_extract(tar_path, root))
-        tar_path.unlink()
-        gitignore = _GitignoreMatcher(root, paths)
+    entries = _list_blobs(repo_path, sha)
+    reader = _BlobReader(repo_path)
+    try:
+        gitignores: dict[str, bytes] = {}
+        for path, oid, size in entries:
+            if PurePosixPath(path).name == ".gitignore" and size <= MAX_BYTES:
+                parent = str(PurePosixPath(path).parent)
+                gitignores["" if parent == "." else parent] = reader.read(oid)
+        gitignore = _GitignoreMatcher(gitignores)
 
-        for path in paths:
+        for path, oid, size in entries:
             if _default_excluded(path):
                 excluded.append({"path": path, "reason": "default"})
                 continue
@@ -175,11 +201,10 @@ def snapshot_study(kb: Path, study: str, rev: str, repo_path: Path | None = None
             if study_spec.match_file(path):
                 excluded.append({"path": path, "reason": "study"})
                 continue
-            full = root / path
-            if full.stat().st_size > MAX_BYTES:
+            if size > MAX_BYTES:
                 excluded.append({"path": path, "reason": "size"})
                 continue
-            data = full.read_bytes()
+            data = reader.read(oid)
             if b"\x00" in data[:8192]:
                 excluded.append({"path": path, "reason": "binary"})
                 continue
@@ -200,6 +225,8 @@ def snapshot_study(kb: Path, study: str, rev: str, repo_path: Path | None = None
                 "bytes": len(data),
                 "indexed": False,
             })
+    finally:
+        reader.close()
 
     tree = {"schemaVersion": 1, "sha": sha, "files": files, "excluded": excluded}
     errors = validate("tree", tree)

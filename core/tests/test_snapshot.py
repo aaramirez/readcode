@@ -159,3 +159,33 @@ def test_errors(study):
 def test_helpers():
     assert count_lines(b"") == 0 and count_lines(b"a\n") == 1 and count_lines(b"a\nb") == 2
     assert detect_language("x/y.TSX") == "tsx" and detect_language("Makefile") is None
+
+
+def test_blobs_are_raw_despite_eol_conversion(tmp_path):
+    repo = tmp_path / "r"
+    repo.mkdir()
+    env = ["-c", "user.name=t", "-c", "user.email=t@e.com", "-c", "commit.gpgsign=false"]
+
+    def git(*a):
+        return subprocess.run(["git", *env, "-C", str(repo), *a], check=True, capture_output=True).stdout
+
+    git("init", "-q")
+    git("config", "core.autocrlf", "false")
+    (repo / "a.txt").write_bytes(b"one\ntwo\n")
+    git("add", "a.txt")
+    git("commit", "-q", "-m", "m")
+    git("config", "core.autocrlf", "true")
+    (repo / ".gitattributes").write_text("* text eol=crlf\n")
+    kb = tmp_path / "kb"
+    assert runner.invoke(app, ["init", str(kb), "s", "--repo", str(repo)]).exit_code == 0
+    snap(kb, "HEAD", name="s")
+    sha = kbio.read_json(kb / "s" / "study.json")["snapshots"][0]["sha"]
+    entry = next(f for f in tree_of(kb / "s", sha)["files"] if f["path"] == "a.txt")
+    stored = kbio.blob_path(kb / "s", entry["blob"]).read_bytes()
+    assert stored == git("cat-file", "blob", f"{sha}:a.txt") == b"one\ntwo\n"
+
+
+def test_rev_cannot_be_an_option(study):
+    kb, _, _, _ = study
+    r = runner.invoke(app, ["snapshot", str(kb), "demo", "--sha", "--output=x"])
+    assert r.exit_code != 0

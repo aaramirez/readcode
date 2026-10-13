@@ -12,6 +12,14 @@ from readcode.schemas import validate
 _URL_RE = re.compile(r"^([a-zA-Z][a-zA-Z0-9+.-]+://|[\w.-]+@[\w.-]+:)")
 
 
+_USERINFO_RE = re.compile(r"^([a-zA-Z][a-zA-Z0-9+.-]+://)[^/@]*@")
+
+
+def strip_userinfo(url: str) -> str:
+    """Drop credentials from scheme URLs (https://user:token@host/x -> https://host/x)."""
+    return _USERINFO_RE.sub(lambda m: m.group(1), url)
+
+
 class InitError(RuntimeError):
     pass
 
@@ -30,11 +38,11 @@ def _origin_url(path: Path) -> str | None:
 
 def _repo_info(repo: str) -> dict:
     if _URL_RE.match(repo):
-        return {"url": repo}
+        return {"url": strip_userinfo(repo)}
     path = Path(repo).resolve()
     if not path.is_dir():
         raise InitError(f"--repo is neither a URL nor an existing directory: {repo}")
-    return {"url": _origin_url(path) or str(path), "localPath": str(path)}
+    return {"url": strip_userinfo(_origin_url(path) or str(path)), "localPath": str(path)}
 
 
 def init_study(kb: Path, study: str, repo: str, title: str | None = None,
