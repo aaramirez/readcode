@@ -17,13 +17,19 @@ FAKE_OK = """import { writeFileSync } from 'node:fs';
 const argv = process.argv.slice(2);
 const [cmd, type, input, out] = argv;
 if (cmd !== 'finalize' || !argv.includes('--out-dir')) process.exit(3);
+if (!out.endsWith('.html')) {
+  console.log(JSON.stringify({ ok: false, code: 'output/cli-extension', message: 'CLI output must target a .html file.' }));
+  process.exit(1);
+}
 writeFileSync(out, `<html><body>${type}</body></html>`);
+writeFileSync(out.slice(0, -5) + '.delivery.json', '{}');  // sidecar next to the output, like real Archify
 const od = argv[argv.indexOf('--out-dir') + 1];
 writeFileSync(od + '/receipt.json', JSON.stringify(argv));
 writeFileSync(process.env.ARGV_LOG || od + '/argv.log', JSON.stringify(argv));
 """
 FAKE_FAIL = """import { writeFileSync } from 'node:fs';
 writeFileSync(process.argv[5], '<html>partial');
+writeFileSync(process.argv[5].slice(0, -5) + '.delivery.json', '{}');
 console.error('boom');
 process.exit(1);
 """
@@ -65,7 +71,7 @@ def test_archify_renders_and_copies_source(study, tmp_path, monkeypatch):
     assert argv[argv.index("--repo-root") + 1] == str(tmp_path) and "showcase" in argv
     assert (diagrams / "arquitectura.html").read_text(encoding="utf-8") == "<html><body>architecture</body></html>"
     assert json.loads((diagrams / "arquitectura.json").read_text(encoding="utf-8")) == {"meta": {}}
-    assert [p.name for p in diagrams.iterdir()] == ["arquitectura.html", "arquitectura.json"]
+    assert sorted(p.name for p in diagrams.iterdir()) == ["arquitectura.html", "arquitectura.json"]
 
 
 def test_archify_bin_may_be_a_directory(study, tmp_path, monkeypatch):
@@ -88,7 +94,7 @@ def test_archify_failed_render_leaves_nothing(study, tmp_path, monkeypatch):
     result = runner.invoke(app, _args(kb, src))
     assert result.exit_code == 2
     assert "boom" in result.output
-    assert list(diagrams.iterdir()) == []
+    assert not diagrams.exists() or list(diagrams.iterdir()) == []
 
 
 def test_archify_missing_archify_exits_2(study, tmp_path, monkeypatch):

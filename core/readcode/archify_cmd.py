@@ -67,25 +67,33 @@ def render_diagram(kb: Path | str, study: str, sha: str, name: str, diagram_type
     archify = find_archify()
 
     out_dir = snap / "diagrams"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    fd, tmp_name = tempfile.mkstemp(dir=out_dir, prefix=f".{name}.", suffix=".html.tmp")
-    os.close(fd)
-    tmp = Path(tmp_name)
-    work = Path(tempfile.mkdtemp(prefix="readcode-archify-"))  # receipts/browser artifacts stay out of the kb
-    cmd = [node, str(archify), "finalize", diagram_type, str(src), str(tmp), "--json",
+    # Stage and finalize in a temp dir: Archify requires a .html target and writes sidecars
+    # (delivery.json, receipt, browser artifacts) next to it, none of which may reach the kb.
+    work = Path(tempfile.mkdtemp(prefix="readcode-archify-"))
+    staged = work / f"{name}.html"
+    cmd = [node, str(archify), "finalize", diagram_type, str(src), str(staged), "--json",
            "--out-dir", str(work), "--receipt", str(work / "receipt.json")]
     if repo_root is not None:
         cmd += ["--repo-root", str(repo_root)]
     if quality is not None:
         cmd += ["--quality", quality]
+    tmp: Path | None = None
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
-        if proc.returncode != 0 or tmp.stat().st_size == 0:
+        if proc.returncode != 0 or not staged.is_file() or staged.stat().st_size == 0:
             detail = (proc.stderr or proc.stdout or "").strip()
             raise ArchifyError(f"archify falló al finalizar {name} (código {proc.returncode}): {detail}")
+        out_dir.mkdir(parents=True, exist_ok=True)
+        # work dir may be on another drive: copy next to the target, then rename atomically
+        fd, tmp_name = tempfile.mkstemp(dir=out_dir, prefix=f".{name}.", suffix=".tmp")
+        os.close(fd)
+        tmp = Path(tmp_name)
+        shutil.copyfile(staged, tmp)
         os.replace(tmp, out_dir / f"{name}.html")
+        tmp = None
         kbio.atomic_write_bytes(out_dir / f"{name}.json", src.read_bytes())
     finally:
-        tmp.unlink(missing_ok=True)
+        if tmp is not None:
+            tmp.unlink(missing_ok=True)
         shutil.rmtree(work, ignore_errors=True)
     return out_dir / f"{name}.html"
