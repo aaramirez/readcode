@@ -52,8 +52,10 @@ borrado, la ruta borrada). No escribas ningún otro archivo. Forma
 - `hunks[].index`: índice **0-based** en `hunks` de ese archivo en `changes.json`. Explica cada
   hunk que tenga algo que decir; hunks triviales (un import, un typo) pueden omitirse si el
   `summary` los menciona. Ordénalos por `index`.
-- Archivos `added` o `deleted` tienen normalmente un solo hunk: el `summary` dice qué aporta o
-  qué se pierde (¿quién lo usaba? ¿qué lo reemplaza?).
+- Archivos `added` o `deleted` llegan **sin hunks** en `changes.json` (todo el archivo es el
+  cambio): escribe `hunks: []` y que el `summary` diga qué aporta o qué se pierde (¿quién lo
+  usaba? ¿qué lo reemplaza?), con marcadores de líneas al contenido (de B si se añadió, de A si
+  se borró).
 - `renamed` sin hunks: `hunks: []` y el `summary` explica el renombrado.
 
 Ejemplo real (`examples/kb/fixture`, diff *initial* → *feature: refunds*,

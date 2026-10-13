@@ -158,4 +158,5 @@ está bien.
 - El JSON es válido (comillas y saltos de línea `\n` escapados) y no tiene campos extra.
 - `path` y `blobHash` coinciden con ``readcode context``.
 - Bloques ordenados, sin solapes, cubriendo el archivo.
-- Cada `[[ref:…]]` apunta a algo que existe.
+- Cada `[[ref:…]]` apunta a algo que existe (compruébalo con las `defs` de ``readcode context``
+  del archivo destino); `readcode validate` lo ejecuta el orquestador, no tú.

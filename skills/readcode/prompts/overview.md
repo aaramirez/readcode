@@ -100,9 +100,15 @@ archivo. Tu mensaje incluye la ruta de `archify.mjs`.
 
 1. Lee el `SKILL.md` de Archify (el directorio padre de `bin/archify.mjs`) y sigue su *Fast
    authoring path*: esquema y ejemplo del tipo, candidato JSON completo, `finalize`.
-2. Trabaja en un **directorio temporal fuera de la KB** (el scratchpad de la sesión o un
-   `mktemp -d`): ahí van `candidate.json`, el HTML y todo lo que genere `finalize`. Pon
-   `meta.output` = `"<nombre>.html"`.
+2. Trabaja en un **directorio temporal nuevo y vacío, fuera de la KB** (un `mktemp -d`, o un
+   subdirectorio nuevo del que indique tu mensaje; nunca uno con restos de otra corrida:
+   la evidencia vieja de `finalize` hace fallar su `browser-check`): ahí van `candidate.json`,
+   el HTML y todo lo que genere `finalize`. Pon `meta.output` = `"<nombre>.html"`.
+   **Idioma del visor de Archify:** pon `meta.locale` = {{LANGUAGE}}; salvo para `en` y
+   `zh-CN` (catálogos incluidos), copia además en `meta.translations` el catálogo
+   `<dir de Archify>/examples/locales/<idioma>.json` (p. ej. `es.json`). Si no hay catálogo para
+   el idioma, omite `meta.locale` y dilo en tu respuesta (los controles del visor quedarán en
+   inglés; los textos del diagrama van igualmente en {{LANGUAGE}}).
 3. Ejecuta `node <archify.mjs> finalize <tipo> candidate.json <nombre>.html --json` (con las
    opciones de calidad que indique su SKILL.md; **no** pases `--repo-root` salvo que tu mensaje
    indique un checkout del repo exactamente en `SHA`: el working copy puede estar en otro commit

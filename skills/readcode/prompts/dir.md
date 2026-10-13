@@ -13,7 +13,9 @@ a leer.
 - `Tarea`: la lista de directorios (rutas relativas al repo; `""` = la raíz), o `refresca …` /
   `corrige …` (ver abajo).
 
-Para cada directorio `D`:
+Procesa los directorios **en el orden de la lista** (viene del más profundo a la raíz: cuando
+llegues a un directorio, los resúmenes de sus subdirectorios ya estarán escritos, por otro
+subagente o por ti). Para cada directorio `D`:
 
 1. Sus **hijos directos** salen de `<SNAP>/tree.json` (`files[].path`): los archivos cuyo padre es
    `D` y los subdirectorios inmediatos de `D`.

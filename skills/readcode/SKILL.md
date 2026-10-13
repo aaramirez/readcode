@@ -90,7 +90,8 @@ Estudio: <STUDY>   (directorio <SDIR>)
 SHA: <SHA>         (snapshot <SNAP>)
 Idioma: <LANG>
 Tarea: <lo específico: lote de archivos, directorios, tour, problemas a corregir…>
-Escribe solo los archivos indicados en la plantilla. Al terminar responde únicamente con la
+Escribe solo los archivos indicados en la plantilla. No ejecutes `readcode validate` (reescribe
+links.json e issues.json; lo ejecuta el orquestador). Al terminar responde únicamente con la
 lista de archivos escritos y, si algo no pudiste hacer, por qué.
 ```
 
@@ -153,12 +154,16 @@ readcode plan <KB> <STUDY> --sha <SHA> --json
 
 1. `plan.json` → `dirs` ya viene ordenado del más profundo a la raíz (`""` = raíz, se guarda
    en `dirs/_root.json`).
-2. Agrupa por profundidad: todos los directorios de la misma profundidad forman una ola; dentro
-   de la ola, junta **directorios hermanos** (mismo padre) en un mismo subagente (hasta ~6 por
-   subagente). Plantilla `dir.md`, `model: "sonnet"`, `Tarea`: la lista de directorios.
-3. No lances una ola hasta que la anterior (más profunda) haya terminado: cada resumen se
+2. **Repo pequeño** (≤ 8 directorios pendientes en total): **un solo** subagente con la lista
+   completa en el orden de `dirs` (él los resume de abajo hacia arriba). Salta los puntos 3–4.
+3. Si no, agrupa por profundidad: todos los directorios de la misma profundidad forman una ola;
+   dentro de la ola reparte los directorios en subagentes de hasta ~6, juntando **directorios
+   hermanos** (mismo padre) en el mismo subagente; directorios no hermanos pueden compartir
+   subagente para completar los ~6. Plantilla `dir.md`, `model: "sonnet"`, `Tarea`: la lista de
+   directorios.
+4. No lances una ola hasta que la anterior (más profunda) haya terminado: cada resumen se
    construye con los de sus hijos.
-4. Al final, `readcode plan <KB> <STUDY> --sha <SHA> --json` debe dejar `dirs` vacío; si no,
+5. Al final, `readcode plan <KB> <STUDY> --sha <SHA> --json` debe dejar `dirs` vacío; si no,
    repite solo los que falten; tras el segundo intento fallido regístralo en `issues.json`
    (`"file": "dirs/<ruta>.json"`, `source: "generator"`) y sigue (el snapshot quedará `partial`).
 
@@ -268,11 +273,18 @@ readcode validate <KB> <STUDY> --sha <SHA> --json
    marcadores afectados y el `changedSymbols` completo. Corrigen **solo** las frases que el
    cambio volvió inexactas y **conservan `blobHash`**. Los `dirs` listados que no estén en
    `plan.json` → `dirs` se refrescan igual con `dir.md` (modo refresco); los `tours` listados,
-   con `tour.md` (modo refresco).
+   con `tour.md` (modo refresco). Los marcadores que da `stale` son `ruta#símbolo`, `#símbolo`
+   o solo `ruta` (marcadores de líneas `[[ref:ruta:L…]]` hacia un archivo cambiado): cópialos
+   tal cual en la `Tarea`. Cuándo lanzarlos: los refrescos de `explain` van en la **misma ola**
+   que la Fase 2 (no dependen de ella); los de `dirs` y `tours`, **después** de la Fase 2
+   (leen las explicaciones nuevas), junto con la Fase 3. Si `overview` sale listado pero
+   `plan.json` → `overview` es `true`, no lo refresques: se regenera en la Fase 4.
 4. Fases 2–7 del `study` con este `SHA`. Particularidades:
    - Fase 4: el overview se regenera si `plan.json` → `overview` es `true`. Regenera
      `arquitectura` solo si `changes.json` tiene archivos `added`/`deleted`/`renamed` que cambian
-     la estructura (directorios o componentes nuevos o borrados); si no, conserva el heredado.
+     la estructura (directorios o componentes nuevos o borrados; mira `diagrams/arquitectura.json`:
+     si sus componentes son archivos, un archivo de código nuevo o borrado cuenta); si no,
+     conserva el heredado. El subagente sobrescribe los dos archivos heredados.
    - Fase 5: no propongas tours nuevos si se heredaron; solo los refrescos del punto 3.
 5. Al final ofrece explicar el cambio con `/readcode diff <STUDY> <PREV> <SHA>` (ya existe
    `changes.json`).
@@ -290,8 +302,9 @@ readcode validate <KB> <STUDY> --sha <SHA> --json
    (cópialos en la `Tarea`, no en archivos).
 4. **Por archivo** (reanudable: salta los que ya tienen `DDIR/explain/<path>.json`): subagentes
    en paralelo (máx. 8), plantilla `diff.md` (*modo archivo*), `model: "sonnet"`, hasta ~6
-   archivos o ~600 líneas cambiadas por subagente; `Tarea`: `A`, `B`, `DDIR`, los archivos y
-   los mensajes de commit.
+   archivos o ~600 líneas cambiadas por subagente; `Tarea`: `modo archivo`, `A`, `B`, `DDIR`,
+   los archivos (con su `status`) y los mensajes de commit. En los mensajes de diff (este punto y
+   el siguiente) la línea `SHA:` del mensaje tipo lleva `B` (snapshot `<SDIR>/snapshots/<B>`).
 5. **Global** (si `DDIR/explain.md` ya existe de una corrida anterior, sáltalo): cuando terminen
    los de archivo, un subagente (plantilla `diff.md`, *modo global*, sin `model`)
    escribe `DDIR/explain.md` a partir de los mensajes de commit, `changes.json` y las
