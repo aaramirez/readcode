@@ -6,8 +6,17 @@ Marker grammar (the TypeScript viewer must re-implement exactly this)
 ---------------------------------------------------------------------
 Markers are searched in the Markdown source, OUTSIDE fenced code blocks
 (``` or ~~~, closed by a fence of the same character and at least the same
-length) and OUTSIDE inline code spans (a run of N backticks closed by a run
-of exactly N backticks).
+length) and OUTSIDE inline code spans. Inline code is resolved per paragraph
+(paragraphs are separated by a blank line: a newline, optional spaces/tabs,
+a newline; fenced lines count as blank for this purpose): scanning left to
+right, a run of N backticks opens a span closed by the next run of exactly N
+backticks in the SAME paragraph; an opener with no closer in its paragraph is
+literal text and the span never crosses a blank line.
+
+Whitespace means exactly: space, tab, LF, CR, form feed, vertical tab.
+Digits are [0-9] only. Character classes are ASCII-only; offsets in
+Marker.span are Python code-point offsets into the source (the viewer must
+not rely on them).
 
     marker   = "[[" body "]]"
     body     = "ref:" refbody | "archify:" name
@@ -29,9 +38,14 @@ The body never contains "]" or a newline. Anything that starts with
 (e.g. "[[ref:]]", "[[ref:path]]", "[[archify:]]") is returned with kind
 "invalid" and its raw text, so `validate` can report it.
 
+Marker.symbol holds the diagram name for archify markers.
+
 Resolution
 ----------
-See `resolve`. Archify markers resolve to target "diagrams/<name>.html";
+See `resolve`. Tier-3 (whole repo) candidates are sorted by path, then by
+start line, so ambiguous results are deterministic.
+
+Archify markers resolve to target "diagrams/<name>.html";
 existence is checked by the caller: pass `diagrams` (a set of names, with or
 without extension) to get "broken" for unknown diagrams; when `diagrams` is
 None the status is "exact" (validate checks existence later).
@@ -44,12 +58,14 @@ from dataclasses import dataclass, field
 
 Range = tuple[int, int]
 
-_MARKER_RE = re.compile(r"\[\[(ref|archify):([^\]\n]*)\]\]")
-_LINES_RE = re.compile(r"^([^\s#:|\[\]]*):L(\d+)(?:-(\d+))?$")
-_SYMBOL_RE = re.compile(r"^([^\s#:|\[\]]*)#([^\s|\[\]#]+)$")
-_ARCHIFY_RE = re.compile(r"^[^\s|\[\]:]+$")
+_WS = r" \t\n\r\f\v"  # regex-escaped class body: ASCII whitespace only
+_MARKER_RE = re.compile(r"\[\[(ref|archify):([^\]\n]*)\]\]", re.ASCII)
+_LINES_RE = re.compile(rf"^([^{_WS}#:|\[\]]*):L([0-9]+)(?:-([0-9]+))?$", re.ASCII)
+_SYMBOL_RE = re.compile(rf"^([^{_WS}#:|\[\]]*)#([^{_WS}|\[\]#]+)$", re.ASCII)
+_ARCHIFY_RE = re.compile(rf"^[^{_WS}|\[\]:]+$", re.ASCII)
 _FENCE_RE = re.compile(r"^( {0,3})(`{3,}|~{3,})")
-_INLINE_CODE_RE = re.compile(r"(?<!`)(`+)(?!`)(.+?)(?<!`)\1(?!`)", re.DOTALL)
+_BACKTICKS_RE = re.compile(r"`+")
+_PARA_SEP_RE = re.compile(r"\n[ \t]*\n")
 
 
 @dataclass(frozen=True)
@@ -111,7 +127,32 @@ def _mask_code(text: str) -> str:
                     and line[m.end():].strip() == ""):
                 fence = None
     masked = "".join(out)
-    return _INLINE_CODE_RE.sub(lambda mm: _blank(mm.group(0)), masked)
+    parts, pos = [], 0
+    for sep in _PARA_SEP_RE.finditer(masked):
+        parts.append(_mask_inline(masked[pos:sep.start()]))
+        parts.append(sep.group(0))
+        pos = sep.end()
+    parts.append(_mask_inline(masked[pos:]))
+    return "".join(parts)
+
+
+def _mask_inline(para: str) -> str:
+    """Blank inline code spans within one paragraph (linear scan)."""
+    runs = [(m.start(), m.end()) for m in _BACKTICKS_RE.finditer(para)]
+    out, last, i = [], 0, 0
+    while i < len(runs):
+        n = runs[i][1] - runs[i][0]
+        j = next((k for k in range(i + 1, len(runs))
+                  if runs[k][1] - runs[k][0] == n), None)
+        if j is None:
+            i += 1
+            continue
+        out.append(para[last:runs[i][0]])
+        out.append(_blank(para[runs[i][0]:runs[j][1]]))
+        last = runs[j][1]
+        i = j + 1
+    out.append(para[last:])
+    return "".join(out)
 
 
 def _parse_one(kind_word: str, body: str, raw: str, span: tuple[int, int]) -> Marker:
@@ -212,9 +253,11 @@ def resolve(marker: Marker, current_path: str, tree: dict, symbols: dict,
 
     imported = [i["resolved"] for i in files.get(current_path, {}).get("imports", [])
                 if i.get("resolved")]
-    tiers = [[current_path], list(dict.fromkeys(imported)), list(files)]
-    for paths in tiers:
+    tiers = [[current_path], list(dict.fromkeys(imported)), sorted(files)]
+    for t, paths in enumerate(tiers):
         found = _candidates(files, paths, symbol)
+        if t == 2:
+            found.sort(key=lambda c: (c[0], c[1]))
         if len(found) == 1:
             base.status = "exact"
             base.target, base.range = found[0]

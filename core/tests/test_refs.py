@@ -184,3 +184,32 @@ def test_exact_link_entry():
 def test_resolve_all():
     out = resolve_all("x [[ref:#main]] y [[ref:#ghost]]", "app/main.py", TREE, SYMS)
     assert [r.status for _, r in out] == ["exact", "broken"]
+
+
+def test_stray_backtick_does_not_swallow_across_paragraphs():
+    md = "use `tick here\n\nsee [[ref:a.py#f]]\n\nstray ` end"
+    assert [m.symbol for m in parse_markers(md)] == ["f"]
+
+
+def test_multi_backtick_inline_span():
+    md = "``a `b` [[ref:x.py#in]] c`` then [[ref:y.py#out]]"
+    assert [m.symbol for m in parse_markers(md)] == ["out"]
+
+
+def test_two_markers_one_line():
+    ms = parse_markers("[[ref:a.py#f]] y [[ref:b.py:L1-2]]")
+    assert [m.kind for m in ms] == ["symbol", "lines"]
+
+
+def test_unicode_digits_not_lines():
+    assert one("[[ref:a.py:L\u0661]]").kind == "invalid"
+
+
+def test_repo_tier_candidates_sorted():
+    d = {"defs": [{"name": "p", "kind": "function", "range": [9, 9]},
+                  {"name": "p", "kind": "function", "range": [2, 2]}],
+         "refs": [], "imports": []}
+    syms = {"files": {"z.py": d, "b.py": d, "cur.py": {"defs": [], "refs": [], "imports": []}}}
+    r = resolve(one("[[ref:#p]]"), "cur.py", TREE, syms)
+    assert [c for c in r.candidates] == [("b.py", (2, 2)), ("b.py", (9, 9)),
+                                         ("z.py", (2, 2)), ("z.py", (9, 9))]
