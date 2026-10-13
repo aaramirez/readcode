@@ -29,6 +29,8 @@ export interface MarkdownContext {
   docKey: string;
   /** URL of diagrams/<name>.html; null for an unsafe name. */
   diagramUrl: (name: string) => string | null;
+  /** Snapshot a ref target opens in (default: sha). Diffs open targets missing from B in A. */
+  shaFor?: (target: string) => string;
 }
 
 export interface Candidate {
@@ -59,7 +61,8 @@ function markerRule(state: StateInline, silent: boolean): boolean {
 md.inline.ruler.before('link', 'rc_marker', markerRule);
 
 function fileHref(ctx: MarkdownContext, target: string, range: [number, number]): string {
-  return format({ kind: 'file', study: ctx.study, sha: ctx.sha, path: target, range: { start: range[0], end: range[1] === range[0] ? undefined : range[1] } });
+  const sha = ctx.shaFor?.(target) ?? ctx.sha;
+  return format({ kind: 'file', study: ctx.study, sha, path: target, range: { start: range[0], end: range[1] === range[0] ? undefined : range[1] } });
 }
 
 function refText(m: ParsedMarker): string {

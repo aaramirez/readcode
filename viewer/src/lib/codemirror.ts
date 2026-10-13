@@ -221,6 +221,19 @@ export function codeViewExtensions(doc: Text, o: CodeViewOptions): Extension[] {
   ];
 }
 
+/** Extensions of one read-only side of the diff merge view (route-range marks only). */
+export function mergeSideExtensions(dark: boolean, themeCompartment: Compartment, languageCompartment: Compartment): Extension[] {
+  return [
+    EditorState.readOnly.of(true),
+    EditorView.editable.of(false),
+    lineNumbers(),
+    baseTheme,
+    themeCompartment.of(themeExtension(dark)),
+    languageCompartment.of([]),
+    lineMarksField,
+  ];
+}
+
 /** First (mostly) visible line of the view. */
 export function topVisibleLine(view: EditorView): number {
   const top = view.scrollDOM.getBoundingClientRect().top + 4;

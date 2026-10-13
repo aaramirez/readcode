@@ -2,6 +2,7 @@
   import { tick } from 'svelte';
   import { SvelteSet } from 'svelte/reactivity';
   import { ancestors, buildTree, filterTree, type TreeNode } from '../lib/tree';
+  import type { DiffBadge } from '../lib/diff';
   import type { Tree } from '../lib/types';
 
   interface Props {
@@ -10,9 +11,20 @@
     selected: { kind: 'file' | 'dir'; path: string } | null;
     onFile: (path: string) => void;
     onDir: (path: string) => void;
+    /** Diff mode: A/M/D/R badge per changed file (replaces the language badge). */
+    badges?: Map<string, DiffBadge>;
+    /** Issue count per file/dir path (warning icon). */
+    warnings?: Map<string, number>;
+    /** Diff mode: no root row, no excluded toggle. */
+    diffMode?: boolean;
   }
 
-  let { tree, selected, onFile, onDir }: Props = $props();
+  let { tree, selected, onFile, onDir, badges, warnings, diffMode = false }: Props = $props();
+
+  function warnTitle(path: string): string {
+    const n = warnings?.get(path) ?? 0;
+    return n === 1 ? '1 problema reportado' : `${n} problemas reportados`;
+  }
 
   let query = $state('');
   let showExcluded = $state(false);
@@ -23,8 +35,10 @@
   const filtered = $derived(filterTree(root, query));
   const visibleRoot = $derived(filtered ? filtered.root : root);
 
+  // In diff mode the (few) changed files start visible: `expanded` then holds collapsed dirs.
   function isOpen(node: TreeNode): boolean {
-    return filtered ? filtered.expand.has(node.path) || expanded.has(node.path) : expanded.has(node.path);
+    const own = diffMode ? !expanded.has(node.path) : expanded.has(node.path);
+    return filtered ? filtered.expand.has(node.path) || own : own;
   }
 
   function toggle(node: TreeNode) {
@@ -40,7 +54,10 @@
   $effect(() => {
     const sel = selected;
     if (!sel || sel.path === '') return;
-    for (const a of ancestors(sel.path)) expanded.add(a);
+    for (const a of ancestors(sel.path)) {
+      if (diffMode) expanded.delete(a);
+      else expanded.add(a);
+    }
     tick().then(() => {
       const el = container?.querySelector<HTMLElement>(`[data-path="${CSS.escape(sel.path)}"]`);
       el?.scrollIntoView({ block: 'nearest' });
@@ -51,11 +68,14 @@
 <div class="tree">
   <div class="tools">
     <input type="search" placeholder="Filtrar archivos…" bind:value={query} aria-label="Filtrar archivos" />
-    <label class="toggle">
-      <input type="checkbox" bind:checked={showExcluded} /> mostrar excluidos
-    </label>
+    {#if !diffMode}
+      <label class="toggle">
+        <input type="checkbox" bind:checked={showExcluded} /> mostrar excluidos
+      </label>
+    {/if}
   </div>
   <div class="items" bind:this={container} role="tree">
+    {#if !diffMode}
     <button
       class="row dir"
       class:selected={selected?.kind === 'dir' && selected.path === ''}
@@ -64,6 +84,7 @@
     >
       <span class="caret"></span><span class="name">/ (raíz)</span>
     </button>
+    {/if}
     {#if visibleRoot.children.length === 0}
       <div class="empty">Sin coincidencias.</div>
     {/if}
@@ -98,6 +119,7 @@
             toggle(node);
           }}>{open ? '▾' : '▸'}</span
         ><span class="name">{node.name}</span>
+        {#if warnings?.has(node.path)}<span class="warn" title={warnTitle(node.path)}>⚠</span>{/if}
       </button>
       {#if open}
         {@render children(node.children, depth + 1)}
@@ -114,8 +136,12 @@
         title={node.excluded ? 'Excluido del estudio' : node.path}
         onclick={() => onFile(node.path)}
       >
-        <span class="caret"></span><span class="name">{node.name}</span>
-        {#if node.language}<span class="badge">{node.language}</span>{/if}
+        <span class="caret"></span><span class="name" class:deleted={badges?.get(node.path)?.status === 'deleted'}>{node.name}</span>
+        {#if warnings?.has(node.path)}<span class="warn" title={warnTitle(node.path)}>⚠</span>{/if}
+        {#if badges?.has(node.path)}
+          {@const diff = badges.get(node.path)!}
+          <span class="badge diff diff-{diff.badge}" title={diff.title}>{diff.badge}</span>
+        {:else if node.language}<span class="badge">{node.language}</span>{/if}
       </button>
     {/if}
   {/each}
@@ -181,6 +207,32 @@
   .name {
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  .warn {
+    color: var(--warn);
+    font-size: 12px;
+    flex: none;
+  }
+  .name.deleted {
+    text-decoration: line-through;
+    color: var(--fg-muted);
+  }
+  .badge.diff {
+    font-family: var(--font-code);
+    font-weight: 700;
+    color: var(--accent-fg);
+  }
+  .badge.diff-A {
+    background: var(--added);
+  }
+  .badge.diff-M {
+    background: var(--warn);
+  }
+  .badge.diff-D {
+    background: var(--danger);
+  }
+  .badge.diff-R {
+    background: var(--accent);
   }
   .badge {
     margin-left: auto;

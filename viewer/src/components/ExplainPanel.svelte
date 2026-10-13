@@ -4,7 +4,7 @@
   import { tick } from 'svelte';
   import type { StudyData } from '../lib/data';
   import { format } from '../lib/router';
-  import type { Block, Tree } from '../lib/types';
+  import type { Block, Issue, Tree } from '../lib/types';
   import Markdown from './Markdown.svelte';
 
   interface Props {
@@ -17,9 +17,13 @@
     showChildren?: boolean;
     activeId: string | null;
     onBlock: (block: Block) => void;
+    /** issues.json problems of the target (shown as a warning banner). */
+    issues?: Issue[];
   }
 
-  let { data, study, sha, tree, target, showChildren = true, activeId, onBlock }: Props = $props();
+  let { data, study, sha, tree, target, showChildren = true, activeId, onBlock, issues = [] }: Props = $props();
+
+  const SOURCES: Record<Issue['source'], string> = { validate: 'validate', generator: 'generador', tool: 'herramienta' };
 
   const dir = $derived(target?.kind === 'dir' ? data.dir(sha, target.path) : null);
   const explain = $derived(target?.kind === 'file' ? data.explain(sha, target.path) : null);
@@ -88,6 +92,7 @@
     <div class="empty">Selecciona un archivo o directorio para ver su explicación.</div>
   {:else if target.kind === 'dir'}
     <h2>{target.path === '' ? 'Raíz del repositorio' : target.path + '/'}</h2>
+    {@render warningBanner()}
     {#await dir}
       <div class="empty">Cargando…</div>
     {:then d}
@@ -118,6 +123,7 @@
   {:else}
     {@const path = target.path}
     <h2>{name(path)}</h2>
+    {@render warningBanner()}
     {#await explain}
       <div class="empty">Cargando…</div>
     {:then e}
@@ -154,7 +160,40 @@
   {/if}
 </div>
 
+{#snippet warningBanner()}
+  {#if issues.length > 0}
+    <div class="warnings" role="alert">
+      <strong>⚠ {issues.length === 1 ? '1 problema reportado' : `${issues.length} problemas reportados`}</strong>
+      <ul>
+        {#each issues as i, n (n)}
+          <li>
+            {i.problem}
+            {#if i.hint}<span class="hint">— {i.hint}</span>{/if}
+            <span class="source">({SOURCES[i.source] ?? i.source}{i.file ? ` · ${i.file}` : ''})</span>
+          </li>
+        {/each}
+      </ul>
+    </div>
+  {/if}
+{/snippet}
+
 <style>
+  .warnings {
+    border: 1px solid var(--warn);
+    border-left-width: 4px;
+    border-radius: 6px;
+    padding: 6px 10px;
+    margin: 0 0 12px;
+    font-size: 13px;
+  }
+  .warnings ul {
+    margin: 4px 0 0;
+    padding-left: 18px;
+  }
+  .warnings .hint,
+  .warnings .source {
+    color: var(--fg-muted);
+  }
   .panel {
     padding: 8px 12px 40px;
     overflow: auto;

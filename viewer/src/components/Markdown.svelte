@@ -12,6 +12,10 @@
     docKey: string;
     /** links.json to use (defaults to the snapshot's). */
     links?: Promise<Links | null>;
+    /** Identifies a custom `links` source (e.g. "diff:<a>..<b>") so docs of different sources never share a load. */
+    scope?: string;
+    /** Snapshot a ref target opens in (default: sha). */
+    shaFor?: (target: string) => string;
   }
 </script>
 
@@ -25,7 +29,7 @@
 
   // links.json is cached by StudyData; wait for it so markers don't flash as broken.
   let loaded = $state<{ key: string; links: Links | null } | null>(null);
-  const linksKey = $derived(doc ? `${doc.study}@${doc.sha}@${doc.links ? 'custom:' + doc.docKey : ''}` : '');
+  const linksKey = $derived(doc ? `${doc.study}@${doc.sha}@${doc.links ? `custom:${doc.scope ?? ''}:${doc.docKey}` : ''}` : '');
   $effect(() => {
     const d = doc;
     const key = linksKey;
@@ -47,6 +51,7 @@
       links: loaded.links,
       docKey: d.docKey,
       diagramUrl: (name) => d.data.diagramUrl(d.sha, name),
+      shaFor: d.shaFor,
     });
   });
 

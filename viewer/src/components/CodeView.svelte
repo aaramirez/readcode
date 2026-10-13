@@ -35,9 +35,11 @@
     /** Bumped to re-reveal the same range (block clicked while already at its hash). */
     revealTick: number;
     onActive: (id: string | null) => void;
+    /** Route of this file in the graph tab (null: no graph.json or the file has no nodes). */
+    graphHref?: string | null;
   }
 
-  let { data, study, sha, tree, path, range, activeId, revealTick, onActive }: Props = $props();
+  let { data, study, sha, tree, path, range, activeId, revealTick, onActive, graphHref = null }: Props = $props();
 
   const file = $derived(tree.files.find((f) => f.path === path));
   const excluded = $derived(tree.excluded.find((e) => e.path === path));
@@ -268,6 +270,9 @@
     {#if current?.symbols?.files[path]}
       <span class="hint">Ctrl+clic en un identificador: ir a la definición · ◇ en el margen: ver usos</span>
     {/if}
+    {#if graphHref}
+      <a class="graph-link" href={graphHref} title="Centrar este archivo en el grafo">ver en grafo</a>
+    {/if}
   </div>
   {#if excluded}
     <div class="empty">Archivo excluido del estudio ({REASONS[excluded.reason] ?? excluded.reason}).</div>
@@ -316,6 +321,14 @@
     margin-left: auto;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  .graph-link {
+    font-family: var(--font-ui);
+    margin-left: auto;
+    flex: none;
+  }
+  .hint + .graph-link {
+    margin-left: 0;
   }
   .editor {
     flex: 1;

@@ -6,6 +6,8 @@
   --bg-highlight: #fff4c2;
   --bg-block: #eef4ff;
   --danger: #c4372b;
+  --warn: #b7791f;
+  --added: #2f8f46;
   --fg: #1d2129;
   --fg-muted: #6a7280;
   --fg-faint: #a0a6b1;
@@ -28,6 +30,8 @@
     --bg-highlight: #3d3720;
     --bg-block: #1c2638;
     --danger: #e5675c;
+    --warn: #e0a84a;
+    --added: #57b26e;
     --fg: #dde1e8;
     --fg-muted: #9aa1ad;
     --fg-faint: #5f6672;
@@ -48,6 +52,8 @@
   --bg-highlight: #3d3720;
   --bg-block: #1c2638;
   --danger: #e5675c;
+  --warn: #e0a84a;
+  --added: #57b26e;
   --fg: #dde1e8;
   --fg-muted: #9aa1ad;
   --fg-faint: #5f6672;

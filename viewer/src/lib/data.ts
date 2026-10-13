@@ -196,6 +196,11 @@ export class StudyData {
     return this.kb.text(this.diff(a, b, 'explain.md'));
   }
 
+  /** links.json of a diff (sha = B; doc keys "explain.md", "explain/<path>.json"). */
+  diffLinks(a: string, b: string): Promise<Links | null> {
+    return this.kb.json<Links>(this.diff(a, b, 'links.json'));
+  }
+
   diffFileExplain(a: string, b: string, path: string): Promise<DiffFileExplain | null> {
     return this.kb.json<DiffFileExplain>(this.diff(a, b, `explain/${encodePath(path)}.json`));
   }

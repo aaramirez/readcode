@@ -49,6 +49,14 @@ describe('renderMarkdown markers', () => {
     );
   });
 
+  it('opens ref targets in the snapshot chosen by shaFor (diff fallback to A)', () => {
+    const A = 'a'.repeat(40);
+    const withFallback: MarkdownContext = { ...ctx, shaFor: (t) => (t === 'app/main.py' ? A : ctx.sha) };
+    expect(renderMarkdown('[[ref:app/main.py#main]]', withFallback)).toContain(`href="#/fixture/${A}/f/app/main.py:L4-7"`);
+    const amb = renderMarkdown('[[ref:#process]]', withFallback);
+    expect(amb).toContain(`#/fixture/${ctx.sha}/f/app/services/auth.py:L5-7`);
+  });
+
   it('renders single-line and labelled refs', () => {
     expect(renderMarkdown('[[ref::L2]]', ctx)).toContain('href="#/fixture/074ec965eabffb43a0224ef9f1426515d2818975/f/app/models.py:L2"');
     expect(renderMarkdown('[[ref::L2]]', ctx)).toContain('>L2</a>');

@@ -11,9 +11,15 @@
     onStudy: (name: string) => void;
     onSha: (sha: string) => void;
     onTheme: () => void;
+    /** Open the "Comparar…" dialog (null: not available). */
+    onCompare: (() => void) | null;
+    /** Open the Ctrl+K palette (null: not available). */
+    onSearch: (() => void) | null;
+    /** Diff view: the commit selector shows B. */
+    diffLabel?: string | null;
   }
 
-  let { catalog, studyName, study, sha, theme, onStudy, onSha, onTheme }: Props = $props();
+  let { catalog, studyName, study, sha, theme, onStudy, onSha, onTheme, onCompare, onSearch, diffLabel = null }: Props = $props();
 
   const snapshots = $derived(
     study ? [...study.snapshots].sort((a, b) => Date.parse(b.date) - Date.parse(a.date)) : [],
@@ -46,12 +52,19 @@
       <option value={s.sha}>{s.sha.slice(0, 7)} · {s.date.slice(0, 10)} · {s.message.split('\n')[0]}</option>
     {/each}
   </select>
-  <button disabled title="Disponible próximamente">Comparar…</button>
+  <button
+    disabled={!onCompare || (study?.snapshots.length ?? 0) < 2}
+    title={diffLabel ?? 'Comparar dos commits'}
+    class:active={!!diffLabel}
+    onclick={() => onCompare?.()}>{diffLabel ?? 'Comparar…'}</button
+  >
   <div class="nav">
     <button title="Atrás" aria-label="Atrás" onclick={() => history.back()}>←</button>
     <button title="Adelante" aria-label="Adelante" onclick={() => history.forward()}>→</button>
   </div>
-  <input class="search" type="search" placeholder="Buscar (Ctrl+K) — próximamente" disabled aria-label="Buscar" />
+  <button class="search" disabled={!onSearch} onclick={() => onSearch?.()} aria-label="Buscar (Ctrl+K)">
+    <span>Buscar…</span><kbd>Ctrl+K</kbd>
+  </button>
   <button class="theme" onclick={onTheme}>{THEME_LABEL[theme]}</button>
 </header>
 
@@ -85,5 +98,23 @@
     min-width: 8rem;
     max-width: 24rem;
     margin-left: auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--bg);
+    color: var(--fg-muted);
+    text-align: left;
+  }
+  .search kbd {
+    font-family: var(--font-code);
+    font-size: 11px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 0 4px;
+  }
+  button.active {
+    background: var(--bg-selected);
+    font-family: var(--font-code);
+    font-size: 12px;
   }
 </style>

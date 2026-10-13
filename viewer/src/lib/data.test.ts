@@ -59,6 +59,7 @@ describe('KbClient', () => {
     await s.changes('aaa', 'bbb');
     await s.diffExplain('aaa', 'bbb');
     await s.diffFileExplain('aaa', 'bbb', 'app/x.py');
+    await s.diffLinks('aaa', 'bbb');
     expect(f.mock.calls.map((c) => c[0])).toEqual([
       'kb/fixture/study.json',
       `kb/fixture/snapshots/${SHA}/tree.json`,
@@ -75,6 +76,7 @@ describe('KbClient', () => {
       'kb/fixture/diffs/aaa..bbb/changes.json',
       'kb/fixture/diffs/aaa..bbb/explain.md',
       'kb/fixture/diffs/aaa..bbb/explain/app/x.py.json',
+      'kb/fixture/diffs/aaa..bbb/links.json',
     ]);
   });
 
