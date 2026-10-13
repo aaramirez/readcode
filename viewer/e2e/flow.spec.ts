@@ -57,6 +57,7 @@ test('flujo completo del visor', async ({ page, request }) => {
     await card.locator('.chip').click();
     await expect(page).toHaveURL(hashIs(`#/fixture/${B}/f/app/main.py:L4-7`));
     await expect(rangeLines(page)).toHaveCount(4);
+    await expect(rangeLines(page).first()).toHaveText('def main():');
     await expect(card).toHaveClass(/active/);
   });
 
@@ -104,6 +105,7 @@ test('flujo completo del visor', async ({ page, request }) => {
     await expect(panel.getByRole('heading', { name: 'Facturación: del usuario al total' })).toBeVisible();
     await expect(codePath).toHaveText('app/services/billing.py');
     await expect(rangeLines(page)).toHaveCount(3);
+    await expect(rangeLines(page).first()).toHaveText('def process(user, items):');
     await expect(tree.locator('[data-path="app/services/billing.py"]')).toHaveAttribute('aria-selected', 'true');
   });
 
@@ -164,8 +166,13 @@ test('flujo completo del visor', async ({ page, request }) => {
   });
 
   await test.step('pestaña Grafo', async () => {
+    // Only this step depends on graph.json (test.skip here would skip the rest of the flow).
     const graph = await request.get(`/kb/fixture/snapshots/${B}/graph/graph.json`);
-    test.skip(!graph.ok(), 'el ejemplo no tiene graph.json');
+    if (!graph.ok()) {
+      test.info().annotations.push({ type: 'skip', description: 'el ejemplo no tiene graph.json: Grafo sin comprobar' });
+      await expect(tab('Grafo')).toHaveCount(0);
+      return;
+    }
     await tab('Grafo').click();
     await expect(page).toHaveURL(hashIs(`#/fixture/${B}/graph`));
     const view = page.getByTestId('graph-view');
@@ -200,6 +207,7 @@ test('tours: volver a la lista y reabrir el mismo tour; pasos seguidos en el mis
 
   // the player → Tours tab shows the list without changing the hash…
   await page.getByRole('tab', { name: 'Tours', exact: true }).click();
+  await expect(panel).toHaveCount(0);
   const start = page.getByTestId('tours').locator('section', { hasText: 'Flujo de facturación' }).getByTestId('tour-start');
   await expect(start).toBeVisible();
   // …and starting the same tour (same hash) must leave the list
@@ -230,9 +238,23 @@ test('compare dialog desde el commit más antiguo; Ctrl+K no abre la búsqueda b
   const dialog = page.getByRole('dialog', { name: 'Comparar commits' });
   await expect(dialog.getByRole('status')).toHaveText('Diff disponible.');
 
+  // Ctrl+K with the modal open: the palette must stay closed over a short window…
+  const palette = page.getByRole('dialog', { name: 'Buscar' });
   await page.keyboard.press('Control+k');
-  await expect(page.getByRole('dialog', { name: 'Buscar' })).toHaveCount(0);
+  for (let i = 0; i < 6; i++) {
+    expect(await palette.count()).toBe(0);
+    await page.waitForTimeout(100);
+  }
+  // …while the same keypress does open it once the dialog is closed.
+  await dialog.getByRole('button', { name: 'Cancelar' }).click();
+  await expect(dialog).toHaveCount(0);
+  await page.keyboard.press('Control+k');
+  await expect(palette).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(palette).toHaveCount(0);
 
+  await page.getByRole('button', { name: 'Comparar…' }).click();
+  await expect(dialog.getByRole('status')).toHaveText('Diff disponible.');
   await dialog.getByRole('button', { name: 'Comparar', exact: true }).click();
   await expect(page).toHaveURL(hashIs(`#/fixture/diff/${A}..${B}`));
   expect(errors).toEqual([]);
