@@ -141,3 +141,48 @@ def test_cli_context_rejects_linked_snapshot(tmp_path):
     _study_json(sdir, [{"sha": SHA, "date": "2026-02-01T00:00:00Z"}])
     result = runner.invoke(app, ["context", str(tmp_path / "kb"), "demo", "a.py", "--sha", SHA])
     assert result.exit_code != 0 and "resuelve fuera" in result.output
+
+
+def test_safe_snapshot_dir_rejects_linked_snapshots_root(tmp_path):
+    outside = tmp_path / "outside"
+    (outside / SHA).mkdir(parents=True)
+    sdir = tmp_path / "study"
+    sdir.mkdir()
+    _link_dir(sdir / "snapshots", outside)
+    with pytest.raises(kbio.UnsafeSnapshotError):
+        kbio.safe_snapshot_dir(sdir, SHA)
+
+
+def test_validate_does_not_follow_linked_snapshot_of_a_diff(tmp_path):
+    from readcode.validate_cmd import validate_study, is_stale
+    sha_a, sha_b = "a" * 40, "b" * 40
+    victim = tmp_path / "victim"
+    victim.mkdir()
+    kbio.atomic_write_json(victim / "tree.json", {"schemaVersion": 1, "sha": sha_b, "excluded": [], "files": [
+        {"path": "secret.py", "blob": "h", "language": "python", "lines": 1, "bytes": 1, "indexed": False}]})
+    sdir = tmp_path / "kb" / "demo"
+    (sdir / "snapshots" / sha_a).mkdir(parents=True)
+    _link_dir(sdir / "snapshots" / sha_b, victim)
+    ddir = sdir / "diffs" / f"{sha_a}..{sha_b}"
+    ddir.mkdir(parents=True)
+    (ddir / "explain.md").write_text("ver [[file:secret.py]]", encoding="utf-8")
+    _study_json(sdir, [{"sha": sha_a, "date": "2026-01-01T00:00:00Z"}])
+    before = sorted(p.name for p in victim.iterdir())
+    problems = validate_study(tmp_path / "kb", "demo")
+    assert any("not a safe snapshot" in p["problem"] for p in problems)
+    assert sorted(p.name for p in victim.iterdir()) == before
+    is_stale(sdir)
+
+
+def test_validate_skips_linked_diff_dir(tmp_path):
+    from readcode.validate_cmd import validate_study
+    sha_a, sha_b = "a" * 40, "b" * 40
+    victim = tmp_path / "victim"
+    victim.mkdir()
+    sdir = tmp_path / "kb" / "demo"
+    (sdir / "diffs").mkdir(parents=True)
+    _link_dir(sdir / "diffs" / f"{sha_a}..{sha_b}", victim)
+    _study_json(sdir, [])
+    problems = validate_study(tmp_path / "kb", "demo")
+    assert any("outside" in p["problem"] for p in problems)
+    assert list(victim.iterdir()) == []

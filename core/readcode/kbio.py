@@ -87,7 +87,8 @@ def safe_snapshot_dir(study_directory: Path | str, sha: str) -> Path:
     if not isinstance(sha, str) or not SHA_RE.match(sha):
         raise UnsafeSnapshotError(f"sha de snapshot no válido: {sha!r} (se esperan 40 caracteres hexadecimales)")
     snap = snapshot_dir(study_directory, sha)
-    if snap.resolve().parent != (Path(study_directory) / "snapshots").resolve():
+    root = (Path(study_directory) / "snapshots").resolve()
+    if root.parent != Path(study_directory).resolve() or snap.resolve().parent != root:
         raise UnsafeSnapshotError(f"el snapshot {sha} resuelve fuera de {Path(study_directory) / 'snapshots'}")
     return snap
 
@@ -148,9 +149,9 @@ def resolve_sha(study_data: dict, prefix: str, sdir: Path | str | None = None) -
     else:
         matches = [s for s in shas if prefix and s.startswith(prefix)]
         if not matches:
-            raise ValueError(f"Snapshot {prefix!r} is not part of the study; run `readcode snapshot` first")
+            raise ValueError(f"el snapshot {prefix!r} no es parte del estudio; ejecuta `readcode snapshot` primero")
         if len(matches) > 1:
-            raise ValueError(f"Ambiguous sha prefix {prefix!r}: {', '.join(matches)}")
+            raise ValueError(f"prefijo de sha ambiguo {prefix!r}: {', '.join(matches)}")
         found = matches[0]
     if sdir is not None:
         safe_snapshot_dir(sdir, found)

@@ -31,8 +31,14 @@ def _shas(sdir: Path) -> list[str]:
     snapshots = sdir / "snapshots"
     if not snapshots.is_dir():
         return []
-    return sorted(p.name for p in snapshots.iterdir()
-                  if p.is_dir() and kbio.SHA_RE.match(p.name) and p.resolve().parent == snapshots.resolve())
+    names = []
+    for p in snapshots.iterdir():
+        try:
+            if p.is_dir() and kbio.safe_snapshot_dir(sdir, p.name):
+                names.append(p.name)
+        except kbio.UnsafeSnapshotError:
+            continue
+    return sorted(names)
 
 
 def migrate_study(kb: Path | str, study: str | None = None) -> list[str]:

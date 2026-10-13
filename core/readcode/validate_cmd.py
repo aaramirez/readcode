@@ -338,8 +338,10 @@ def _write_issues(snap: Path, sp: str, problems: list[dict], out: _Collector) ->
 
 def _snapshot_index(sdir: Path, sha: str) -> tuple[dict, dict]:
     """tree/symbols of a snapshot for marker resolution (empty when absent/invalid)."""
-    snap = kbio.snapshot_dir(sdir, sha)
     out = []
+    snap = _safe_snapshot_dir(sdir, sha)
+    if snap is None:
+        return _EMPTY_TREE, _EMPTY_SYMBOLS
     for name, kind, empty in (("tree.json", "tree", _EMPTY_TREE),
                               ("symbols.json", "symbols", _EMPTY_SYMBOLS)):
         try:
@@ -359,6 +361,14 @@ def _validate_diff(sdir: Path, name: str, out: _Collector) -> None:
                 "regenerate it with `readcode diff`")
         return
     sha_a, sha_b = m.groups()
+    if not _is_safe_diff_dir(sdir, name):
+        out.add(dp, "diff directory resolves outside <study>/diffs; skipped",
+                "replace the link with a real directory or regenerate it with `readcode diff`")
+        return
+    unsafe = [s for s in (sha_a, sha_b) if _safe_snapshot_dir(sdir, s) is None]
+    if unsafe:
+        out.add(dp, f"snapshot {unsafe[0]} is not a safe snapshot directory (resolves outside "
+                    "<study>/snapshots); its files are not read", "replace the link with a real snapshot")
     changes = None
     if (ddir / "changes.json").is_file():
         changes = _load(ddir / "changes.json", "changes", f"{dp}/changes.json", out)
@@ -371,8 +381,8 @@ def _validate_diff(sdir: Path, name: str, out: _Collector) -> None:
 
     tree_b, symbols_b = _snapshot_index(sdir, sha_b)
     res = _Resolver(tree_b, symbols_b, set(), fallback=_snapshot_index(sdir, sha_a))
-    snap_b = kbio.snapshot_dir(sdir, sha_b)
-    if (snap_b / "diagrams").is_dir():
+    snap_b = _safe_snapshot_dir(sdir, sha_b)
+    if snap_b is not None and (snap_b / "diagrams").is_dir():
         res.diagrams = {p.name for p in (snap_b / "diagrams").glob("*.html")}
 
     if (ddir / "explain.md").is_file():
@@ -479,6 +489,12 @@ def _safe_snapshot_dir(sdir: Path, sha: str) -> Path | None:
         return None
 
 
+def _is_safe_diff_dir(sdir: Path, name: str) -> bool:
+    """``<study>/diffs/<name>`` stays directly under ``<study>/diffs`` (no link escapes)."""
+    root = (sdir / "diffs").resolve()
+    return root.parent == sdir.resolve() and (sdir / "diffs" / name).resolve().parent == root
+
+
 def _study_shas(sdir: Path) -> list[str]:
     data = json.loads((sdir / "study.json").read_text(encoding="utf-8"))
     snaps = data.get("snapshots", []) if isinstance(data, dict) else []
@@ -494,7 +510,8 @@ def is_stale(sdir: Path) -> bool:
     dirs = [d for d in (kbio.snapshot_dir(sdir, s) for s in _study_shas(sdir)) if d.is_dir()]
     diffs = sdir / "diffs"
     if diffs.is_dir():
-        dirs += [d for d in sorted(diffs.iterdir()) if d.is_dir() and _DIFF_DIR_RE.match(d.name)]
+        dirs += [d for d in sorted(diffs.iterdir()) if d.is_dir() and _DIFF_DIR_RE.match(d.name)
+                 and _is_safe_diff_dir(sdir, d.name)]
     if not dirs:
         return False
     links = [d / "links.json" for d in dirs]

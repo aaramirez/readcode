@@ -40,9 +40,9 @@ def _find_snapshot_dir(sdir: Path, sha: str) -> Path:
     try:
         study_data = kbio.read_json(sdir / "study.json")
         full = kbio.resolve_sha(study_data, sha, sdir)
-        snap = kbio.safe_snapshot_dir(sdir, full)
     except (OSError, ValueError, KeyError, TypeError) as exc:
         raise ArchifyError(f"no existe el snapshot {sha} en {sdir}: {exc}") from exc
+    snap = kbio.snapshot_dir(sdir, full)
     if not snap.is_dir():
         raise ArchifyError(f"no existe el snapshot {sha} en {sdir}")
     return snap

@@ -27,8 +27,9 @@ def _safe_entries(sdir: Path, snapshots: list) -> list[dict]:
     out = []
     for s in snapshots:
         try:
-            if not (isinstance(s, dict) and isinstance(s.get("date"), str)):
-                raise kbio.UnsafeSnapshotError(f"entrada de snapshot no válida: {s!r}")
+            if not isinstance(s, dict) or not isinstance(s.get("date"), str):
+                print(f"aviso: se omite una entrada de study.json sin fecha: {s!r}", file=sys.stderr)
+                continue
             kbio.safe_snapshot_dir(sdir, s.get("sha"))
         except kbio.UnsafeSnapshotError as exc:
             print(f"aviso: se omite un snapshot de study.json: {exc}", file=sys.stderr)
