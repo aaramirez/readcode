@@ -49,8 +49,8 @@ def diff_snapshots(kb: Path | str, study: str, sha_a: str, sha_b: str) -> dict:
         raise DiffError(f"{study_json} not found; run `readcode init` first")
     study_data = kbio.read_json(study_json)
     try:
-        a = kbio.resolve_sha(study_data, sha_a)
-        b = kbio.resolve_sha(study_data, sha_b)
+        a = kbio.resolve_sha(study_data, sha_a, sdir)
+        b = kbio.resolve_sha(study_data, sha_b, sdir)
     except ValueError as exc:
         raise DiffError(str(exc)) from exc
 

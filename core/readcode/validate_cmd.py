@@ -31,7 +31,6 @@ from readcode import kbio, refs, schemas
 from readcode.schemas import validate as schema_validate
 
 _DIFF_DIR_RE = re.compile(r"^([0-9a-f]{40})\.\.([0-9a-f]{40})$")
-_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 _DIAGRAM_NAME_RE = refs._ARCHIFY_RE  # same rule as [[archify:name]]
 _EMPTY_TREE: dict = {"files": []}
 _EMPTY_SYMBOLS: dict = {"files": {}}
@@ -443,7 +442,7 @@ def validate_study(kb: Path | str, study: str, sha: str | None = None,
         shas.append(s["sha"])
     if sha is not None:
         try:
-            shas = [kbio.resolve_sha({"snapshots": [{"sha": s} for s in shas]}, sha)]
+            shas = [kbio.resolve_sha({"snapshots": [{"sha": s} for s in shas]}, sha, sdir)]
         except ValueError as exc:
             raise ValidateError(str(exc)) from exc
     for s in shas:
@@ -474,11 +473,10 @@ _DERIVED_NAMES = frozenset({"links.json", "search.json", "issues.json"})
 
 def _safe_snapshot_dir(sdir: Path, sha: str) -> Path | None:
     """``<study>/snapshots/<sha>`` only for a 40-hex sha that stays under ``<study>/snapshots``."""
-    if not _SHA_RE.match(sha):
+    try:
+        return kbio.safe_snapshot_dir(sdir, sha)
+    except kbio.UnsafeSnapshotError:
         return None
-    root = (sdir / "snapshots").resolve()
-    snap = kbio.snapshot_dir(sdir, sha).resolve()
-    return kbio.snapshot_dir(sdir, sha) if snap.parent == root else None
 
 
 def _study_shas(sdir: Path) -> list[str]:

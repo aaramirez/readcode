@@ -244,7 +244,10 @@ def snapshot_study(kb: Path, study: str, rev: str, repo_path: Path | None = None
     errors = validate("tree", tree)
     if errors:
         raise SnapshotError("Invalid tree.json: " + "; ".join(errors))
-    snap_dir = kbio.snapshot_dir(sdir, sha)
+    try:
+        snap_dir = kbio.safe_snapshot_dir(sdir, sha)
+    except ValueError as exc:
+        raise SnapshotError(str(exc)) from exc
     tree_changed = _tree_changed(snap_dir / "tree.json", tree)  # read BEFORE overwriting
     kbio.atomic_write_json(snap_dir / "tree.json", tree)
 

@@ -38,7 +38,7 @@ def graph_snapshot(kb: Path | str, study: str, sha: str) -> bool:
         raise GraphError(f"{study_json} not found; run `readcode init` first")
     study_data = kbio.read_json(study_json)
     try:
-        sha = kbio.resolve_sha(study_data, sha)
+        sha = kbio.resolve_sha(study_data, sha, sdir)
     except ValueError as exc:
         raise GraphError(str(exc)) from exc
     snap = kbio.snapshot_dir(sdir, sha)

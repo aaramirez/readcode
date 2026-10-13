@@ -87,7 +87,7 @@ def stale_docs(kb: Path | str, study: str, sha_a: str, sha_b: str) -> dict:
         raise StaleError(f"{sdir / 'study.json'} not found; run `readcode init` first")
     study_data = kbio.read_json(sdir / "study.json")
     try:
-        sha_a, sha_b = kbio.resolve_sha(study_data, sha_a), kbio.resolve_sha(study_data, sha_b)
+        sha_a, sha_b = kbio.resolve_sha(study_data, sha_a, sdir), kbio.resolve_sha(study_data, sha_b, sdir)
     except ValueError as exc:
         raise StaleError(str(exc)) from exc
     changes_path = sdir / "diffs" / f"{sha_a}..{sha_b}" / "changes.json"

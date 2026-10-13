@@ -29,7 +29,10 @@ def _studies(kb: Path, study: str | None) -> list[str]:
 
 def _shas(sdir: Path) -> list[str]:
     snapshots = sdir / "snapshots"
-    return sorted(p.name for p in snapshots.iterdir() if p.is_dir()) if snapshots.is_dir() else []
+    if not snapshots.is_dir():
+        return []
+    return sorted(p.name for p in snapshots.iterdir()
+                  if p.is_dir() and kbio.SHA_RE.match(p.name) and p.resolve().parent == snapshots.resolve())
 
 
 def migrate_study(kb: Path | str, study: str | None = None) -> list[str]:

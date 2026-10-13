@@ -369,12 +369,18 @@ def _resolve_java(module: str, paths: frozenset[str]) -> str | None:
 
 
 def _find_snapshot(sdir: Path, sha: str) -> Path:
-    exact = kbio.snapshot_dir(sdir, sha)
-    if (exact / "tree.json").is_file():
+    def safe(name: str) -> Path | None:
+        try:
+            return kbio.safe_snapshot_dir(sdir, name)
+        except kbio.UnsafeSnapshotError:
+            return None
+
+    exact = safe(sha)
+    if exact is not None and (exact / "tree.json").is_file():
         return exact
     root = sdir / "snapshots"
-    matches = [p for p in root.iterdir() if p.name.startswith(sha)] if root.is_dir() and sha else []
-    matches = [p for p in matches if (p / "tree.json").is_file()]
+    matches = [safe(p.name) for p in root.iterdir() if p.name.startswith(sha)] if root.is_dir() and sha else []
+    matches = [p for p in matches if p is not None and (p / "tree.json").is_file()]
     if len(matches) == 1:
         return matches[0]
     if not matches:

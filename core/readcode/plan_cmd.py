@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from datetime import datetime
 from pathlib import Path, PurePosixPath
 
@@ -21,12 +22,27 @@ def _has_explain(sdir: Path, sha: str) -> bool:
     return d.is_dir() and any(d.rglob("*.json"))
 
 
+def _safe_entries(sdir: Path, snapshots: list) -> list[dict]:
+    """study.json snapshot entries whose sha is a safe snapshot dir; the rest are skipped with a warning."""
+    out = []
+    for s in snapshots:
+        try:
+            if not (isinstance(s, dict) and isinstance(s.get("date"), str)):
+                raise kbio.UnsafeSnapshotError(f"entrada de snapshot no válida: {s!r}")
+            kbio.safe_snapshot_dir(sdir, s.get("sha"))
+        except kbio.UnsafeSnapshotError as exc:
+            print(f"aviso: se omite un snapshot de study.json: {exc}", file=sys.stderr)
+            continue
+        out.append(s)
+    return out
+
+
 def reuse_source(sdir: Path, study_data: dict, sha: str) -> str | None:
     """Snapshot ``plan`` inherits from (reported as ``reusedFrom``).
 
     Most recent earlier snapshot with explain/ files; otherwise any other (newest first).
     """
-    snaps = sorted(study_data["snapshots"], key=_date)
+    snaps = sorted(_safe_entries(sdir, study_data["snapshots"]), key=_date)
     this = next((s for s in snaps if s["sha"] == sha), None)
     others = [s for s in snaps if s["sha"] != sha]
     if this is not None:
@@ -122,7 +138,7 @@ def plan_snapshot(kb: Path | str, study: str, sha: str, batch_lines: int = 1500)
         raise PlanError(f"{study_json} not found; run `readcode init` first")
     study_data = kbio.read_json(study_json)
     try:
-        sha = kbio.resolve_sha(study_data, sha)
+        sha = kbio.resolve_sha(study_data, sha, sdir)
     except ValueError as exc:
         raise PlanError(str(exc)) from exc
     snap = kbio.snapshot_dir(sdir, sha)

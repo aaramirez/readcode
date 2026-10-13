@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import tempfile
 from pathlib import Path
 
@@ -73,6 +74,24 @@ def snapshot_dir(study_directory: Path | str, sha: str) -> Path:
     return Path(study_directory) / "snapshots" / sha
 
 
+SHA_RE = re.compile(r"^[0-9a-f]{40}$")
+
+
+class UnsafeSnapshotError(ValueError):
+    """A snapshot sha that is not 40-hex or whose directory resolves outside ``<study>/snapshots``."""
+
+
+def safe_snapshot_dir(study_directory: Path | str, sha: str) -> Path:
+    """``<study>/snapshots/<sha>`` for a 40-hex sha whose resolved path (symlinks and junctions
+    followed) stays directly under ``<study>/snapshots``; otherwise UnsafeSnapshotError."""
+    if not isinstance(sha, str) or not SHA_RE.match(sha):
+        raise UnsafeSnapshotError(f"sha de snapshot no válido: {sha!r} (se esperan 40 caracteres hexadecimales)")
+    snap = snapshot_dir(study_directory, sha)
+    if snap.resolve().parent != (Path(study_directory) / "snapshots").resolve():
+        raise UnsafeSnapshotError(f"el snapshot {sha} resuelve fuera de {Path(study_directory) / 'snapshots'}")
+    return snap
+
+
 def explain_path(snapshot_directory: Path | str, file_path: str) -> Path:
     """``<snapshot>/explain/<path>.json`` (e.g. ``explain/app/main.py.json``)."""
     return Path(snapshot_directory) / "explain" / f"{file_path}.json"
@@ -117,14 +136,22 @@ def find_dir_summary(snapshot_directory: Path | str, dir_path: str) -> Path | No
     return legacy_root_path(snapshot_directory) if not dir_path else None
 
 
-def resolve_sha(study_data: dict, prefix: str) -> str:
-    """Resolve a full sha or unique prefix against study.json snapshots; ValueError if not studied."""
-    shas = [s["sha"] for s in study_data.get("snapshots", [])]
+def resolve_sha(study_data: dict, prefix: str, sdir: Path | str | None = None) -> str:
+    """Resolve a full sha or unique prefix against study.json snapshots; ValueError if not studied.
+
+    Entries that are not 40-hex are ignored. With ``sdir`` the result must also pass
+    ``safe_snapshot_dir`` (UnsafeSnapshotError, a ValueError, otherwise)."""
+    shas = [s["sha"] for s in study_data.get("snapshots", [])
+            if isinstance(s, dict) and isinstance(s.get("sha"), str) and SHA_RE.match(s["sha"])]
     if prefix in shas:
-        return prefix
-    matches = [s for s in shas if prefix and s.startswith(prefix)]
-    if len(matches) == 1:
-        return matches[0]
-    if not matches:
-        raise ValueError(f"Snapshot {prefix!r} is not part of the study; run `readcode snapshot` first")
-    raise ValueError(f"Ambiguous sha prefix {prefix!r}: {', '.join(matches)}")
+        found = prefix
+    else:
+        matches = [s for s in shas if prefix and s.startswith(prefix)]
+        if not matches:
+            raise ValueError(f"Snapshot {prefix!r} is not part of the study; run `readcode snapshot` first")
+        if len(matches) > 1:
+            raise ValueError(f"Ambiguous sha prefix {prefix!r}: {', '.join(matches)}")
+        found = matches[0]
+    if sdir is not None:
+        safe_snapshot_dir(sdir, found)
+    return found

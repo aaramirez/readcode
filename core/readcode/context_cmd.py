@@ -108,7 +108,7 @@ def file_context(kb: Path | str, study: str, sha: str, paths: list[str]) -> list
     if not (sdir / "study.json").is_file():
         raise ContextError(f"{sdir / 'study.json'} not found; run `readcode init` first")
     try:
-        sha = kbio.resolve_sha(kbio.read_json(sdir / "study.json"), sha)
+        sha = kbio.resolve_sha(kbio.read_json(sdir / "study.json"), sha, sdir)
     except ValueError as exc:
         raise ContextError(str(exc)) from exc
     snap = kbio.snapshot_dir(sdir, sha)

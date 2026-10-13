@@ -11,7 +11,6 @@ from pathlib import Path
 
 from readcode import kbio
 
-_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 NAME_RE = re.compile(r"^(?!.*\.\.)[A-Za-z0-9._-]+$", re.ASCII)  # same rule as [[archify:name]]
 
 
@@ -40,11 +39,10 @@ def _find_snapshot_dir(sdir: Path, sha: str) -> Path:
     """Resolve ``sha`` (full or unique prefix) against study.json; never leaves <study>/snapshots."""
     try:
         study_data = kbio.read_json(sdir / "study.json")
-        shas = [s["sha"] for s in study_data["snapshots"]]
-        full = kbio.resolve_sha({"snapshots": [{"sha": x} for x in shas if _SHA_RE.match(x)]}, sha)
+        full = kbio.resolve_sha(study_data, sha, sdir)
+        snap = kbio.safe_snapshot_dir(sdir, full)
     except (OSError, ValueError, KeyError, TypeError) as exc:
         raise ArchifyError(f"no existe el snapshot {sha} en {sdir}: {exc}") from exc
-    snap = kbio.snapshot_dir(sdir, full)
     if not snap.is_dir():
         raise ArchifyError(f"no existe el snapshot {sha} en {sdir}")
     return snap
