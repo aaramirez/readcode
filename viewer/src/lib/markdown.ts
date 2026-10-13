@@ -15,6 +15,7 @@
 //                       rendered later by lib/mermaid.ts (the <pre> is the fallback).
 
 import MarkdownIt, { type Env as MdEnv, type StateInline, type Token } from 'markdown-it';
+import { docMarkers } from './data';
 import { isDiagramName, markerAt, type ParsedMarker } from './markers';
 import { format } from './router';
 import type { LinkMarker, Links } from './types';
@@ -138,7 +139,7 @@ export function renderMarkdown(src: string, ctx?: MarkdownContext): string {
   const env: Env = {};
   if (ctx) {
     env.ctx = ctx;
-    env.byRaw = new Map((ctx.links?.docs[ctx.docKey] ?? []).map((m) => [m.raw, m]));
+    env.byRaw = new Map(docMarkers(ctx.links, ctx.docKey).map((m) => [m.raw, m]));
   }
   return md.render(src, env);
 }

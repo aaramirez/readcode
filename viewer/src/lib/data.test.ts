@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { HttpError, KbClient } from './data';
-import type { Links } from './types';
+import { docMarkers, HttpError, KbClient } from './data';
+import type { LinkMarker, Links } from './types';
 
 const SHA = 'b42f63fb2414b4d4d830af722a64255504a80ee8';
 
@@ -151,5 +151,22 @@ describe('KbClient', () => {
       expect(await s2.tours(SHA)).toEqual([]);
       expect(await s2.diagrams(SHA)).toEqual([]);
     });
+  });
+});
+
+describe('docMarkers', () => {
+  const marker: LinkMarker = { raw: '[[ref:#crear]]', kind: 'symbol', status: 'exact', target: 'app/u.py', range: [1, 2] };
+  const v2: Links = { schemaVersion: 1, sha: SHA, docs: { 'tours/t.json': [marker], 'tours/t.json#2': [] } };
+  const v1: Links = { schemaVersion: 1, sha: SHA, docs: { 'tours/t.json': [marker] } };
+
+  it('uses the per-step key when present', () => {
+    expect(docMarkers(v2, 'tours/t.json#2')).toEqual([]);
+  });
+  it('falls back to tours/<id>.json for a v1 links.json without step keys', () => {
+    expect(docMarkers(v1, 'tours/t.json#3')).toEqual([marker]);
+  });
+  it('does not fall back for other docs, and tolerates missing links', () => {
+    expect(docMarkers(v1, 'explain/x.json')).toEqual([]);
+    expect(docMarkers(null, 'tours/t.json#1')).toEqual([]);
   });
 });

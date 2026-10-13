@@ -10,6 +10,7 @@
   import {
     bottomVisibleLine,
     codeViewExtensions,
+    lineSeparator,
     loadLanguage,
     setLineMarks,
     themeExtension,
@@ -92,7 +93,7 @@
     const h = host;
     if (!c || c.text === null || !h) return;
     return untrack(() => {
-      const doc = EditorState.create({ doc: c.text! }).doc;
+      const doc = EditorState.create({ doc: c.text!, extensions: [lineSeparator] }).doc;
       const fileSymbols = c.symbols?.files[path];
       const refs: RefSpan[] = [];
       for (const r of fileSymbols?.refs ?? []) {

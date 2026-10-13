@@ -25,6 +25,12 @@ import {
 } from '@codemirror/view';
 import { oneDarkHighlightStyle } from '@codemirror/theme-one-dark';
 
+/**
+ * Split documents only on "\n", like the core (kbio.blob_lines); CodeMirror's
+ * default also splits on a lone "\r", which would shift every line number.
+ */
+export const lineSeparator: Extension = EditorState.lineSeparator.of('\n');
+
 /** Language support for a tree.json language; null = plain text. */
 export async function loadLanguage(language: string | null): Promise<Extension | null> {
   switch (language) {
@@ -182,6 +188,7 @@ export function codeViewExtensions(doc: Text, o: CodeViewOptions): Extension[] {
     true,
   );
   return [
+    lineSeparator,
     EditorState.readOnly.of(true),
     EditorView.editable.of(false),
     lineNumbers(),
@@ -224,6 +231,7 @@ export function codeViewExtensions(doc: Text, o: CodeViewOptions): Extension[] {
 /** Extensions of one read-only side of the diff merge view (route-range marks only). */
 export function mergeSideExtensions(dark: boolean, themeCompartment: Compartment, languageCompartment: Compartment): Extension[] {
   return [
+    lineSeparator,
     EditorState.readOnly.of(true),
     EditorView.editable.of(false),
     lineNumbers(),

@@ -15,6 +15,7 @@ import type {
   Explain,
   Graph,
   Issues,
+  LinkMarker,
   Links,
   SearchEntry,
   Study,
@@ -25,6 +26,19 @@ import type {
 } from './types';
 
 export type FetchFn = (input: string) => Promise<Response>;
+
+/**
+ * Markers of a doc in links.json. A tour step key "tours/<id>.json#<n>" falls
+ * back to "tours/<id>.json" for links.json written by v1 (no per-step keys).
+ */
+export function docMarkers(links: Links | null, docKey: string): LinkMarker[] {
+  const docs = links?.docs;
+  if (!docs) return [];
+  const direct = docs[docKey];
+  if (direct) return direct;
+  const step = /^(tours\/.+\.json)#\d+$/.exec(docKey);
+  return (step && docs[step[1]]) || [];
+}
 
 export class HttpError extends Error {
   constructor(
