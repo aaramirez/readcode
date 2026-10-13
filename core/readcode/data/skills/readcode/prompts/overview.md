@@ -21,6 +21,16 @@ infraestructura no descrita) se marca como tal.
 
 ---
 
+## Reglas de lectura
+
+- Lee los blobs como **UTF-8** (con Read, sin recodificar). **Nunca** afirmes que el archivo
+  tiene problemas de codificación o acentos corruptos: si ves caracteres raros, es tu lectura,
+  no el archivo.
+- Lee **completo** cada archivo antes de explicarlo (en partes, con `offset`/`limit`, si es
+  largo). Nunca expliques secciones solo por sus títulos o por lo que parezca que contienen.
+- Comprueba cada `[[ref:…]]` que escribas contra `symbols.json` del snapshot (o con
+  ``readcode context`` del archivo destino) antes de darla por buena.
+
 ## Tarea `overview`
 
 ### Rol

@@ -25,6 +25,16 @@ subagente o por ti). Para cada directorio `D`:
    hacia arriba).
 4. Si una relación no queda clara, mira `readcode context <KB> <STUDY> --sha <SHA> <path> --json` o el blob; no inventes.
 
+## Reglas de lectura
+
+- Lee los blobs como **UTF-8** (con Read, sin recodificar). **Nunca** afirmes que el archivo
+  tiene problemas de codificación o acentos corruptos: si ves caracteres raros, es tu lectura,
+  no el archivo.
+- Lee **completo** cada archivo antes de explicarlo (en partes, con `offset`/`limit`, si es
+  largo). Nunca expliques secciones solo por sus títulos o por lo que parezca que contienen.
+- Comprueba cada `[[ref:…]]` que escribas contra `symbols.json` del snapshot (o con
+  ``readcode context`` del archivo destino) antes de darla por buena.
+
 ## Salida
 
 Un archivo por directorio: `<SNAP>/dirs/<D>.json`; la raíz va en `<SNAP>/dir-root.json` (fuera de `dirs/`) con

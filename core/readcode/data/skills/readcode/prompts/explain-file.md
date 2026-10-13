@@ -28,6 +28,24 @@ definiciones), `graphNeighbours` (si hay grafo) y si ya existe explicación.
 Lee también lo necesario de los vecinos (sus blobs o sus explicaciones ya escritas en
 `<SNAP>/explain/`) para explicar bien las relaciones. No leas el working copy del repo.
 
+## Reglas de lectura
+
+- Lee los blobs como **UTF-8** (con Read, sin recodificar). **Nunca** afirmes que el archivo
+  tiene problemas de codificación o acentos corruptos: si ves caracteres raros, es tu lectura,
+  no el archivo.
+- Lee **completo** cada archivo antes de explicarlo (en partes, con `offset`/`limit`, si es
+  largo). Nunca expliques secciones solo por sus títulos o por lo que parezca que contienen.
+- Comprueba cada `[[ref:…]]` que escribas contra `symbols.json` del snapshot (o con
+  ``readcode context`` del archivo destino) antes de darla por buena.
+
+## Vecinos (`neighbourDefs`)
+
+`readcode context` también da `neighbourDefs`: las definiciones (`<ruta>#<Nombre> (<kind>) Lx-y`,
+métodos como `Clase.método`) de los archivos que el tuyo importa y, en Go, de los de su mismo
+paquete. Úsalas para explicar las relaciones y **enlaza los símbolos de los vecinos** con
+`[[ref:ruta#Nombre]]` o `[[ref:ruta#Clase.método]]` en vez de nombrarlos solo en texto. Si
+`truncated` es `true`, la lista está recortada: abre el vecino para ver el resto.
+
 ## Salida
 
 Un archivo por cada archivo del lote: `<SNAP>/explain/<path>.json` (p. ej. el de

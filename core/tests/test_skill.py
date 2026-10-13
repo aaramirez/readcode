@@ -125,3 +125,15 @@ def test_skill_documents_legacy_root_and_code_warnings():
     assert "no se reenvían" in text
     assert "las entradas con `code` son avisos" in text
     assert "pipx install" in text
+
+
+def test_prompts_have_strict_reading_rules():
+    for p in ["explain-file.md", "dir.md", "overview.md", "tour.md"]:
+        text = (SKILL / "prompts" / p).read_text(encoding="utf-8")
+        assert "UTF-8" in text and "codificación" in text, p
+        assert "completo" in text and "títulos" in text, p
+        assert "symbols.json" in text, p
+    explain = (SKILL / "prompts" / "explain-file.md").read_text(encoding="utf-8")
+    assert "neighbourDefs" in explain
+    assert "[[ref:ruta#Nombre]]" in explain and "[[ref:ruta#Clase.método]]" in explain
+    assert "Lee los blobs como UTF-8" in (SKILL / "SKILL.md").read_text(encoding="utf-8")

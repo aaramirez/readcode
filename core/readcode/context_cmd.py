@@ -5,9 +5,12 @@ from __future__ import annotations
 from pathlib import Path
 
 from readcode import kbio
+from readcode.refs import _go_dir_files
 
 USED_BY_LIMIT = 15
 NEIGHBOUR_LIMIT = 20
+NEIGHBOUR_DEFS_PER_FILE = 40
+NEIGHBOUR_DEFS_TOTAL = 200
 
 
 class ContextError(RuntimeError):
@@ -28,6 +31,67 @@ def _graph_neighbours(graph: dict, path: str) -> list[str]:
                 if item not in out:
                     out.append(item)
     return out[:NEIGHBOUR_LIMIT]
+
+
+def _import_target(i: dict) -> str | None:
+    if i.get("resolved") is None and i.get("resolvedDir") is not None:
+        return i["resolvedDir"].strip("/") + "/"  # package folder ("/" = repo root)
+    return i.get("resolved")
+
+
+def _importers(files: dict, path: str) -> list[str]:
+    """Files importing `path`: by `resolved`, or (Go) by `resolvedDir` == its folder.
+
+    A `_test.go` file is only imported by other test files (same rule as refs.py)."""
+    is_go = path.endswith(".go")
+    directory = path.rpartition("/")[0]
+    is_test = path.endswith("_test.go")
+    out = []
+    for p, s in files.items():
+        if p == path:
+            continue
+        for i in s.get("imports", []):
+            if i.get("resolved") == path or (
+                    is_go and p.endswith(".go") and i.get("resolvedDir") is not None
+                    and i["resolvedDir"].strip("/") == directory
+                    and (not is_test or p.endswith("_test.go"))):
+                out.append(p)
+                break
+    return sorted(out)
+
+
+def _neighbour_files(files: dict, path: str, imports: list[dict]) -> list[str]:
+    """Files whose defs the explainer may link: imported files plus (Go) same-package files."""
+    found = [i["resolved"] for i in imports if i.get("resolved")]
+    if path.endswith(".go"):
+        tests = path.endswith("_test.go")
+        found += _go_dir_files(files, path.rpartition("/")[0], tests)
+        for i in imports:
+            if i.get("resolvedDir") is not None:
+                found += _go_dir_files(files, i["resolvedDir"].strip("/"), tests)
+    return [p for p in dict.fromkeys(found) if p != path and p in files]
+
+
+def _def_order(d: dict, go: bool) -> tuple:
+    start = d["range"][0]
+    if not go:
+        return (start,)
+    return (not d["name"][:1].isupper(), d.get("parent") is not None, start)
+
+
+def _neighbour_defs(files: dict, path: str, imports: list[dict]) -> tuple[list[str], bool]:
+    out: list[str] = []
+    truncated = False
+    for n in _neighbour_files(files, path, imports):
+        defs = sorted(files[n].get("defs", []), key=lambda d: _def_order(d, n.endswith(".go")))
+        if len(defs) > NEIGHBOUR_DEFS_PER_FILE:
+            defs, truncated = defs[:NEIGHBOUR_DEFS_PER_FILE], True
+        for d in defs:
+            if len(out) >= NEIGHBOUR_DEFS_TOTAL:
+                return out, True
+            name = f"{d['parent']}.{d['name']}" if d.get("parent") else d["name"]
+            out.append(f"{n}#{name} ({d['kind']}) L{d['range'][0]}-{d['range'][1]}")
+    return out, truncated
 
 
 def _read(path: Path) -> dict:
@@ -61,8 +125,8 @@ def file_context(kb: Path | str, study: str, sha: str, paths: list[str]) -> list
             continue
         syms = files.get(path, {"defs": [], "refs": [], "imports": []})
         names = {d["name"] for d in syms["defs"]}
-        imported_by = sorted(p for p, s in files.items() if p != path
-                             and any(i.get("resolved") == path for i in s.get("imports", [])))
+        imported_by = _importers(files, path)
+        neighbour_defs, truncated = _neighbour_defs(files, path, syms["imports"])
         hits: dict[str, set[str]] = {}
         for p, s in files.items():
             if p == path:
@@ -84,9 +148,11 @@ def file_context(kb: Path | str, study: str, sha: str, paths: list[str]) -> list
             "indexed": info["indexed"],
             "defs": [f"{d['name']} ({d['kind']}{', in ' + d['parent'] if d.get('parent') else ''}) "
                      f"L{d['range'][0]}-{d['range'][1]}" for d in syms["defs"]],
-            "imports": [f"{i['module']} -> {i.get('resolved')}" for i in syms["imports"]],
+            "imports": [f"{i['module']} -> {_import_target(i)}" for i in syms["imports"]],
             "importedBy": imported_by,
             "usedBy": {p: sorted(n) for p, n in used_by},
+            "neighbourDefs": neighbour_defs,
+            "truncated": truncated,
             "graphNeighbours": _graph_neighbours(graph, path) if graph else [],
             "explanation": state,
         })
@@ -102,9 +168,11 @@ def format_context(items: list[dict]) -> str:
         out.append(f"{c['path']} ({c['language']}, {c['lines']} líneas, explicación: {c['explanation']})")
         out.append(f"  blob: {c['blobFile']}")
         out.append(f"  blobHash: {c['blobHash']}")
-        for key in ("defs", "imports", "importedBy", "graphNeighbours"):
+        for key in ("defs", "imports", "importedBy", "neighbourDefs", "graphNeighbours"):
             if c[key]:
                 out.append(f"  {key}: " + "; ".join(c[key]))
+        if c["truncated"]:
+            out.append("  neighbourDefs truncado: abre el vecino para ver el resto")
         if c["usedBy"]:
             out.append("  usedBy: " + "; ".join(f"{p} ({', '.join(n)})" for p, n in c["usedBy"].items()))
     return "\n".join(out)

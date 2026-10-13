@@ -9,7 +9,7 @@ from typer.testing import CliRunner
 
 from readcode import kbio
 from readcode.cli import app
-from readcode.context_cmd import ContextError, file_context
+from readcode.context_cmd import ContextError, file_context, format_context
 from readcode.mark_cmd import MarkError, mark_study
 from readcode.stale_cmd import StaleError, stale_docs
 
@@ -247,3 +247,93 @@ def test_stale_resolves_pathless_line_markers_against_the_owning_file(tmp_path):
     out = stale_docs(kb, "demo", a, b)
     assert out["explain"] == [{"path": "m.py", "symbols": [], "markers": ["m.py"]}]
     assert out["dirs"] == []  # path-less line markers are forbidden (and ignored) outside explain docs
+
+
+# ------------------------------------------------------------------ Go packages
+
+import subprocess
+
+GO_FILES = {
+    "go.mod": "module github.com/x/y\n\ngo 1.22\n",
+    "main.go": 'package main\n\nimport "github.com/x/y/internal/app"\n\nfunc main() { app.New().Start() }\n',
+    "main_test.go": 'package main\n\nimport "github.com/x/y/internal/app"\n\nfunc TestMain() { app.New() }\n',
+    "internal/app/app.go": 'package app\n\ntype App struct{}\n\nfunc New() *App { return &App{} }\n\n'
+                           'func (a *App) Start() {}\n\nfunc helper() {}\n',
+    "internal/app/util.go": 'package app\n\nvar ErrX = 1\n',
+    "internal/app/app_test.go": 'package app\n\nfunc TestX() {}\n',
+    "internal/many/many.go": "package many\n\n" + "".join(f"func f{i:03d}() {{}}\n" for i in range(45)),
+    "internal/many/big.go": "package many\n\n" + "".join(f"func F{i:03d}() {{}}\n" for i in range(45)),
+}
+
+
+def _go_kb(tmp_path, files):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    git = lambda *a: subprocess.run(["git", "-C", str(repo), *a], check=True, capture_output=True,
+                                    text=True).stdout.strip()
+    git("init", "-q")
+    for rel, text in files.items():
+        p = repo / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(text, encoding="utf-8")
+    git("add", "-A")
+    git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "c")
+    sha = git("rev-parse", "HEAD")
+    kb = tmp_path / "kb"
+    for args in (("init", str(kb), "demo", "--repo", str(repo)),
+                 ("snapshot", str(kb), "demo", "--sha", sha),
+                 ("index", str(kb), "demo", "--sha", sha)):
+        r = runner.invoke(app, list(args))
+        assert r.exit_code == 0, r.output
+    return kb, sha
+
+
+def test_context_go_package_importers_and_neighbour_defs(tmp_path):
+    kb, sha = _go_kb(tmp_path, GO_FILES)
+    ctx = {c["path"]: c for c in file_context(
+        kb, "demo", sha, ["internal/app/app.go", "main.go", "internal/app/app_test.go"])}
+    app_go, main_go = ctx["internal/app/app.go"], ctx["main.go"]
+    # imported by folder (resolvedDir); the test file counts only for test importers
+    assert app_go["importedBy"] == ["main.go", "main_test.go"]
+    assert ctx["internal/app/app_test.go"]["importedBy"] == ["main_test.go"]
+    assert "github.com/x/y/internal/app -> internal/app/" in main_go["imports"]
+    nd = main_go["neighbourDefs"]
+    assert "internal/app/app.go#App.Start (method) L7-7" in nd or any(
+        n.startswith("internal/app/app.go#App.Start (method)") for n in nd)
+    assert any(n.startswith("internal/app/app.go#New (function)") for n in nd)
+    assert any(n.startswith("internal/app/util.go#ErrX") for n in nd)
+    assert not any("app_test.go" in n for n in nd)  # main.go is not a test
+    assert main_go["truncated"] is False
+    # exported before unexported inside a neighbour file
+    app_defs = [n for n in nd if n.startswith("internal/app/app.go#")]
+    assert app_defs[-1].startswith("internal/app/app.go#helper")
+    # same-package neighbours, test file included only for a test file
+    assert any(n.startswith("internal/app/app.go#") for n in ctx["internal/app/app_test.go"]["neighbourDefs"])
+    assert not any("app_test.go" in n for n in app_go["neighbourDefs"])
+    assert any(n.startswith("internal/app/util.go#ErrX") for n in app_go["neighbourDefs"])
+    text = format_context([main_go])
+    assert "neighbourDefs: " in text and "internal/app/app.go#App.Start (method)" in text
+
+
+def test_context_go_neighbour_defs_caps(tmp_path):
+    files = dict(GO_FILES)
+    files["cmd/x.go"] = 'package main\n\nimport "github.com/x/y/internal/many"\n'
+    for i in range(5):  # 5 x 40 > 200 total
+        files[f"internal/p{i}/p.go"] = f"package p{i}\n\n" + "".join(
+            f"func G{j:03d}() {{}}\n" for j in range(45))
+        files["cmd/x.go"] += f'import "github.com/x/y/internal/p{i}"\n'
+    kb, sha = _go_kb(tmp_path, files)
+    one, many = file_context(kb, "demo", sha, ["internal/many/many.go"])[0], \
+        file_context(kb, "demo", sha, ["cmd/x.go"])[0]
+    big = [n for n in one["neighbourDefs"] if n.startswith("internal/many/big.go#")]
+    assert len(big) == 40 and one["truncated"] is True  # per-file cap
+    assert len(many["neighbourDefs"]) == 200 and many["truncated"] is True  # total cap
+    # exported defs are the ones kept when capping
+    assert all("#F" in n for n in big)
+
+
+def test_context_non_go_neighbour_defs_use_resolved_imports():
+    billing = file_context(EXAMPLE_KB, "fixture", SHA2, ["app/services/billing.py"])[0]
+    assert billing["truncated"] is False
+    assert billing["neighbourDefs"]
+    assert all(n.startswith("app/models.py#") for n in billing["neighbourDefs"])

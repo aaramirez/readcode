@@ -91,6 +91,7 @@ KB: <KB>
 Estudio: <STUDY>   (directorio <SDIR>)
 SHA: <SHA>         (snapshot <SNAP>)
 Idioma: <LANG>
+Lee los blobs como UTF-8; no afirmes problemas de codificación; lee cada archivo completo antes de explicarlo.
 Tarea: <lo específico: lote de archivos, directorios, tour, problemas a corregir…>
 Escribe solo los archivos indicados en la plantilla. No ejecutes `readcode validate` (reescribe
 links.json e issues.json; lo ejecuta el orquestador). Al terminar responde únicamente con la

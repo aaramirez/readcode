@@ -23,6 +23,16 @@ Cómo seguir el flujo:
 3. No supongas llamadas que no veas en el código. Si el flujo sale del repo (HTTP a un servicio
    externo, una cola), dilo en el paso y termina o continúa donde vuelva a entrar.
 
+## Reglas de lectura
+
+- Lee los blobs como **UTF-8** (con Read, sin recodificar). **Nunca** afirmes que el archivo
+  tiene problemas de codificación o acentos corruptos: si ves caracteres raros, es tu lectura,
+  no el archivo.
+- Lee **completo** cada archivo antes de explicarlo (en partes, con `offset`/`limit`, si es
+  largo). Nunca expliques secciones solo por sus títulos o por lo que parezca que contienen.
+- Comprueba cada `[[ref:…]]` que escribas contra `symbols.json` del snapshot (o con
+  ``readcode context`` del archivo destino) antes de darla por buena.
+
 ## Salida
 
 Un solo archivo: `<SNAP>/tours/<id>.json`. Forma (`schemas/tour.schema.json`, sin campos
