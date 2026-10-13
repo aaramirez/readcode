@@ -320,3 +320,13 @@ def test_search_json_lists_every_explain_block(mini):
         {"path": "app/other.py", "blockId": "b1", "title": "t", "range": [1, 2]},
         {"path": "app/util.py", "blockId": "b1", "title": "t", "range": [1, 2]},
     ]
+
+
+def test_links_lists_diagrams_sorted_by_name_and_kind(mini):
+    kb, _, snap = mini
+    (snap / "diagrams" / "flujo.mmd").write_text("graph TD", encoding="utf-8")
+    (snap / "diagrams" / "arch.mmd").write_text("graph TD", encoding="utf-8")
+    _problems(kb)
+    assert links(snap)["diagrams"] == [
+        {"name": "arch", "kind": "archify"}, {"name": "arch", "kind": "mermaid"},
+        {"name": "flujo", "kind": "mermaid"}]

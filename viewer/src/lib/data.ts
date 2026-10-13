@@ -193,13 +193,15 @@ export class StudyData {
   }
 
   /**
-   * Archify diagrams of a snapshot, derived from links.json markers of kind
-   * "archify" (unique names, sorted). A name is broken when no marker resolves
-   * it (no diagrams/<name>.html). Mermaid diagrams are inline and not listed.
+   * Diagrams of a snapshot. Uses links.json `diagrams` when present (archify and
+   * mermaid files, never broken); otherwise (v1 kb) derives the archify list from
+   * links.json markers of kind "archify" (unique names, sorted). There a name is
+   * broken when no marker resolves it (no diagrams/<name>.html).
    */
   async diagrams(sha: string): Promise<DiagramEntry[]> {
     const links = await this.links(sha);
     if (!links) return [];
+    if (links.diagrams) return links.diagrams.map((d) => ({ name: d.name, kind: d.kind, broken: false }));
     const broken = new Map<string, boolean>();
     for (const markers of Object.values(links.docs)) {
       for (const m of markers) {
@@ -208,13 +210,19 @@ export class StudyData {
         if (name) broken.set(name, (broken.get(name) ?? true) && !(m.status === 'exact' && isDiagramName(name)));
       }
     }
-    return [...broken.keys()].sort().map((name) => ({ name, broken: broken.get(name)! }));
+    return [...broken.keys()].sort().map((name) => ({ name, kind: 'archify' as const, broken: broken.get(name)! }));
   }
 
   /** Relative URL of an archify diagram page (for an iframe); null for an unsafe name. */
   diagramUrl(sha: string, name: string): string | null {
     if (!isDiagramName(name)) return null;
     return this.kb.url(this.snap(sha, `diagrams/${encodeURIComponent(name)}.html`));
+  }
+
+  /** Source text of a mermaid diagram (diagrams/<name>.mmd); null if missing or unsafe name. */
+  diagramSource(sha: string, name: string): Promise<string | null> {
+    if (!isDiagramName(name)) return Promise.resolve(null);
+    return this.kb.text(this.snap(sha, `diagrams/${encodeURIComponent(name)}.mmd`));
   }
 
   graph(sha: string): Promise<Graph | null> {

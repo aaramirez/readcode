@@ -60,3 +60,10 @@ export function renderMermaidIn(root: HTMLElement, dark: boolean): void {
     queue = queue.then(() => (el.isConnected ? renderOne(el, source, dark) : undefined));
   }
 }
+
+/** Render a mermaid source into `el` (same pipeline and strict security level as the placeholders). */
+export function renderMermaidSource(el: HTMLElement, source: string, dark: boolean): Promise<void> {
+  const run = queue.then(() => (el.isConnected ? renderOne(el, source, dark) : undefined));
+  queue = run.catch(() => undefined);
+  return run;
+}

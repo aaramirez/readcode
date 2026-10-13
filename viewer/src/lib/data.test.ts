@@ -157,14 +157,31 @@ describe('KbClient', () => {
     it('derives unique archify names, flagging broken ones', async () => {
       const { s } = setup();
       expect(await s.diagrams(SHA)).toEqual([
-        { name: 'arquitectura', broken: false },
-        { name: 'falta', broken: true },
-        { name: 'flujo', broken: false },
+        { name: 'arquitectura', kind: 'archify', broken: false },
+        { name: 'falta', kind: 'archify', broken: true },
+        { name: 'flujo', kind: 'archify', broken: false },
       ]);
       expect(s.diagramUrl(SHA, 'flujo')).toBe(`kb/fixture/snapshots/${SHA}/diagrams/flujo.html`);
       expect(s.diagramUrl(SHA, '../x')).toBeNull();
       expect(s.diagramUrl(SHA, 'a/b')).toBeNull();
       expect(s.diagramUrl(SHA, String.raw`a\b`)).toBeNull();
+    });
+
+    it('uses the explicit links.diagrams list (archify and mermaid) when present', async () => {
+      const f = mockFetch({
+        [`kb/fixture/snapshots/${SHA}/links.json`]: {
+          ...links,
+          diagrams: [{ name: 'arq', kind: 'archify' }, { name: 'arq', kind: 'mermaid' }],
+        },
+        [`kb/fixture/snapshots/${SHA}/diagrams/arq.mmd`]: 'graph TD',
+      });
+      const s = new KbClient('kb/', f).study('fixture');
+      expect(await s.diagrams(SHA)).toEqual([
+        { name: 'arq', kind: 'archify', broken: false },
+        { name: 'arq', kind: 'mermaid', broken: false },
+      ]);
+      expect(await s.diagramSource(SHA, 'arq')).toBe('graph TD');
+      expect(await s.diagramSource(SHA, '../x')).toBeNull();
     });
 
     it('shares one links.json request between both lists', async () => {

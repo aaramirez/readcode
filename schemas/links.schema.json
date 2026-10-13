@@ -11,6 +11,32 @@
     "sha": {
       "$ref": "common.schema.json#/$defs/sha40"
     },
+    "diagrams": {
+      "type": "array",
+      "description": "Explicit list of what diagrams/ holds, sorted by name: archify = diagrams/<name>.html, mermaid = diagrams/<name>.mmd. Optional: when absent (v1 kb) the viewer derives the archify list from markers.",
+      "items": {
+        "type": "object",
+        "description": "A diagram file.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "File name without extension."
+          },
+          "kind": {
+            "enum": [
+              "archify",
+              "mermaid"
+            ],
+            "description": "archify (.html) or mermaid (.mmd)."
+          }
+        },
+        "required": [
+          "name",
+          "kind"
+        ],
+        "additionalProperties": false
+      }
+    },
     "docs": {
       "type": "object",
       "description": "Map from doc key (path of the markdown-bearing file relative to the snapshot dir, e.g. \"explain/app/main.py.json\", \"overview.md\", \"tours/login.json\", \"dirs/app.json\") to its markers. A tour's description uses \"tours/<id>.json\"; each tour step has its own key \"tours/<id>.json#<n>\" (n = 1-based step index), since steps resolve markers relative to their own file. Within one key a raw marker has a single resolution.",

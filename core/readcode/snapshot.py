@@ -8,6 +8,7 @@ same blob hashes on every machine.
 from __future__ import annotations
 
 import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path, PurePosixPath
 
@@ -147,6 +148,19 @@ class _GitignoreMatcher:
         return False
 
 
+def _tree_changed(path: Path, new_tree: dict) -> bool:
+    """True when an existing tree.json differs from ``new_tree`` in files (path, blob) or excluded."""
+    if not path.is_file():
+        return False
+    try:
+        old = kbio.read_json(path)
+        key = lambda t: (sorted((f["path"], f["blob"]) for f in t["files"]),
+                         sorted((e["path"], e["reason"]) for e in t["excluded"]))
+        return key(old) != key(new_tree)
+    except (OSError, ValueError, KeyError, TypeError):
+        return True
+
+
 def _sort_key(date: str) -> datetime:
     return datetime.fromisoformat(date.replace("Z", "+00:00"))
 
@@ -230,12 +244,22 @@ def snapshot_study(kb: Path, study: str, rev: str, repo_path: Path | None = None
     errors = validate("tree", tree)
     if errors:
         raise SnapshotError("Invalid tree.json: " + "; ".join(errors))
-    kbio.atomic_write_json(kbio.snapshot_dir(sdir, sha) / "tree.json", tree)
+    snap_dir = kbio.snapshot_dir(sdir, sha)
+    tree_changed = _tree_changed(snap_dir / "tree.json", tree)  # read BEFORE overwriting
+    kbio.atomic_write_json(snap_dir / "tree.json", tree)
 
     # A new snapshot starts "partial"; re-snapshotting a studied sha keeps its status
     # (``index`` upgrades an unexplained "partial" to "indexed", ``mark`` sets the rest).
     previous = next((s for s in study_data["snapshots"] if s["sha"] == sha), None)
     status = previous["status"] if previous is not None else "partial"
+    if previous is not None and tree_changed:
+        # The files/exclusions changed: explanations and symbols no longer match the tree.
+        had_symbols = (snap_dir / "symbols.json").is_file()
+        status = "indexed" if had_symbols else "partial"
+        print(f"Aviso: el árbol de {sha[:8]} cambió (archivos o exclusiones); "
+              f"el estado vuelve a '{status}'."
+              + (" symbols.json puede estar obsoleto: vuelve a correr `readcode index`."
+                 if had_symbols else ""), file=sys.stderr)
     entry = {"sha": sha, "date": date, "message": message, "status": status}
     snapshots = [s for s in study_data["snapshots"] if s["sha"] != sha]
     snapshots.append(entry)

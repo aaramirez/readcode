@@ -744,5 +744,15 @@
         ]
       }
     ]
-  }
+  },
+  "diagrams": [
+    {
+      "name": "arquitectura",
+      "kind": "archify"
+    },
+    {
+      "name": "flujo",
+      "kind": "mermaid"
+    }
+  ]
 }

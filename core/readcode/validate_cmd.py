@@ -125,8 +125,21 @@ class _Resolver:
             out.add(rel, f"internal: exact resolution of {res.raw} lacks target/range",
                     "report this as a readcode bug")
 
-    def links(self, sha: str) -> dict:
-        return {"schemaVersion": 1, "sha": sha, "docs": self.docs}
+    def links(self, sha: str, diagrams: list[dict] | None = None) -> dict:
+        links: dict = {"schemaVersion": 1, "sha": sha, "docs": self.docs}
+        if diagrams is not None:
+            links["diagrams"] = diagrams
+        return links
+
+
+def _diagram_list(snap: Path) -> list[dict]:
+    """Explicit diagrams/ listing: archify (.html) and mermaid (.mmd), sorted by name."""
+    base = snap / "diagrams"
+    if not base.is_dir():
+        return []
+    found = [{"name": p.stem, "kind": "archify"} for p in base.glob("*.html") if p.is_file()]
+    found += [{"name": p.stem, "kind": "mermaid"} for p in base.glob("*.mmd") if p.is_file()]
+    return sorted(found, key=lambda d: (d["name"], d["kind"]))
 
 
 def _rel_json_files(base: Path) -> list[str]:
@@ -279,7 +292,7 @@ def _validate_snapshot(sdir: Path, sha: str, out: _Collector) -> None:
             text = ""
         res.markdown("overview.md", f"{sp}/overview.md", text, None, "overview", out)
 
-    _write_links(snap / "links.json", res.links(sha), f"{sp}/links.json", out)
+    _write_links(snap / "links.json", res.links(sha, _diagram_list(snap)), f"{sp}/links.json", out)
     for err in schema_validate("search", search):
         out.add(f"{sp}/search.json", f"internal: generated search.json invalid: {err}",
                 "report this as a readcode bug")

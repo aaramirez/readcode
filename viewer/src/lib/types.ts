@@ -193,6 +193,8 @@ export interface LinkMarker {
 export interface Links {
   schemaVersion: 1;
   sha: string;
+  /** Explicit list of diagrams/ files (absent in v1 kbs: the viewer derives the archify list). */
+  diagrams?: { name: string; kind: DiagramKind }[];
   /** Doc key (e.g. "overview.md", "tours/login.json") → markers in that doc. */
   docs: Record<string, LinkMarker[]>;
 }
@@ -255,8 +257,11 @@ export interface TourListEntry {
   id: string;
 }
 
-/** An archify diagram referenced by a snapshot (broken: no diagrams/<name>.html). */
+export type DiagramKind = 'archify' | 'mermaid';
+
+/** A diagram of a snapshot (archify broken: referenced but no diagrams/<name>.html). */
 export interface DiagramEntry {
   name: string;
+  kind: DiagramKind;
   broken: boolean;
 }

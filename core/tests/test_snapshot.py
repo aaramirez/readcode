@@ -210,3 +210,31 @@ def test_count_lines_matches_blob_lines_for_odd_breaks():
     data = "a\fb\nc\x85d\ne\u2028f\ng\rh\r\ni".encode("utf-8")
     assert count_lines(data) == len(kbio.blob_lines(data)) == 5
     assert count_lines(data + b"\n") == 5
+
+
+def test_resnapshot_with_changed_exclusions_demotes_status(study):
+    kb, sd, sha1, _ = study
+
+    def status():
+        return kbio.read_json(sd / "study.json")["snapshots"][0]["status"]
+
+    snap(kb, sha1)
+    runner.invoke(app, ["mark", str(kb), "demo", "--sha", sha1, "--status", "explained"])
+    r = snap(kb, sha1)  # unchanged tree: status kept, no warning
+    assert status() == "explained"
+    assert "cambió" not in r.output
+
+    data = kbio.read_json(sd / "study.json")
+    data["exclude"] = ["web/", "*.sql"]
+    kbio.atomic_write_json(sd / "study.json", data)
+    r = snap(kb, sha1)  # no symbols.json yet -> partial
+    assert status() == "partial"
+    assert "cambió" in r.output
+
+    runner.invoke(app, ["mark", str(kb), "demo", "--sha", sha1, "--status", "explained"])
+    kbio.atomic_write_json(sd / "snapshots" / sha1 / "symbols.json", {})
+    data["exclude"] = ["web/"]
+    kbio.atomic_write_json(sd / "study.json", data)
+    r = snap(kb, sha1)  # had symbols -> indexed, with the re-index hint
+    assert status() == "indexed"
+    assert "readcode index" in r.output

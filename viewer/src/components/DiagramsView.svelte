@@ -1,12 +1,17 @@
 <script lang="ts">
-  // Diagrams tab: archify diagrams referenced by the snapshot (from links.json);
-  // the selected one (route diagrams/<name>) is shown in a large sandboxed iframe.
+  // Diagrams tab: diagrams of the snapshot (from links.json). The selected one
+  // (route diagrams/<key>) is an archify page in a large sandboxed iframe, or a
+  // mermaid source (.mmd) rendered inline. A mermaid entry's route key is "<name>.mmd",
+  // so an archify and a mermaid diagram with the same name stay distinct.
   import type { StudyData } from '../lib/data';
+  import type { DiagramEntry } from '../lib/types';
   import { format } from '../lib/router';
+  import MermaidDiagram from './MermaidDiagram.svelte';
 
   let { data, study, sha, name }: { data: StudyData; study: string; sha: string; name?: string } = $props();
 
   const list = $derived(data.diagrams(sha));
+  const keyOf = (e: DiagramEntry) => (e.kind === 'mermaid' ? `${e.name}.mmd` : e.name);
 </script>
 
 <div class="diagrams">
@@ -14,17 +19,17 @@
     <div class="empty">Cargando…</div>
   {:then entries}
     {#if entries.length === 0}
-      <div class="empty">Este commit no tiene diagramas de Archify. Los diagramas Mermaid aparecen dentro de las explicaciones.</div>
+      <div class="empty">Este commit no tiene diagramas. Los bloques Mermaid de las explicaciones se muestran dentro de ellas.</div>
     {:else}
-      {@const selected = entries.find((e) => e.name === name)}
+      {@const selected = entries.find((e) => keyOf(e) === name)}
       <nav class="list" aria-label="Diagramas">
-        {#each entries as e (e.name)}
+        {#each entries as e (keyOf(e))}
           <a
-            href={format({ kind: 'diagrams', study, sha, name: e.name })}
-            class:selected={e.name === name}
+            href={format({ kind: 'diagrams', study, sha, name: keyOf(e) })}
+            class:selected={keyOf(e) === name}
             class:broken={e.broken}
             title={e.broken ? 'Diagrama roto: no existe diagrams/' + e.name + '.html' : e.name}
-            >{e.name}{#if e.broken}<span class="badge">roto</span>{/if}</a
+            >{e.name}{#if e.kind === 'mermaid'}<span class="badge kind">mmd</span>{/if}{#if e.broken}<span class="badge">roto</span>{/if}</a
           >
         {/each}
       </nav>
@@ -33,6 +38,11 @@
           <div class="empty">Selecciona un diagrama.</div>
         {:else if !selected}
           <div class="empty">El diagrama <code>{name}</code> no está referenciado en este commit.</div>
+        {:else if selected.kind === 'mermaid'}
+          <div class="toolbar"><strong>{selected.name}</strong></div>
+          {#key selected.name}
+            <MermaidDiagram {data} {sha} name={selected.name} />
+          {/key}
         {:else if selected.broken || !data.diagramUrl(sha, selected.name)}
           <div class="error">
             El diagrama <code>{name}</code> está referenciado pero no existe <code>diagrams/{name}.html</code> en este commit
@@ -92,6 +102,9 @@
     font-family: var(--font-ui);
     font-size: 11px;
     color: var(--danger);
+  }
+  .badge.kind {
+    color: var(--fg-muted);
   }
   .stage {
     flex: 1;
