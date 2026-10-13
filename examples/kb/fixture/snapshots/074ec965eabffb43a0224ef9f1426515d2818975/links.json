@@ -428,7 +428,7 @@
       }
     ],
     "explain/worker/queue.go.json": [],
-    "dirs/_root.json": [
+    "dir-root.json": [
       {
         "raw": "[[archify:arquitectura]]",
         "kind": "archify",

@@ -94,6 +94,7 @@ Casi todos los comandos reciben `<kb> <estudio>` (ver `readcode <comando> --help
 | `readcode context <kb> <estudio> <rutas...> --sha <sha>` | Contexto de archivos para la skill: blob, defs, imports, usos, vecinos en el grafo. |
 | `readcode stale <kb> <estudio> <shaA> <shaB>` | Documentos heredados que pueden haber quedado viejos tras un update. |
 | `readcode mark <kb> <estudio> [--sha --status] [--archify true\|false]` | Fija el estado de un snapshot y/o `tools.archify`. |
+| `readcode migrate <kb> [estudio]` | Migra un kb de v1 al formato actual (la raíz de dirs pasa de `dirs/_root.json` a `dir-root.json`); luego corre `readcode validate`. Es idempotente. |
 
 ## Desarrollo
 

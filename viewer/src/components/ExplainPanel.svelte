@@ -25,7 +25,7 @@
 
   const SOURCES: Record<Issue['source'], string> = { validate: 'validate', generator: 'generador', tool: 'herramienta' };
 
-  const dir = $derived(target?.kind === 'dir' ? data.dir(sha, target.path) : null);
+  const dir = $derived(target?.kind === 'dir' ? data.dirDoc(sha, target.path) : null);
   const explain = $derived(target?.kind === 'file' ? data.explain(sha, target.path) : null);
   const treeFile = $derived(target?.kind === 'file' ? tree?.files.find((f) => f.path === target.path) : undefined);
   const excluded = $derived(target?.kind === 'file' ? tree?.excluded.find((e) => e.path === target.path) : undefined);
@@ -95,13 +95,14 @@
     {@render warningBanner()}
     {#await dir}
       <div class="empty">Cargando…</div>
-    {:then d}
+    {:then loaded}
+      {@const d = loaded?.summary}
       {#if !d}
         <div class="empty">Sin resumen para este directorio.</div>
       {:else}
         <Markdown
           source={d.summary}
-          doc={{ data, study, sha, docKey: `dirs/${target.path === '' ? '_root' : target.path}.json` }}
+          doc={{ data, study, sha, docKey: loaded!.key }}
         />
         {#if showChildren && d.children.length > 0}
           <h3>Contenido</h3>

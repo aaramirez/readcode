@@ -27,7 +27,7 @@ subagente o por ti). Para cada directorio `D`:
 
 ## Salida
 
-Un archivo por directorio: `<SNAP>/dirs/<D>.json`; la raíz va en `<SNAP>/dirs/_root.json` con
+Un archivo por directorio: `<SNAP>/dirs/<D>.json`; la raíz va en `<SNAP>/dir-root.json` (fuera de `dirs/`) con
 `"path": ""`. No escribas ningún otro archivo. Forma (`schemas/dir.schema.json`, sin campos
 adicionales):
 
@@ -61,7 +61,7 @@ Ejemplo real (`examples/kb/fixture`, `dirs/app/services.json`):
 }
 ```
 
-Y la raíz (`dirs/_root.json`) empieza así:
+Y la raíz (`dir-root.json`) empieza así:
 `"Repositorio de ejemplo con **tres programas independientes** en tres lenguajes y un esquema\nSQL. La pieza central es la app Python de facturación (`app/`) …"`.
 
 ## Tono y contenido

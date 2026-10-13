@@ -153,7 +153,7 @@ readcode plan <KB> <STUDY> --sha <SHA> --json
 ### Fase 3 — Directorios (de abajo hacia arriba)
 
 1. `plan.json` → `dirs` ya viene ordenado del más profundo a la raíz (`""` = raíz, se guarda
-   en `dirs/_root.json`).
+   en `dir-root.json`, fuera de `dirs/`).
 2. **Repo pequeño** (≤ 8 directorios pendientes en total): **un solo** subagente con la lista
    completa en el orden de `dirs` (él los resume de abajo hacia arriba). Salta los puntos 3–4.
 3. Si no, agrupa por profundidad: todos los directorios de la misma profundidad forman una ola;
@@ -165,7 +165,7 @@ readcode plan <KB> <STUDY> --sha <SHA> --json
    construye con los de sus hijos.
 5. Al final, `readcode plan <KB> <STUDY> --sha <SHA> --json` debe dejar `dirs` vacío; si no,
    repite solo los que falten; tras el segundo intento fallido regístralo en `issues.json`
-   (`"file": "dirs/<ruta>.json"`, `source: "generator"`; para la raíz `"file": "dirs/_root.json"`)
+   (`"file": "dirs/<ruta>.json"`, `source: "generator"`; para la raíz `"file": "dir-root.json"`)
    y sigue (el snapshot quedará `partial`). Desde entonces `readcode plan` lo lista en
    `abandonedDirs` y no en `dirs`; para reintentarlo, el usuario borra esa entrada.
 

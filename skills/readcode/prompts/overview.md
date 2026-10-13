@@ -8,7 +8,7 @@ Esta plantilla tiene dos tareas; tu mensaje dice cuál: `overview` o `diagrama <
 
 Lee en este orden y solo lo necesario:
 
-1. `<SNAP>/dirs/_root.json` y los resúmenes de directorio de primer y segundo nivel
+1. `<SNAP>/dir-root.json` y los resúmenes de directorio de primer y segundo nivel
    (`<SNAP>/dirs/*.json`).
 2. `<SNAP>/graph/GRAPH_REPORT.md` y `<SNAP>/graph/graph.json` si existen (comunidades, nodos más
    conectados, llamadas entre archivos).

@@ -65,7 +65,7 @@ describe('KbClient', () => {
       `kb/fixture/snapshots/${SHA}/tree.json`,
       `kb/fixture/snapshots/${SHA}/symbols.json`,
       `kb/fixture/snapshots/${SHA}/explain/app/mi%20archivo.py.json`,
-      `kb/fixture/snapshots/${SHA}/dirs/_root.json`,
+      `kb/fixture/snapshots/${SHA}/dir-root.json`,
       `kb/fixture/snapshots/${SHA}/dirs/app/sub.json`,
       `kb/fixture/snapshots/${SHA}/overview.md`,
       `kb/fixture/snapshots/${SHA}/links.json`,
@@ -78,6 +78,33 @@ describe('KbClient', () => {
       'kb/fixture/diffs/aaa..bbb/explain/app/x.py.json',
       'kb/fixture/diffs/aaa..bbb/links.json',
     ]);
+  });
+
+  describe('root directory summary', () => {
+    const base = `kb/fixture/snapshots/${SHA}/`;
+    const summary = (p: string) => ({ schemaVersion: 1, path: p, summary: 'x', children: [] });
+    const tree = (paths: string[]) => ({ files: paths.map((path) => ({ path })) });
+
+    it('prefers dir-root.json', async () => {
+      const f = mockFetch({ [base + 'dir-root.json']: summary(''), [base + 'dirs/_root.json']: summary('legacy') });
+      const r = await new KbClient('kb/', f).study('fixture').dirDoc(SHA, '');
+      expect(r.key).toBe('dir-root.json');
+      expect(r.summary?.path).toBe('');
+    });
+
+    it('falls back to dirs/_root.json when the tree has no _root directory', async () => {
+      const f = mockFetch({ [base + 'dirs/_root.json']: summary(''), [base + 'tree.json']: tree(['app/a.py']) });
+      const r = await new KbClient('kb/', f).study('fixture').dirDoc(SHA, '');
+      expect(r.key).toBe('dirs/_root.json');
+      expect(r.summary).not.toBeNull();
+    });
+
+    it('does not take dirs/_root.json as the root when the tree has a _root directory', async () => {
+      const f = mockFetch({ [base + 'dirs/_root.json']: summary('_root'), [base + 'tree.json']: tree(['_root/a.py']) });
+      const s = new KbClient('kb/', f).study('fixture');
+      expect(await s.dir(SHA, '')).toBeNull();
+      expect((await s.dirDoc(SHA, '_root')).summary?.path).toBe('_root');
+    });
   });
 
   it('returns text resources as text', async () => {
@@ -114,7 +141,7 @@ describe('KbClient', () => {
         ],
         'tours/solo-pasos.json#1': [],
         'explain/app/tours/x.py.json': [],
-        'dirs/_root.json': [],
+        'dir-root.json': [],
       },
     };
     const setup = () => {

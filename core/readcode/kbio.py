@@ -78,10 +78,43 @@ def explain_path(snapshot_directory: Path | str, file_path: str) -> Path:
     return Path(snapshot_directory) / "explain" / f"{file_path}.json"
 
 
+ROOT_DIR_DOC = "dir-root.json"
+LEGACY_ROOT_DIR_DOC = "dirs/_root.json"
+
+
 def dir_summary_path(snapshot_directory: Path | str, dir_path: str) -> Path:
-    """``<snapshot>/dirs/<path>.json``; the repo root ("") is ``dirs/_root.json``."""
-    name = dir_path if dir_path else "_root"
-    return Path(snapshot_directory) / "dirs" / f"{name}.json"
+    """``<snapshot>/dirs/<path>.json``; the repo root ("") is ``<snapshot>/dir-root.json``,
+    outside ``dirs/`` so it cannot collide with a repo directory (e.g. one named ``_root``)."""
+    if not dir_path:
+        return Path(snapshot_directory) / ROOT_DIR_DOC
+    return Path(snapshot_directory) / "dirs" / f"{dir_path}.json"
+
+
+def has_root_named_dir(snapshot_directory: Path | str) -> bool:
+    """True when the snapshot's tree.json has a directory named ``_root`` (any path under ``_root/``)."""
+    try:
+        files = read_json(Path(snapshot_directory) / "tree.json").get("files", [])
+    except (OSError, ValueError, AttributeError):
+        return False
+    return any(isinstance(f, dict) and str(f.get("path", "")).startswith("_root/") for f in files)
+
+
+def legacy_root_path(snapshot_directory: Path | str) -> Path | None:
+    """The v1 root summary ``dirs/_root.json``, when it is to be read as the root summary:
+    the file exists and the tree has no directory named ``_root`` (then it is that directory's)."""
+    path = Path(snapshot_directory) / LEGACY_ROOT_DIR_DOC
+    if path.is_file() and not has_root_named_dir(snapshot_directory):
+        return path
+    return None
+
+
+def find_dir_summary(snapshot_directory: Path | str, dir_path: str) -> Path | None:
+    """Existing summary file of a directory; for the root, ``dir-root.json`` wins over a legacy
+    ``dirs/_root.json``. None when there is none."""
+    path = dir_summary_path(snapshot_directory, dir_path)
+    if path.is_file():
+        return path
+    return legacy_root_path(snapshot_directory) if not dir_path else None
 
 
 def resolve_sha(study_data: dict, prefix: str) -> str:

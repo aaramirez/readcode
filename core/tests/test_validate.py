@@ -87,9 +87,9 @@ def test_clean_study_exit0_and_links(mini):
     assert data["sha"] == SHA
     docs = data["docs"]
     assert set(docs) == {"explain/app/main.py.json", "explain/app/util.py.json",
-                         "explain/app/other.py.json", "dirs/_root.json", "dirs/app.json",
+                         "explain/app/other.py.json", "dir-root.json", "dirs/app.json",
                          "tours/intro.json", "tours/intro.json#1", "overview.md"}
-    assert docs["explain/app/util.py.json"] == [] and docs["dirs/_root.json"] == []
+    assert docs["explain/app/util.py.json"] == [] and docs["dir-root.json"] == []
     main = docs["explain/app/main.py.json"]
     assert main == [
         {"raw": "[[ref:app/util.py#fmt]]", "kind": "symbol", "status": "exact",

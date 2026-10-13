@@ -129,11 +129,19 @@ def stale_docs(kb: Path | str, study: str, sha_a: str, sha_b: str) -> dict:
 
     dirs = []
     dirs_root = snap_b / "dirs"
+    docs: list[tuple[str, Path]] = []
     for doc_path in sorted(dirs_root.rglob("*.json")) if dirs_root.is_dir() else []:
+        rel = doc_path.relative_to(dirs_root).as_posix()[: -len(".json")]
+        if rel == "_root" and kbio.legacy_root_path(snap_b) is not None:
+            continue  # the v1 root summary: read below, unless dir-root.json replaces it
+        docs.append((rel, doc_path))
+    root_doc = kbio.find_dir_summary(snap_b, "")
+    if root_doc is not None:
+        docs.insert(0, ("", root_doc))
+    for rel, doc_path in docs:
         markers = ch.markers([_read(doc_path).get("summary", "")])
         if markers:
-            rel = doc_path.relative_to(dirs_root).as_posix()[: -len(".json")]
-            dirs.append({"path": "" if rel == "_root" else rel, "markers": markers})
+            dirs.append({"path": rel, "markers": markers})
 
     tours = []
     tours_root = snap_b / "tours"

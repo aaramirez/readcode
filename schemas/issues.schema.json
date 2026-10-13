@@ -27,6 +27,10 @@
             "type": "string",
             "description": "How to fix it."
           },
+          "code": {
+            "type": "string",
+            "description": "Machine-readable code of a warning (e.g. legacy-root); absent for plain problems."
+          },
           "source": {
             "enum": [
               "validate",

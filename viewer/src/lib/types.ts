@@ -237,6 +237,8 @@ export interface Issue {
   file?: string;
   problem: string;
   hint?: string;
+  /** Machine-readable code of a warning (e.g. 'legacy-root'). */
+  code?: string;
   source: 'validate' | 'generator' | 'tool';
 }
 

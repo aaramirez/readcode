@@ -141,10 +141,28 @@ export class StudyData {
     return this.kb.json<Explain>(this.snap(sha, `explain/${encodePath(path)}.json`));
   }
 
-  /** Directory summary; "" is the repo root (dirs/_root.json). */
-  dir(sha: string, path: string): Promise<DirSummary | null> {
-    const rel = path === '' ? '_root' : encodePath(path);
-    return this.kb.json<DirSummary>(this.snap(sha, `dirs/${rel}.json`));
+  /**
+   * Directory summary and the links.json doc key it was loaded from. The repo root ("") is
+   * dir-root.json; a v1 kb that was not migrated has it at dirs/_root.json, accepted only when
+   * the tree has no directory named `_root` (there dirs/_root.json is that directory's summary).
+   */
+  async dirDoc(sha: string, path: string): Promise<{ summary: DirSummary | null; key: string }> {
+    if (path !== '') {
+      const key = `dirs/${encodePath(path)}.json`;
+      return { summary: await this.kb.json<DirSummary>(this.snap(sha, key)), key };
+    }
+    const root = await this.kb.json<DirSummary>(this.snap(sha, 'dir-root.json'));
+    if (root) return { summary: root, key: 'dir-root.json' };
+    const tree = await this.tree(sha);
+    if (tree && !tree.files.some((f) => f.path.startsWith('_root/'))) {
+      const legacy = await this.kb.json<DirSummary>(this.snap(sha, 'dirs/_root.json'));
+      if (legacy) return { summary: legacy, key: 'dirs/_root.json' };
+    }
+    return { summary: null, key: 'dir-root.json' };
+  }
+
+  async dir(sha: string, path: string): Promise<DirSummary | null> {
+    return (await this.dirDoc(sha, path)).summary;
   }
 
   overview(sha: string): Promise<string | null> {

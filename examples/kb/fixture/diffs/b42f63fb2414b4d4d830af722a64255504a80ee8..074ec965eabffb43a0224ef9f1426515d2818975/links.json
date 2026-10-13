@@ -41,7 +41,8 @@
         "range": [
           1,
           2
-        ]
+        ],
+        "snapshot": "A"
       },
       {
         "raw": "[[ref:app/services/auth.py#process]]",
@@ -97,7 +98,8 @@
         "range": [
           1,
           2
-        ]
+        ],
+        "snapshot": "A"
       },
       {
         "raw": "[[ref:db/schema.sql#invoices]]",

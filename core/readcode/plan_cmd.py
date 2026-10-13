@@ -62,7 +62,8 @@ def _parents(path: str) -> list[str]:
 
 def _abandoned(snap: Path) -> tuple[set[str], set[str]]:
     """(files, dirs) given up by the generator: issues.json entries with source "generator"
-    whose file is ``explain/<path>.json`` or ``dirs/<path>.json`` (root: ``dirs/_root.json``)."""
+    whose file is ``explain/<path>.json`` or ``dirs/<path>.json`` (root: ``dir-root.json``, or the
+    v1 ``dirs/_root.json`` when the tree has no directory named ``_root``)."""
     path = snap / "issues.json"
     if not path.is_file():
         return set(), set()
@@ -71,6 +72,7 @@ def _abandoned(snap: Path) -> tuple[set[str], set[str]]:
     except (ValueError, AttributeError):
         return set(), set()
     files, dirs = set(), set()
+    legacy_root = not kbio.has_root_named_dir(snap)
     for issue in issues if isinstance(issues, list) else []:
         if not isinstance(issue, dict) or issue.get("source") != "generator":
             continue
@@ -79,9 +81,11 @@ def _abandoned(snap: Path) -> tuple[set[str], set[str]]:
             continue
         if f.startswith("explain/"):
             files.add(f[len("explain/"):-len(".json")])
+        elif f == kbio.ROOT_DIR_DOC:
+            dirs.add("")
         elif f.startswith("dirs/"):
             d = f[len("dirs/"):-len(".json")]
-            dirs.add("" if d == "_root" else d)
+            dirs.add("" if d == "_root" and legacy_root else d)
     return files, dirs
 
 
@@ -161,9 +165,9 @@ def plan_snapshot(kb: Path | str, study: str, sha: str, batch_lines: int = 1500)
         for d in all_dirs:
             if d in dirty or old_sub.get(d) != new_sub.get(d):
                 continue
-            mine, theirs = kbio.dir_summary_path(snap, d), kbio.dir_summary_path(other_dir, d)
-            if not mine.is_file() and theirs.is_file():
-                kbio.atomic_write_bytes(mine, theirs.read_bytes())
+            theirs = kbio.find_dir_summary(other_dir, d)  # a v1 root is inherited under its new name
+            if kbio.find_dir_summary(snap, d) is None and theirs is not None:
+                kbio.atomic_write_bytes(kbio.dir_summary_path(snap, d), theirs.read_bytes())
                 reused_dirs += 1
         # Copied only into a snapshot that never had the directory: once it exists (even
         # emptied by the user) deleted tours/diagrams are not resurrected on later runs.
@@ -179,7 +183,7 @@ def plan_snapshot(kb: Path | str, study: str, sha: str, batch_lines: int = 1500)
             if ov.is_file():
                 kbio.atomic_write_bytes(snap / "overview.md", ov.read_bytes())
 
-    unsummarized = [d for d in all_dirs if d in dirty or not kbio.dir_summary_path(snap, d).is_file()]
+    unsummarized = [d for d in all_dirs if d in dirty or kbio.find_dir_summary(snap, d) is None]
     pending_dirs = [d for d in unsummarized if d not in given_up_dirs]
     pending_dirs.sort(key=lambda d: (-(len(d.split("/")) if d else 0), d))
     abandoned_dirs = sorted(d for d in unsummarized if d in given_up_dirs)

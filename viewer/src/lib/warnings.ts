@@ -15,6 +15,7 @@ export interface IssueIndex {
 
 const EXPLAIN = /^explain\/(.+)\.json$/;
 const DIRS = /^dirs\/(.+)\.json$/;
+const ROOT_DIR = 'dir-root.json';
 
 function push(map: Map<string, Issue[]>, key: string, issue: Issue) {
   const list = map.get(key);
@@ -23,13 +24,17 @@ function push(map: Map<string, Issue[]>, key: string, issue: Issue) {
 }
 
 export function issuesByPath(issues: Issue[], paths: Set<string>): IssueIndex {
+  // dirs/_root.json is the (legacy) repo root summary unless the tree has a directory `_root`.
+  const hasRootDir = [...paths].some((p) => p.startsWith('_root/'));
   const out: IssueIndex = { files: new Map(), dirs: new Map(), other: [] };
   for (const issue of issues) {
     const f = issue.file;
     const ex = f ? EXPLAIN.exec(f) : null;
     const dir = f ? DIRS.exec(f) : null;
+    const legacyRoot = dir !== null && dir[1] === '_root' && !hasRootDir;
     if (ex) push(out.files, ex[1], issue);
-    else if (dir) push(out.dirs, dir[1] === '_root' ? '' : dir[1], issue);
+    else if (f === ROOT_DIR || legacyRoot) push(out.dirs, '', issue);
+    else if (dir) push(out.dirs, dir[1], issue);
     else if (f && paths.has(f)) push(out.files, f, issue);
     else out.other.push(issue);
   }

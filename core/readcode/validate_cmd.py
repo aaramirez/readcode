@@ -10,6 +10,11 @@ problems are stored with ``file`` relative to the snapshot directory, i.e. the
 same key the doc has in ``links.json``. Problems of study.json and of diffs are
 only reported on output (issues.json is per snapshot).
 
+The root directory summary is ``dir-root.json``. A v1 kb has it at ``dirs/_root.json``; that is
+read as the root (key ``dirs/_root.json``) only when tree.json has no directory named ``_root``
+and ``dir-root.json`` is absent, and ``readcode migrate`` renames it. It is reported with the
+warning code ``legacy-root`` (problems whose ``code`` is in ``WARNING_CODES`` do not fail the run).
+
 Doc keys in ``links.json`` are the doc's path relative to the snapshot (or diff) directory,
 except tour steps: a tour's description is ``tours/<id>.json`` and step ``n`` (1-based) is
 ``tours/<id>.json#<n>``, because each step resolves markers relative to its own file.
@@ -29,6 +34,9 @@ _EMPTY_TREE: dict = {"files": []}
 _EMPTY_SYMBOLS: dict = {"files": {}}
 
 
+WARNING_CODES = frozenset({"legacy-root"})
+
+
 class ValidateError(RuntimeError):
     """The study or the requested snapshot cannot be validated at all."""
 
@@ -37,8 +45,9 @@ class _Collector:
     def __init__(self) -> None:
         self.problems: list[dict] = []
 
-    def add(self, file: str, problem: str, hint: str) -> None:
-        self.problems.append({"file": file, "problem": problem, "hint": hint})
+    def add(self, file: str, problem: str, hint: str, code: str | None = None) -> None:
+        self.problems.append({"file": file, "problem": problem, "hint": hint,
+                              **({"code": code} if code else {})})
 
 
 def _lf(text: str) -> str:
@@ -184,18 +193,17 @@ def _check_explain(snap: Path, sp: str, rel_path: str, files: dict, res: _Resolv
         res.markdown(key, rel, block["body"], location, f"block {block['id']}", out)
 
 
-def _check_dir(snap: Path, sp: str, rel_path: str, res: _Resolver, out: _Collector) -> None:
-    key = f"dirs/{rel_path}"
+def _check_dir(snap: Path, sp: str, key: str, location: str, res: _Resolver, out: _Collector) -> None:
+    """One directory summary: ``key`` is its doc key (path relative to the snapshot)."""
     rel = f"{sp}/{key}"
     res.doc(key)
     doc = _load(snap / key, "dir", rel, out)
     if doc is None:
         return
-    location = rel_path[: -len(".json")]
-    location = "" if location == "_root" else location
     if doc["path"] != location:
         out.add(rel, f"path {doc['path']!r} does not match its location ({location!r})",
-                f"set \"path\": \"{location}\" (root directory = \"\", stored as dirs/_root.json)")
+                f"set \"path\": \"{location}\""
+                + (f" (root directory = \"\", stored as {kbio.ROOT_DIR_DOC})" if not location else ""))
     res.markdown(key, rel, doc["summary"], location, "summary", out)
 
 
@@ -247,8 +255,19 @@ def _validate_snapshot(sdir: Path, sha: str, out: _Collector) -> None:
 
     for rel_path in _rel_json_files(snap / "explain"):
         _check_explain(snap, sp, rel_path, files, res, search, out)
+    legacy_root = kbio.legacy_root_path(snap)  # None when dirs/_root.json is a real directory's
+    if (snap / kbio.ROOT_DIR_DOC).is_file():
+        _check_dir(snap, sp, kbio.ROOT_DIR_DOC, "", res, out)
     for rel_path in _rel_json_files(snap / "dirs"):
-        _check_dir(snap, sp, rel_path, res, out)
+        location = rel_path[: -len(".json")]
+        key = f"dirs/{rel_path}"
+        if location == "_root" and legacy_root is not None:
+            out.add(f"{sp}/{key}", "legacy root summary: v1 stored the root at dirs/_root.json",
+                    f"run `readcode migrate` to move it to {kbio.ROOT_DIR_DOC}", code="legacy-root")
+            if (snap / kbio.ROOT_DIR_DOC).is_file():
+                continue  # dir-root.json wins
+            location = ""
+        _check_dir(snap, sp, key, location, res, out)
     for rel_path in _rel_json_files(snap / "tours"):
         _check_tour(snap, sp, rel_path, files, res, out)
     overview = snap / "overview.md"
@@ -280,7 +299,8 @@ def _write_issues(snap: Path, sp: str, problems: list[dict], out: _Collector) ->
             pass
     prefix = f"{sp}/"
     new = [{"file": p["file"][len(prefix):] if p["file"].startswith(prefix) else p["file"],
-            "problem": p["problem"], "hint": p["hint"], "source": "validate"} for p in problems]
+            "problem": p["problem"], "hint": p["hint"], "source": "validate",
+            **({"code": p["code"]} if "code" in p else {})} for p in problems]
     kbio.atomic_write_json(path, {"schemaVersion": 1, "issues": kept + new})
 
 
@@ -395,7 +415,12 @@ def validate_study(kb: Path | str, study: str, sha: str | None = None) -> list[d
     return out.problems
 
 
+def is_warning(problem: dict) -> bool:
+    return problem.get("code") in WARNING_CODES
+
+
 def format_problems(problems: list[dict]) -> str:
     if not problems:
         return "OK: sin problemas"
-    return "\n".join(f"{p['file']}: {p['problem']} ({p['hint']})" for p in problems)
+    return "\n".join(f"{'aviso: ' if is_warning(p) else ''}{p['file']}: {p['problem']} ({p['hint']})"
+                     for p in problems)

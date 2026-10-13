@@ -6,6 +6,7 @@ from pathlib import Path, PurePosixPath
 
 import pytest
 
+from readcode import kbio
 from readcode.validate_cmd import validate_study
 
 EXAMPLE_KB = Path(__file__).resolve().parents[2] / "examples" / "kb"
@@ -43,7 +44,7 @@ def test_every_snapshot_is_fully_explained():
                 dirs.add(str(parent))
                 parent = parent.parent
         for d in dirs:
-            assert (sdir / "dirs" / f"{d or '_root'}.json").is_file(), d
+            assert kbio.find_dir_summary(sdir, d) is not None, d
         assert (sdir / "overview.md").is_file()
         assert len(list((sdir / "tours").glob("*.json"))) >= 2
         assert (sdir / "diagrams" / "arquitectura.html").is_file()

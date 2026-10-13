@@ -49,7 +49,7 @@ def fake_dirs(sd, sha):
 
 def test_path_helpers(tmp_path):
     assert kbio.explain_path(tmp_path, "app/main.py").as_posix().endswith("explain/app/main.py.json")
-    assert kbio.dir_summary_path(tmp_path, "").name == "_root.json"
+    assert kbio.dir_summary_path(tmp_path, "").name == "dir-root.json"
     assert kbio.dir_summary_path(tmp_path, "app/services").as_posix().endswith("dirs/app/services.json")
 
 
@@ -148,7 +148,7 @@ def test_plan_after_reexplaining_keeps_affected_dirs_and_overview_pending(study)
     assert again["batches"] == []
     assert set(again["dirs"]) == affected
     assert not (s2 / "dirs" / "app" / "services.json").exists()
-    assert not (s2 / "dirs" / "_root.json").exists()
+    assert not (s2 / "dir-root.json").exists()
     assert again["overview"] is True and not (s2 / "overview.md").exists()
     assert (s2 / "dirs" / "worker.json").is_file()
 
@@ -185,7 +185,7 @@ def test_plan_abandoned_dirs_including_root(study):
     kbio.dir_summary_path(snap, "app/services").unlink()
     kbio.dir_summary_path(snap, "web").unlink()
     kbio.atomic_write_json(snap / "issues.json", {"schemaVersion": 1, "issues": [
-        {"file": "dirs/_root.json", "problem": "failed twice", "source": "generator"},
+        {"file": "dir-root.json", "problem": "failed twice", "source": "generator"},
         {"file": "dirs/app/services.json", "problem": "failed twice", "source": "generator"},
         {"file": "dirs/web.json", "problem": "x", "source": "validate"},
         {"file": "dirs/app.json", "problem": "summary exists", "source": "generator"}]})

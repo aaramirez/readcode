@@ -141,10 +141,10 @@ def validate_cmd(
     sha: Annotated[Optional[str], typer.Option("--sha", help="Solo este snapshot (y sus diffs).")] = None,
     as_json: Annotated[bool, typer.Option("--json", help="Salida en JSON.")] = False,
 ) -> None:
-    """Valida el estudio; escribe links.json e issues.json. Exit 1 si hay problemas."""
+    """Valida el estudio; escribe links.json e issues.json. Exit 1 si hay problemas (los avisos no cuentan)."""
     import json
 
-    from readcode.validate_cmd import ValidateError, format_problems, validate_study
+    from readcode.validate_cmd import ValidateError, format_problems, is_warning, validate_study
 
     try:
         problems = validate_study(kb_dir, study, sha)
@@ -153,8 +153,24 @@ def validate_cmd(
         raise typer.Exit(1)
     typer.echo(json.dumps(problems, indent=2, ensure_ascii=False) if as_json
                else format_problems(problems))
-    if problems:
+    if any(not is_warning(p) for p in problems):  # warnings (legacy-root) do not fail
         raise typer.Exit(1)
+
+
+@app.command()
+def migrate(
+    kb_dir: Annotated[Path, typer.Argument(help="Directorio de la base de conocimiento.")],
+    study: Annotated[Optional[str], typer.Argument(help="Nombre del estudio (todos si se omite).")] = None,
+) -> None:
+    """Migra un kb de v1 al formato actual (raíz de dirs: dirs/_root.json -> dir-root.json)."""
+    from readcode.migrate_cmd import MigrateError, format_migrated, migrate_study
+
+    try:
+        moved = migrate_study(kb_dir, study)
+    except MigrateError as exc:
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(1)
+    typer.echo(format_migrated(moved))
 
 
 @app.command()
