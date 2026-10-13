@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://readcode.dev/schemas/catalog.schema.json",
+  "title": "Catalog",
+  "description": "Catalog root.",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "$ref": "common.schema.json#/$defs/schemaVersion"
+    },
+    "studies": {
+      "type": "array",
+      "description": "All studies in the kb.",
+      "items": {
+        "type": "object",
+        "description": "One study entry.",
+        "properties": {
+          "name": {
+            "$ref": "common.schema.json#/$defs/studyName",
+            "description": "Study directory name."
+          },
+          "title": {
+            "type": "string",
+            "description": "Human-readable study title."
+          },
+          "repo": {
+            "$ref": "common.schema.json#/$defs/repo"
+          },
+          "snapshots": {
+            "type": "integer",
+            "description": "Number of snapshots in the study.",
+            "minimum": 0
+          },
+          "updated": {
+            "$ref": "common.schema.json#/$defs/isoDateTime",
+            "description": "Last update of the study (ISO datetime)."
+          }
+        },
+        "required": [
+          "name",
+          "title",
+          "repo",
+          "snapshots",
+          "updated"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "studies"
+  ],
+  "additionalProperties": false
+}

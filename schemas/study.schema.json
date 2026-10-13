@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://readcode.dev/schemas/study.schema.json",
+  "title": "Study",
+  "description": "Study root.",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "$ref": "common.schema.json#/$defs/schemaVersion"
+    },
+    "name": {
+      "$ref": "common.schema.json#/$defs/studyName",
+      "description": "Study directory name."
+    },
+    "title": {
+      "type": "string",
+      "description": "Human-readable study title."
+    },
+    "repo": {
+      "$ref": "common.schema.json#/$defs/repo"
+    },
+    "language": {
+      "type": "string",
+      "description": "Language of generated explanations (default \"es\").",
+      "default": "es"
+    },
+    "exclude": {
+      "type": "array",
+      "description": "Extra gitignore-style exclusion patterns for this study.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "tools": {
+      "type": "object",
+      "description": "Optional tools available to the study.",
+      "properties": {
+        "graphify": {
+          "type": "boolean",
+          "description": "Whether Graphify graphs are available."
+        },
+        "archify": {
+          "type": "boolean",
+          "description": "Whether Archify diagrams are available."
+        }
+      },
+      "required": [
+        "graphify",
+        "archify"
+      ],
+      "additionalProperties": false
+    },
+    "snapshots": {
+      "type": "array",
+      "description": "Snapshots of the study.",
+      "items": {
+        "type": "object",
+        "description": "One snapshot.",
+        "properties": {
+          "sha": {
+            "$ref": "common.schema.json#/$defs/sha40"
+          },
+          "date": {
+            "$ref": "common.schema.json#/$defs/isoDateTime",
+            "description": "Commit date."
+          },
+          "message": {
+            "type": "string",
+            "description": "Commit message (first line is enough)."
+          },
+          "status": {
+            "enum": [
+              "indexed",
+              "explained",
+              "partial"
+            ],
+            "description": "indexed: tree+symbols only; explained: fully explained; partial: some explanations missing."
+          }
+        },
+        "required": [
+          "sha",
+          "date",
+          "message",
+          "status"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "name",
+    "title",
+    "repo",
+    "language",
+    "exclude",
+    "tools",
+    "snapshots"
+  ],
+  "additionalProperties": false
+}

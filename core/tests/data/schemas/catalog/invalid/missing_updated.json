@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "studies": [
+    {
+      "name": "demo",
+      "title": "Demo",
+      "repo": {
+        "url": "https://x/y.git",
+        "localPath": "/tmp/y"
+      },
+      "snapshots": 2
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://readcode.dev/schemas/changes.schema.json",
+  "title": "Changes",
+  "description": "Changes root.",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "$ref": "common.schema.json#/$defs/schemaVersion"
+    },
+    "from": {
+      "$ref": "common.schema.json#/$defs/sha40",
+      "description": "Base commit."
+    },
+    "to": {
+      "$ref": "common.schema.json#/$defs/sha40",
+      "description": "Target commit."
+    },
+    "files": {
+      "type": "array",
+      "description": "Changed files.",
+      "items": {
+        "type": "object",
+        "description": "A changed file.",
+        "properties": {
+          "path": {
+            "$ref": "common.schema.json#/$defs/path"
+          },
+          "status": {
+            "enum": [
+              "added",
+              "modified",
+              "deleted",
+              "renamed"
+            ],
+            "description": "Change status."
+          },
+          "oldPath": {
+            "$ref": "common.schema.json#/$defs/path",
+            "description": "Previous path (renamed)."
+          },
+          "fromBlob": {
+            "$ref": "common.schema.json#/$defs/sha256",
+            "description": "Old blob hash (absent when added)."
+          },
+          "toBlob": {
+            "$ref": "common.schema.json#/$defs/sha256",
+            "description": "New blob hash (absent when deleted)."
+          },
+          "hunks": {
+            "type": "array",
+            "description": "Hunks of the change.",
+            "items": {
+              "type": "object",
+              "description": "A diff hunk.",
+              "properties": {
+                "fromRange": {
+                  "$ref": "common.schema.json#/$defs/nullableRange",
+                  "description": "Old-side lines, null for pure additions."
+                },
+                "toRange": {
+                  "$ref": "common.schema.json#/$defs/nullableRange",
+                  "description": "New-side lines, null for pure deletions."
+                },
+                "header": {
+                  "type": "string",
+                  "description": "Hunk header text (e.g. @@ ... @@)."
+                }
+              },
+              "required": [
+                "fromRange",
+                "toRange"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "path",
+          "status",
+          "hunks"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "from",
+    "to",
+    "files"
+  ],
+  "additionalProperties": false
+}

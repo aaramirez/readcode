@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "files": {
+    "app/main.py": {
+      "defs": [
+        {
+          "name": "f",
+          "kind": "macro",
+          "range": [
+            1,
+            5
+          ]
+        },
+        {
+          "name": "g",
+          "kind": "method",
+          "range": [
+            2,
+            3
+          ],
+          "parent": "C"
+        }
+      ],
+      "refs": [
+        {
+          "name": "f",
+          "line": 8,
+          "col": 4
+        }
+      ],
+      "imports": [
+        {
+          "module": "os",
+          "line": 1,
+          "resolved": null
+        },
+        {
+          "module": ".x",
+          "line": 2,
+          "resolved": "app/x.py"
+        }
+      ]
+    }
+  }
+}

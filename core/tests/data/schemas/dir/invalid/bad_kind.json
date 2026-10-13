@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "path": "",
+  "summary": "Raiz",
+  "children": [
+    {
+      "path": "app",
+      "kind": "symlink",
+      "oneLine": "Codigo"
+    }
+  ]
+}

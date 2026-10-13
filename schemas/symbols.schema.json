@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://readcode.dev/schemas/symbols.schema.json",
+  "title": "Symbols",
+  "description": "Symbols root.",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "$ref": "common.schema.json#/$defs/schemaVersion"
+    },
+    "sha": {
+      "$ref": "common.schema.json#/$defs/sha40"
+    },
+    "files": {
+      "type": "object",
+      "description": "Map from file path to its symbols.",
+      "propertyNames": {
+        "minLength": 1
+      },
+      "additionalProperties": {
+        "type": "object",
+        "description": "Symbols of one file.",
+        "properties": {
+          "defs": {
+            "type": "array",
+            "description": "Definitions in the file.",
+            "items": {
+              "type": "object",
+              "description": "A definition.",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Symbol name."
+                },
+                "kind": {
+                  "enum": [
+                    "function",
+                    "method",
+                    "class",
+                    "interface",
+                    "type",
+                    "struct",
+                    "variable",
+                    "constant",
+                    "module",
+                    "table",
+                    "other"
+                  ],
+                  "description": "Symbol kind."
+                },
+                "range": {
+                  "$ref": "common.schema.json#/$defs/range",
+                  "description": "Lines of the definition."
+                },
+                "parent": {
+                  "type": "string",
+                  "description": "Name of the enclosing symbol, if any."
+                }
+              },
+              "required": [
+                "name",
+                "kind",
+                "range"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "refs": {
+            "type": "array",
+            "description": "References in the file.",
+            "items": {
+              "type": "object",
+              "description": "A reference.",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Referenced name."
+                },
+                "line": {
+                  "type": "integer",
+                  "description": "1-based line.",
+                  "minimum": 1
+                },
+                "col": {
+                  "type": "integer",
+                  "description": "Column (0-based).",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "name",
+                "line",
+                "col"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "imports": {
+            "type": "array",
+            "description": "Imports in the file.",
+            "items": {
+              "type": "object",
+              "description": "An import.",
+              "properties": {
+                "module": {
+                  "type": "string",
+                  "description": "Module specifier as written."
+                },
+                "line": {
+                  "type": "integer",
+                  "description": "1-based line.",
+                  "minimum": 1
+                },
+                "resolved": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Repo path the import resolves to, or null."
+                }
+              },
+              "required": [
+                "module",
+                "line"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "defs",
+          "refs",
+          "imports"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "sha",
+    "files"
+  ],
+  "additionalProperties": false
+}

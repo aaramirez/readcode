@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://readcode.dev/schemas/links.schema.json",
+  "title": "Links",
+  "description": "Links root.",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "$ref": "common.schema.json#/$defs/schemaVersion"
+    },
+    "sha": {
+      "$ref": "common.schema.json#/$defs/sha40"
+    },
+    "docs": {
+      "type": "object",
+      "description": "Map from doc key (path of the markdown-bearing file relative to the snapshot dir, e.g. \"explain/app/main.py.json\", \"overview.md\", \"tours/login.json\", \"dirs/app.json\") to its markers.",
+      "additionalProperties": {
+        "type": "array",
+        "description": "Markers found in the doc.",
+        "items": {
+          "type": "object",
+          "description": "A resolved marker.",
+          "properties": {
+            "raw": {
+              "type": "string",
+              "description": "Exact marker text, e.g. [[ref:app/x.py#f]]."
+            },
+            "kind": {
+              "enum": [
+                "symbol",
+                "lines",
+                "archify",
+                "invalid"
+              ],
+              "description": "Marker kind."
+            },
+            "status": {
+              "enum": [
+                "exact",
+                "ambiguous",
+                "broken"
+              ],
+              "description": "Resolution status."
+            },
+            "target": {
+              "$ref": "common.schema.json#/$defs/path",
+              "description": "Resolved file path (exact)."
+            },
+            "range": {
+              "$ref": "common.schema.json#/$defs/range",
+              "description": "Resolved range (exact)."
+            },
+            "candidates": {
+              "type": "array",
+              "description": "Candidates when ambiguous.",
+              "items": {
+                "type": "object",
+                "description": "A candidate.",
+                "properties": {
+                  "target": {
+                    "$ref": "common.schema.json#/$defs/path"
+                  },
+                  "range": {
+                    "$ref": "common.schema.json#/$defs/range"
+                  }
+                },
+                "required": [
+                  "target",
+                  "range"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "raw",
+            "kind",
+            "status"
+          ],
+          "additionalProperties": false
+        }
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "sha",
+    "docs"
+  ],
+  "additionalProperties": false
+}

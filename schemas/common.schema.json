@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://readcode.dev/schemas/common.schema.json",
+  "title": "readcode common definitions",
+  "description": "Shared shapes referenced by the other readcode schemas.",
+  "$defs": {
+    "schemaVersion": {
+      "const": 1,
+      "type": "integer",
+      "description": "Study format version. Always 1 in v1."
+    },
+    "sha40": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$",
+      "description": "Full git commit SHA (40 lowercase hex chars)."
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 of a blob's content (64 lowercase hex chars)."
+    },
+    "isoDateTime": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$",
+      "description": "ISO 8601 date-time string with timezone."
+    },
+    "path": {
+      "type": "string",
+      "description": "Path relative to the repo root, always with forward slashes."
+    },
+    "markdown": {
+      "type": "string",
+      "description": "Markdown text; may contain [[ref:path#symbol]], [[ref:path:L10-31]], [[archify:name]] and mermaid fenced blocks."
+    },
+    "range": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "minItems": 2,
+      "maxItems": 2,
+      "description": "Line range [startLine, endLine], 1-based inclusive. start<=end is checked by `readcode validate`, not by the schema."
+    },
+    "studyName": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$",
+      "description": "Study name: lowercase letters, digits, '.', '_' or '-', starting with a letter or digit."
+    },
+    "nullableRange": {
+      "oneOf": [
+        {
+          "$ref": "common.schema.json#/$defs/range"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "A range, or null when it does not apply."
+    },
+    "repo": {
+      "type": "object",
+      "description": "Repository reference.",
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "Repository URL (or path) the study was generated from."
+        },
+        "localPath": {
+          "type": "string",
+          "description": "Optional local checkout path."
+        }
+      },
+      "required": [
+        "url"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

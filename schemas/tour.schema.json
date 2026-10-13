@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://readcode.dev/schemas/tour.schema.json",
+  "title": "Tour",
+  "description": "Tour root.",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "$ref": "common.schema.json#/$defs/schemaVersion"
+    },
+    "id": {
+      "type": "string",
+      "description": "Tour id (matches file name)."
+    },
+    "title": {
+      "type": "string",
+      "description": "Tour title."
+    },
+    "description": {
+      "$ref": "common.schema.json#/$defs/markdown",
+      "description": "Tour description."
+    },
+    "steps": {
+      "type": "array",
+      "description": "Ordered steps.",
+      "items": {
+        "type": "object",
+        "description": "A tour step.",
+        "properties": {
+          "path": {
+            "$ref": "common.schema.json#/$defs/path"
+          },
+          "range": {
+            "$ref": "common.schema.json#/$defs/range",
+            "description": "Lines shown in this step."
+          },
+          "title": {
+            "type": "string",
+            "description": "Step title."
+          },
+          "body": {
+            "$ref": "common.schema.json#/$defs/markdown",
+            "description": "Step text."
+          }
+        },
+        "required": [
+          "path",
+          "range",
+          "title",
+          "body"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "id",
+    "title",
+    "description",
+    "steps"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "name": "demo",
+  "title": "Demo",
+  "repo": {
+    "url": "https://x/y.git"
+  },
+  "language": "es",
+  "exclude": [
+    "docs/"
+  ],
+  "snapshots": [
+    {
+      "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "date": "2026-10-12T10:00:00Z",
+      "message": "init",
+      "status": "indexed"
+    }
+  ]
+}

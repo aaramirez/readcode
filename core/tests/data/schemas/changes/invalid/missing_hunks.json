@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "from": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "to": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "files": [
+    {
+      "path": "a.py",
+      "status": "modified",
+      "fromBlob": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "toBlob": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    },
+    {
+      "path": "b.py",
+      "status": "added",
+      "toBlob": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "hunks": [
+        {
+          "fromRange": null,
+          "toRange": [
+            1,
+            10
+          ]
+        }
+      ]
+    }
+  ]
+}

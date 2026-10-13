@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "issues": [
+    {
+      "file": "explain/a.json",
+      "hint": "Corrige",
+      "source": "validate"
+    }
+  ]
+}

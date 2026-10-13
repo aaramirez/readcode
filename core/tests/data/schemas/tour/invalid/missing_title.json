@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "login",
+  "title": "Login",
+  "description": "Flujo",
+  "steps": [
+    {
+      "path": "app/main.py",
+      "range": [
+        1,
+        5
+      ],
+      "body": "Texto"
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://readcode.dev/schemas/diff-explain.schema.json",
+  "title": "Diff explanation",
+  "description": "Diff explanation root.",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "$ref": "common.schema.json#/$defs/schemaVersion"
+    },
+    "path": {
+      "$ref": "common.schema.json#/$defs/path"
+    },
+    "summary": {
+      "$ref": "common.schema.json#/$defs/markdown",
+      "description": "Summary of the change to the file."
+    },
+    "hunks": {
+      "type": "array",
+      "description": "Hunk explanations.",
+      "items": {
+        "type": "object",
+        "description": "A hunk explanation.",
+        "properties": {
+          "index": {
+            "type": "integer",
+            "description": "Index into changes.json hunks of this file (0-based).",
+            "minimum": 0
+          },
+          "body": {
+            "$ref": "common.schema.json#/$defs/markdown",
+            "description": "Explanation of the hunk."
+          }
+        },
+        "required": [
+          "index",
+          "body"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "path",
+    "summary",
+    "hunks"
+  ],
+  "additionalProperties": false
+}

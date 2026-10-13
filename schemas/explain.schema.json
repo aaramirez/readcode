@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://readcode.dev/schemas/explain.schema.json",
+  "title": "File explanation",
+  "description": "Explanation root.",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "$ref": "common.schema.json#/$defs/schemaVersion"
+    },
+    "path": {
+      "$ref": "common.schema.json#/$defs/path"
+    },
+    "blobHash": {
+      "$ref": "common.schema.json#/$defs/sha256",
+      "description": "Hash of the blob explained; reused across snapshots when unchanged."
+    },
+    "summary": {
+      "$ref": "common.schema.json#/$defs/markdown",
+      "description": "File summary."
+    },
+    "blocks": {
+      "type": "array",
+      "description": "Explained blocks.",
+      "items": {
+        "type": "object",
+        "description": "An explained block of code.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^b[0-9]+$",
+            "description": "Block id, e.g. b3."
+          },
+          "range": {
+            "$ref": "common.schema.json#/$defs/range",
+            "description": "Lines covered by the block."
+          },
+          "title": {
+            "type": "string",
+            "description": "Block title."
+          },
+          "body": {
+            "$ref": "common.schema.json#/$defs/markdown",
+            "description": "Block explanation."
+          }
+        },
+        "required": [
+          "id",
+          "range",
+          "title",
+          "body"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "path",
+    "blobHash",
+    "summary",
+    "blocks"
+  ],
+  "additionalProperties": false
+}

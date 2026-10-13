@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "docs": {
+    "overview.md": [
+      {
+        "raw": "[[ref:app/x.py#f]]",
+        "kind": "url",
+        "status": "exact",
+        "target": "app/x.py",
+        "range": [
+          1,
+          5
+        ]
+      },
+      {
+        "raw": "[[ref:f]]",
+        "kind": "symbol",
+        "status": "ambiguous",
+        "candidates": [
+          {
+            "target": "a.py",
+            "range": [
+              1,
+              2
+            ]
+          },
+          {
+            "target": "b.py",
+            "range": [
+              3,
+              4
+            ]
+          }
+        ]
+      },
+      {
+        "raw": "[[ref:zzz]]",
+        "kind": "invalid",
+        "status": "broken"
+      }
+    ]
+  }
+}

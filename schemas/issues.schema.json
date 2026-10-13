@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://readcode.dev/schemas/issues.schema.json",
+  "title": "Issues",
+  "description": "Issues root.",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "$ref": "common.schema.json#/$defs/schemaVersion"
+    },
+    "issues": {
+      "type": "array",
+      "description": "Issues.",
+      "items": {
+        "type": "object",
+        "description": "An issue.",
+        "properties": {
+          "file": {
+            "type": "string",
+            "description": "File the problem refers to."
+          },
+          "problem": {
+            "type": "string",
+            "description": "Problem description."
+          },
+          "hint": {
+            "type": "string",
+            "description": "How to fix it."
+          },
+          "source": {
+            "enum": [
+              "validate",
+              "generator",
+              "tool"
+            ],
+            "description": "Who reported the issue."
+          }
+        },
+        "required": [
+          "problem",
+          "source"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "issues"
+  ],
+  "additionalProperties": false
+}

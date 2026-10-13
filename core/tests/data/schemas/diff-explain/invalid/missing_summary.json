@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "path": "a.py",
+  "hunks": [
+    {
+      "index": 0,
+      "body": "Explicacion"
+    }
+  ]
+}

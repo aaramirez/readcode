@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "path": "app/main.py",
+  "blobHash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "summary": "Resumen [[ref:app/x.py#f]]",
+  "blocks": [
+    {
+      "id": "block1",
+      "range": [
+        1,
+        5
+      ],
+      "title": "Inicio",
+      "body": "Texto"
+    }
+  ]
+}

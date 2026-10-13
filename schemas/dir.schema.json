@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://readcode.dev/schemas/dir.schema.json",
+  "title": "Directory summary",
+  "description": "Directory root.",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "$ref": "common.schema.json#/$defs/schemaVersion"
+    },
+    "path": {
+      "type": "string",
+      "description": "Directory path; empty string for the repo root."
+    },
+    "summary": {
+      "$ref": "common.schema.json#/$defs/markdown",
+      "description": "Directory summary."
+    },
+    "children": {
+      "type": "array",
+      "description": "Children.",
+      "items": {
+        "type": "object",
+        "description": "A child entry.",
+        "properties": {
+          "path": {
+            "$ref": "common.schema.json#/$defs/path"
+          },
+          "kind": {
+            "enum": [
+              "file",
+              "dir"
+            ],
+            "description": "Child kind."
+          },
+          "oneLine": {
+            "type": "string",
+            "description": "One-line description."
+          }
+        },
+        "required": [
+          "path",
+          "kind",
+          "oneLine"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "path",
+    "summary",
+    "children"
+  ],
+  "additionalProperties": false
+}

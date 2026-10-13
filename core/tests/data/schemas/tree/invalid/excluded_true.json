@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "files": [
+    {
+      "path": "app/main.py",
+      "blob": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "language": "python",
+      "lines": 10,
+      "bytes": 200,
+      "indexed": true,
+      "excluded": true
+    },
+    {
+      "path": "notes.xyz",
+      "blob": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "language": null,
+      "lines": 1,
+      "bytes": 5,
+      "indexed": false,
+      "excluded": false
+    }
+  ],
+  "excluded": [
+    {
+      "path": "node_modules/a.js",
+      "reason": "default"
+    }
+  ]
+}

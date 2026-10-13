@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "issues": [
+    {
+      "file": "explain/a.json",
+      "problem": "Rango fuera de archivo",
+      "hint": "Corrige",
+      "source": "human"
+    }
+  ]
+}

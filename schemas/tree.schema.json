@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://readcode.dev/schemas/tree.schema.json",
+  "title": "Tree",
+  "description": "Tree root.",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "$ref": "common.schema.json#/$defs/schemaVersion"
+    },
+    "sha": {
+      "$ref": "common.schema.json#/$defs/sha40"
+    },
+    "files": {
+      "type": "array",
+      "description": "Included files.",
+      "items": {
+        "type": "object",
+        "description": "A file in the snapshot.",
+        "properties": {
+          "path": {
+            "$ref": "common.schema.json#/$defs/path"
+          },
+          "blob": {
+            "$ref": "common.schema.json#/$defs/sha256",
+            "description": "Blob hash; content at blobs/<first2>/<hash>.txt."
+          },
+          "language": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Detected language, or null if unknown."
+          },
+          "lines": {
+            "type": "integer",
+            "description": "Number of lines.",
+            "minimum": 0
+          },
+          "bytes": {
+            "type": "integer",
+            "description": "Size in bytes.",
+            "minimum": 0
+          },
+          "indexed": {
+            "type": "boolean",
+            "description": "True if symbols were extracted (false for unsupported or unparseable files)."
+          },
+          "excluded": {
+            "const": false,
+            "description": "Optional marker; always false when present."
+          }
+        },
+        "required": [
+          "path",
+          "blob",
+          "language",
+          "lines",
+          "bytes",
+          "indexed"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "excluded": {
+      "type": "array",
+      "description": "Excluded paths.",
+      "items": {
+        "type": "object",
+        "description": "An excluded path.",
+        "properties": {
+          "path": {
+            "$ref": "common.schema.json#/$defs/path"
+          },
+          "reason": {
+            "enum": [
+              "gitignore",
+              "default",
+              "study",
+              "binary",
+              "size"
+            ],
+            "description": "Why the path was excluded."
+          }
+        },
+        "required": [
+          "path",
+          "reason"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "sha",
+    "files",
+    "excluded"
+  ],
+  "additionalProperties": false
+}
