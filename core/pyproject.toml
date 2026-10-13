@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "readcode"
+version = "0.1.0"
+description = "Genera estudios de repositorios de código y un visor para leerlos."
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = [
+  "typer",
+  "jsonschema",
+  "tree-sitter",
+  "tree-sitter-language-pack",
+  "pathspec",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+readcode = "readcode.cli:app"
+
+[tool.setuptools.packages.find]
+include = ["readcode*"]
+
+[tool.setuptools.package-data]
+readcode = ["viewer_dist/**"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

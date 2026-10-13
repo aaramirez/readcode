@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.egg-info/
+.venv/
+.pytest_cache/
+
+# Node
+viewer/node_modules/
+viewer/test-results/
+viewer/playwright-report/
+
+# Tooling
+.superpowers/
+
+# Generated on demand by examples/make_fixture.py
+examples/fixture-repo/
