@@ -117,3 +117,11 @@ def test_install_skill_cli(tmp_path):
 
     forced = runner.invoke(app, ["install-skill", "--dest", str(tmp_path), "--force"])
     assert forced.exit_code == 0, forced.output
+
+
+def test_skill_documents_legacy_root_and_code_warnings():
+    text = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+    assert "legacy-root" in text and "readcode migrate" in text
+    assert "no se reenvían" in text
+    assert "las entradas con `code` son avisos" in text
+    assert "pipx install" in text

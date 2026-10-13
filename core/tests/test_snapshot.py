@@ -235,6 +235,6 @@ def test_resnapshot_with_changed_exclusions_demotes_status(study):
     kbio.atomic_write_json(sd / "snapshots" / sha1 / "symbols.json", {})
     data["exclude"] = ["web/"]
     kbio.atomic_write_json(sd / "study.json", data)
-    r = snap(kb, sha1)  # had symbols -> indexed, with the re-index hint
-    assert status() == "indexed"
+    r = snap(kb, sha1)  # even with symbols: "indexed" means tree+symbols only -> partial
+    assert status() == "partial"
     assert "readcode index" in r.output

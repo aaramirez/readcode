@@ -79,7 +79,7 @@ def refresh_on_startup(kb_dir: Path | str, echo=print) -> list[str]:
     from readcode.validate_cmd import refresh_stale
 
     try:
-        done = refresh_stale(kb_dir)
+        done = refresh_stale(kb_dir, echo=echo)
     except Exception as exc:  # e.g. PermissionError on a read-only kb: serve what exists
         echo(f"aviso: no se pudieron regenerar los derivados ({exc}); se sirven los existentes")
         return []

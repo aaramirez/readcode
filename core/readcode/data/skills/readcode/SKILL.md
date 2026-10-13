@@ -28,7 +28,9 @@ pregunta qué quiere (update, diff o tour).
 ## 0. Preparación (todos los subcomandos)
 
 1. **CLI disponible:** ejecuta `readcode --help`. Si falla, detente y pide instalarlo
-   (`pip install -e core` desde el repo de readcode). No sigas sin él.
+   (`pipx install "git+https://github.com/aaramirez/readcode#subdirectory=core"`, o
+   `pip install ./core` desde un clon del repo; `pip install -e core` es solo para desarrollo).
+   No sigas sin él.
 2. **KB:** usa `--kb <dir>` si viene; si no, la variable de entorno `READCODE_KB`; si tampoco,
    pregunta **una sola vez** al usuario. Usa rutas absolutas.
 3. **Estudio:** en `study`, el nombre es `--name` o el nombre del directorio del repo en
@@ -211,7 +213,9 @@ readcode validate <KB> <STUDY> --sha <SHA> --json
 
 1. Sale con código 1 si hay problemas: es lo esperado mientras haya errores. La salida es una
    lista `[{file, problem, hint}]` con `file` relativo a `<SDIR>`
-   (p. ej. `snapshots/<SHA>/explain/app/x.py.json`).
+   (p. ej. `snapshots/<SHA>/explain/app/x.py.json`). Los problemas con `code` son **avisos**
+   (no hacen fallar el comando) y **no se reenvían a los subagentes**. Si hay un aviso
+   `code: legacy-root` (kb de v1), ejecuta `readcode migrate <KB> <STUDY>` y vuelve a validar.
 2. Agrupa los problemas por documento y **reenvía cada documento a su autor**: misma plantilla
    que lo generó (`explain/` → `explain-file.md`, `dirs/` → `dir.md`, `tours/` → `tour.md`,
    `overview.md` → `overview.md`, `diffs/` → `diff.md`), en paralelo (máx. 8), con `Tarea`:
@@ -230,7 +234,8 @@ readcode validate <KB> <STUDY> --sha <SHA> --json
 ### Fase 7 — Cierre
 
 1. `readcode plan <KB> <STUDY> --sha <SHA> --json`. Si `done` es `true`, `abandoned` y
-   `abandonedDirs` están vacíos y `<SNAP>/issues.json` no tiene problemas, el estado es `explained`; si no, `partial`:
+   `abandonedDirs` están vacíos y `<SNAP>/issues.json` no tiene problemas (las entradas con `code` son avisos y no cuentan),
+   el estado es `explained`; si no, `partial`:
    `readcode mark <KB> <STUDY> --sha <SHA> --status explained` (o `--status partial`).
 2. `readcode catalog <KB>`.
 3. Informa: archivos explicados/heredados, directorios, diagramas, tours, problemas restantes

@@ -31,6 +31,14 @@ import { oneDarkHighlightStyle } from '@codemirror/theme-one-dark';
  */
 export const lineSeparator: Extension = EditorState.lineSeparator.of('\n');
 
+/**
+ * Text for an editor document: CRLF becomes "\n" (the core counts "\r\n" as one break, see
+ * kbio.blob_lines) so lines carry no trailing "\r"; a lone "\r" stays inside its line.
+ */
+export function editorText(text: string): string {
+  return text.replace(/\r\n/g, '\n');
+}
+
 /** Language support for a tree.json language; null = plain text. */
 export async function loadLanguage(language: string | null): Promise<Extension | null> {
   switch (language) {

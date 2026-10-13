@@ -330,3 +330,13 @@ def test_links_lists_diagrams_sorted_by_name_and_kind(mini):
     assert links(snap)["diagrams"] == [
         {"name": "arch", "kind": "archify"}, {"name": "arch", "kind": "mermaid"},
         {"name": "flujo", "kind": "mermaid"}]
+
+
+def test_invalid_diagram_names_are_skipped_and_reported(mini):
+    kb, _, snap = mini
+    (snap / "diagrams" / "a b.mmd").write_text("graph TD", encoding="utf-8")
+    (snap / "diagrams" / "x..y.html").write_text("<html></html>", encoding="utf-8")
+    problems = _problems(kb)
+    names = [d["name"] for d in links(snap)["diagrams"]]
+    assert names == ["arch"]
+    assert sum("diagram name" in p["problem"] for p in problems) == 2

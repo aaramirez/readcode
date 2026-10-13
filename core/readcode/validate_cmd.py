@@ -24,12 +24,15 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 from pathlib import Path
 
-from readcode import kbio, refs
+from readcode import kbio, refs, schemas
 from readcode.schemas import validate as schema_validate
 
 _DIFF_DIR_RE = re.compile(r"^([0-9a-f]{40})\.\.([0-9a-f]{40})$")
+_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
+_DIAGRAM_NAME_RE = refs._ARCHIFY_RE  # same rule as [[archify:name]]
 _EMPTY_TREE: dict = {"files": []}
 _EMPTY_SYMBOLS: dict = {"files": {}}
 
@@ -63,7 +66,7 @@ def _load(path: Path, kind: str, rel: str, out: _Collector) -> dict | None:
         return None
     errors = schema_validate(kind, data)
     for err in errors:
-        out.add(rel, f"schema {kind}: {err}", f"fix the field to match readcode/data/schemas/{kind}.schema.json")
+        out.add(rel, f"schema {kind}: {err}", f"fix the field to match {schemas.SCHEMAS_DIR / f'{kind}.schema.json'}")
     return None if errors else data
 
 
@@ -132,13 +135,26 @@ class _Resolver:
         return links
 
 
-def _diagram_list(snap: Path) -> list[dict]:
-    """Explicit diagrams/ listing: archify (.html) and mermaid (.mmd), sorted by name."""
+def _diagram_list(snap: Path, sp: str = "", out: _Collector | None = None) -> list[dict]:
+    """Explicit diagrams/ listing: archify (.html) and mermaid (.mmd), sorted by name.
+
+    Names that break the diagram-name rule are skipped (and reported when ``out`` is given).
+    """
     base = snap / "diagrams"
     if not base.is_dir():
         return []
-    found = [{"name": p.stem, "kind": "archify"} for p in base.glob("*.html") if p.is_file()]
-    found += [{"name": p.stem, "kind": "mermaid"} for p in base.glob("*.mmd") if p.is_file()]
+    found = []
+    for pattern, kind in (("*.html", "archify"), ("*.mmd", "mermaid")):
+        for p in base.glob(pattern):
+            if not p.is_file():
+                continue
+            if not _DIAGRAM_NAME_RE.match(p.stem):
+                if out is not None:
+                    out.add(f"{sp}/diagrams/{p.name}" if sp else f"diagrams/{p.name}",
+                            f"diagram name {p.stem!r} is not valid and was skipped",
+                            "rename it using only [A-Za-z0-9._-] and no '..'")
+                continue
+            found.append({"name": p.stem, "kind": kind})
     return sorted(found, key=lambda d: (d["name"], d["kind"]))
 
 
@@ -292,7 +308,7 @@ def _validate_snapshot(sdir: Path, sha: str, out: _Collector, derived_only: bool
             text = ""
         res.markdown("overview.md", f"{sp}/overview.md", text, None, "overview", out)
 
-    _write_links(snap / "links.json", res.links(sha, _diagram_list(snap)), f"{sp}/links.json", out)
+    _write_links(snap / "links.json", res.links(sha, _diagram_list(snap, sp, out)), f"{sp}/links.json", out)
     for err in schema_validate("search", search):
         out.add(f"{sp}/search.json", f"internal: generated search.json invalid: {err}",
                 "report this as a readcode bug")
@@ -416,8 +432,15 @@ def validate_study(kb: Path | str, study: str, sha: str | None = None,
             study_data = {}
         if not isinstance(study_data, dict):
             study_data = {}
-    shas = [s["sha"] for s in study_data.get("snapshots", [])
-            if isinstance(s, dict) and isinstance(s.get("sha"), str)]
+    shas = []
+    for s in study_data.get("snapshots", []) if isinstance(study_data.get("snapshots"), list) else []:
+        if not (isinstance(s, dict) and isinstance(s.get("sha"), str)):
+            continue
+        if _safe_snapshot_dir(sdir, s["sha"]) is None:
+            out.add("study.json", f"snapshot sha {s['sha']!r} is not a safe 40-hex sha; skipped",
+                    "use the full lowercase 40-hex commit sha")
+            continue
+        shas.append(s["sha"])
     if sha is not None:
         try:
             shas = [kbio.resolve_sha({"snapshots": [{"sha": s} for s in shas]}, sha)]
@@ -449,10 +472,23 @@ def format_problems(problems: list[dict]) -> str:
 _DERIVED_NAMES = frozenset({"links.json", "search.json", "issues.json"})
 
 
+def _safe_snapshot_dir(sdir: Path, sha: str) -> Path | None:
+    """``<study>/snapshots/<sha>`` only for a 40-hex sha that stays under ``<study>/snapshots``."""
+    if not _SHA_RE.match(sha):
+        return None
+    root = (sdir / "snapshots").resolve()
+    snap = kbio.snapshot_dir(sdir, sha).resolve()
+    return kbio.snapshot_dir(sdir, sha) if snap.parent == root else None
+
+
 def _study_shas(sdir: Path) -> list[str]:
     data = json.loads((sdir / "study.json").read_text(encoding="utf-8"))
-    return [s["sha"] for s in data.get("snapshots", [])
-            if isinstance(s, dict) and isinstance(s.get("sha"), str)]
+    snaps = data.get("snapshots", []) if isinstance(data, dict) else []
+    if not isinstance(snaps, list):
+        return []
+    return [s["sha"] for s in snaps
+            if isinstance(s, dict) and isinstance(s.get("sha"), str)
+            and _safe_snapshot_dir(sdir, s["sha"]) is not None]
 
 
 def is_stale(sdir: Path) -> bool:
@@ -472,16 +508,21 @@ def is_stale(sdir: Path) -> bool:
                if p.is_file() and not (p.parent == d and p.name in _DERIVED_NAMES))
 
 
-def refresh_stale(kb: Path | str) -> list[str]:
-    """Regenerate derived files of every stale study in ``kb``; return their names."""
+def refresh_stale(kb: Path | str, echo=None) -> list[str]:
+    """Regenerate derived files of every stale study in ``kb``; return their names.
+
+    A study that fails is skipped with one warning (``echo``, default stderr); the rest go on.
+    """
+    if echo is None:
+        def echo(msg: str) -> None:
+            print(msg, file=sys.stderr)
     kb = Path(kb)
     done: list[str] = []
     for sdir in sorted(p for p in kb.iterdir() if (p / "study.json").is_file()):
         try:
-            stale = is_stale(sdir)
-        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
-            continue  # unreadable study.json: nothing sensible to regenerate
-        if stale:
-            validate_study(kb, sdir.name, derived_only=True)
-            done.append(sdir.name)
+            if is_stale(sdir):
+                validate_study(kb, sdir.name, derived_only=True)
+                done.append(sdir.name)
+        except Exception as exc:  # one broken study must not stop the others
+            echo(f"aviso: no se pudieron regenerar los derivados de {sdir.name} ({exc}); se omite")
     return done

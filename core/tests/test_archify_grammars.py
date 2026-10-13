@@ -39,7 +39,7 @@ process.exit(1);
 def study(tmp_path):
     sdir = tmp_path / "kb" / "demo"
     (sdir / "snapshots" / SHA).mkdir(parents=True)
-    (sdir / "study.json").write_text("{}", encoding="utf-8")
+    (sdir / "study.json").write_text(json.dumps({"snapshots": [{"sha": SHA}]}), encoding="utf-8")
     src = tmp_path / "in.json"
     src.write_text('{"meta": {}}', encoding="utf-8")
     return tmp_path / "kb", sdir / "snapshots" / SHA / "diagrams", src

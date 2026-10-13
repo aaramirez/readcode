@@ -4,6 +4,8 @@ __pycache__/
 .venv/
 .pytest_cache/
 
+build/
+
 # Node
 viewer/node_modules/
 viewer/test-results/

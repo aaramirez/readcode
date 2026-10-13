@@ -11,6 +11,7 @@ from pathlib import Path
 
 from readcode import kbio
 
+_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 NAME_RE = re.compile(r"^(?!.*\.\.)[A-Za-z0-9._-]+$", re.ASCII)  # same rule as [[archify:name]]
 
 
@@ -36,16 +37,17 @@ def find_archify() -> Path:
 
 
 def _find_snapshot_dir(sdir: Path, sha: str) -> Path:
-    exact = kbio.snapshot_dir(sdir, sha)
-    if exact.is_dir():
-        return exact
-    root = sdir / "snapshots"
-    matches = [p for p in root.iterdir() if p.is_dir() and p.name.startswith(sha)] \
-        if root.is_dir() and sha else []
-    if len(matches) != 1:
-        raise ArchifyError(f"no existe el snapshot {sha} en {sdir}" if not matches
-                           else f"prefijo de sha ambiguo: {sha}")
-    return matches[0]
+    """Resolve ``sha`` (full or unique prefix) against study.json; never leaves <study>/snapshots."""
+    try:
+        study_data = kbio.read_json(sdir / "study.json")
+        shas = [s["sha"] for s in study_data["snapshots"]]
+        full = kbio.resolve_sha({"snapshots": [{"sha": x} for x in shas if _SHA_RE.match(x)]}, sha)
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        raise ArchifyError(f"no existe el snapshot {sha} en {sdir}: {exc}") from exc
+    snap = kbio.snapshot_dir(sdir, full)
+    if not snap.is_dir():
+        raise ArchifyError(f"no existe el snapshot {sha} en {sdir}")
+    return snap
 
 
 def render_diagram(kb: Path | str, study: str, sha: str, name: str, diagram_type: str,

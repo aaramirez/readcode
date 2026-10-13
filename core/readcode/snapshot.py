@@ -254,12 +254,11 @@ def snapshot_study(kb: Path, study: str, rev: str, repo_path: Path | None = None
     status = previous["status"] if previous is not None else "partial"
     if previous is not None and tree_changed:
         # The files/exclusions changed: explanations and symbols no longer match the tree.
-        had_symbols = (snap_dir / "symbols.json").is_file()
-        status = "indexed" if had_symbols else "partial"
-        print(f"Aviso: el árbol de {sha[:8]} cambió (archivos o exclusiones); "
-              f"el estado vuelve a '{status}'."
-              + (" symbols.json puede estar obsoleto: vuelve a correr `readcode index`."
-                 if had_symbols else ""), file=sys.stderr)
+        # "indexed" means tree+symbols only, so it is always demoted to "partial".
+        status = "partial"
+        print(f"Aviso: el árbol de {sha[:8]} cambió (archivos o exclusiones); el estado vuelve "
+              "a 'partial'. Vuelve a correr `readcode index` y re-estudia el snapshot "
+              "(símbolos y explicaciones pueden estar obsoletos).", file=sys.stderr)
     entry = {"sha": sha, "date": date, "message": message, "status": status}
     snapshots = [s for s in study_data["snapshots"] if s["sha"] != sha]
     snapshots.append(entry)

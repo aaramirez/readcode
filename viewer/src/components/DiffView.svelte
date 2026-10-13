@@ -6,7 +6,7 @@
   import { Compartment } from '@codemirror/state';
   import { EditorView } from '@codemirror/view';
   import { untrack } from 'svelte';
-  import { loadLanguage, mergeSideExtensions, setLineMarks, themeExtension } from '../lib/codemirror';
+  import { editorText, loadLanguage, mergeSideExtensions, setLineMarks, themeExtension } from '../lib/codemirror';
   import type { StudyData } from '../lib/data';
   import { hunkTarget, type DiffBadge } from '../lib/diff';
   import { themeState } from '../lib/theme.svelte';
@@ -59,8 +59,8 @@
     return untrack(() => {
       const dark = themeState.dark;
       const mv = new MergeView({
-        a: { doc: c.old, extensions: mergeSideExtensions(dark, themeA, langA) },
-        b: { doc: c.new, extensions: mergeSideExtensions(dark, themeB, langB) },
+        a: { doc: editorText(c.old), extensions: mergeSideExtensions(dark, themeA, langA) },
+        b: { doc: editorText(c.new), extensions: mergeSideExtensions(dark, themeB, langB) },
         parent: h,
         gutter: true,
         highlightChanges: true,

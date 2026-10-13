@@ -16,25 +16,21 @@ readcode genera **estudios** de repositorios de código (índice de símbolos, e
 
 ## Instalación
 
-En v1 el método soportado es la **instalación editable desde un clon**:
-
-```bash
-git clone https://github.com/aaramirez/readcode
-cd readcode
-pip install -e core        # o: pipx install -e core
-readcode install-skill     # copia la skill empaquetada a ~/.claude/skills
-readcode --help
-```
-
 Instalación sin clonar (el paquete incluye el visor, los schemas y la skill):
 
 ```bash
 pipx install "git+https://github.com/aaramirez/readcode#subdirectory=core"
 # o, desde un clon:
+git clone https://github.com/aaramirez/readcode
+cd readcode
 pip install ./core
+readcode install-skill     # copia la skill empaquetada a ~/.claude/skills
+readcode --help
 ```
 
-Para actualizar: `git pull` dentro del clon (instalación editable) o reinstalar con `pipx upgrade readcode` / `pip install --upgrade ./core`.
+Para desarrollo, la instalación editable (`pip install -e core`) refleja los cambios del clon al instante.
+
+Para actualizar: reinstala con `pipx upgrade readcode` / `pip install --upgrade ./core` (o `git pull` si la instalación es editable).
 
 ## Uso
 

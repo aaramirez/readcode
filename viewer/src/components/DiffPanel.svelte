@@ -67,7 +67,7 @@
   {:else}
     <h2>
       {change.path}
-      {#if badge}<span class="status">{badge.title}</span>{/if}
+      {#if badge && !change.eolOnly}<span class="status">{badge.title}</span>{/if}
     </h2>
     {#if change.eolOnly}
       <p class="eol" data-testid="eol-only">solo finales de línea</p>
@@ -78,7 +78,7 @@
       {@const d = doc(`explain/${change.path}.json`)}
       {#if e}
         <div class="summary"><Markdown source={e.summary} doc={d} /></div>
-      {:else}
+      {:else if !change.eolOnly}
         <div class="empty">Este archivo no tiene explicación del cambio todavía.</div>
       {/if}
       {#each change.hunks as h, i (i)}
