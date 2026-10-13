@@ -1,0 +1,136 @@
+:root {
+  --bg: #ffffff;
+  --bg-alt: #f5f6f8;
+  --bg-hover: #eceef2;
+  --bg-selected: #dbe7ff;
+  --bg-highlight: #fff4c2;
+  --fg: #1d2129;
+  --fg-muted: #6a7280;
+  --fg-faint: #a0a6b1;
+  --border: #d9dce2;
+  --accent: #2f6fdf;
+  --accent-fg: #ffffff;
+  --badge-bg: #e8ebf0;
+  --code-bg: #fafbfc;
+  --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-code: ui-monospace, 'Cascadia Code', 'SF Mono', Consolas, monospace;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #16181d;
+    --bg-alt: #1d2026;
+    --bg-hover: #262a32;
+    --bg-selected: #233a63;
+    --bg-highlight: #3d3720;
+    --fg: #dde1e8;
+    --fg-muted: #9aa1ad;
+    --fg-faint: #5f6672;
+    --border: #2e333c;
+    --accent: #6c9cf0;
+    --accent-fg: #0d1117;
+    --badge-bg: #2a2f38;
+    --code-bg: #1a1c21;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: #16181d;
+  --bg-alt: #1d2026;
+  --bg-hover: #262a32;
+  --bg-selected: #233a63;
+  --bg-highlight: #3d3720;
+  --fg: #dde1e8;
+  --fg-muted: #9aa1ad;
+  --fg-faint: #5f6672;
+  --border: #2e333c;
+  --accent: #6c9cf0;
+  --accent-fg: #0d1117;
+  --badge-bg: #2a2f38;
+  --code-bg: #1a1c21;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-ui);
+  font-size: 14px;
+}
+
+button,
+select,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+select,
+input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 6px;
+}
+
+a {
+  color: var(--accent);
+}
+
+.empty {
+  color: var(--fg-muted);
+  padding: 16px;
+}
+
+.markdown {
+  line-height: 1.55;
+}
+
+.markdown pre,
+.markdown code {
+  font-family: var(--font-code);
+  background: var(--code-bg);
+}
+
+.markdown pre {
+  padding: 8px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3 {
+  line-height: 1.25;
+}
