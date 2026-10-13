@@ -164,10 +164,10 @@ def test_unparseable_file_does_not_abort(indexed, monkeypatch, capsys):
     kb, sd, sha1, _ = indexed
     real = indexer.extract
 
-    def flaky(source, language, path, paths):
+    def flaky(source, language, path, paths, *rest):
         if path == "app/models.py":
             raise RuntimeError("boom")
-        return real(source, language, path, paths)
+        return real(source, language, path, paths, *rest)
 
     monkeypatch.setattr(indexer, "extract", flaky)
     result = indexer.index_snapshot(kb, "demo", sha1)
@@ -208,10 +208,10 @@ def test_cli_summary_counts_failures(indexed, monkeypatch):
     kb, sd, sha1, _ = indexed
     real = indexer.extract
 
-    def flaky(source, language, path, paths):
+    def flaky(source, language, path, paths, *rest):
         if path in ("app/models.py", "app/main.py"):
             raise ValueError("boom")
-        return real(source, language, path, paths)
+        return real(source, language, path, paths, *rest)
 
     monkeypatch.setattr(indexer, "extract", flaky)
     r = runner.invoke(app, ["index", str(kb), "demo", "--sha", sha1])

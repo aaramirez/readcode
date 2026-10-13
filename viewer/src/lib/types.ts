@@ -101,6 +101,8 @@ export interface SymbolImport {
   module: string;
   line: number;
   resolved?: string | null;
+  /** Go: package directory the import resolves to. */
+  resolvedDir?: string;
 }
 
 export interface FileSymbols {

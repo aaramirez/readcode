@@ -132,8 +132,12 @@ def _contains(outer, inner) -> bool:
     )
 
 
-def extract(source: bytes, language: str, path: str, paths: frozenset[str]) -> dict | None:
-    """Symbols of one file ``{defs, refs, imports}``; None if the language is unsupported."""
+def extract(source: bytes, language: str, path: str, paths: frozenset[str],
+            go_modules: dict[str, str] | None = None) -> dict | None:
+    """Symbols of one file ``{defs, refs, imports}``; None if the language is unsupported.
+
+    ``go_modules`` maps a directory ("" = repo root) to the module path of its go.mod.
+    """
     from tree_sitter import Parser, QueryCursor
 
     lang = resolve_language(language)
@@ -169,7 +173,7 @@ def extract(source: bytes, language: str, path: str, paths: frozenset[str]) -> d
         line = node.start_point[0] + 1
         ref = {"name": _text(node, source), "line": line, "col": _col(source, node)}
         refs[(ref["line"], ref["col"], ref["name"])] = ref
-    imports = _build_imports(raw_imports, source, language, path, paths)
+    imports = _build_imports(raw_imports, source, language, path, paths, go_modules or {})
     return {"defs": defs, "refs": [refs[k] for k in sorted(refs)], "imports": imports}
 
 
@@ -209,7 +213,8 @@ def _build_defs(raw_defs, source: bytes) -> list[dict]:
 # ------------------------------------------------------------------- imports
 
 
-def _build_imports(raw, source: bytes, language: str, path: str, paths: frozenset[str]) -> list[dict]:
+def _build_imports(raw, source: bytes, language: str, path: str, paths: frozenset[str],
+                   go_modules: dict[str, str]) -> list[dict]:
     out: list[dict] = []
     for node, stmt in sorted(raw, key=lambda r: r[0].start_byte):
         module = _text(node, source)
@@ -220,8 +225,12 @@ def _build_imports(raw, source: bytes, language: str, path: str, paths: frozense
             out.append({"module": module, "line": line, "resolved": _resolve_js(module, path, paths)})
         elif language == "java":
             out.append({"module": module, "line": line, "resolved": _resolve_java(module, paths)})
-        else:  # go: same-package files are implicit; packages are directories -> unresolved
-            out.append({"module": module, "line": line, "resolved": None})
+        else:  # go: packages are directories -> `resolvedDir` (`resolved` stays null)
+            imp = {"module": module, "line": line, "resolved": None}
+            resolved_dir = _resolve_go_dir(module, path, paths, go_modules)
+            if resolved_dir is not None:
+                imp["resolvedDir"] = resolved_dir
+            out.append(imp)
     unique: dict[tuple, dict] = {}
     for imp in out:
         unique.setdefault((imp["line"], imp["module"]), imp)
@@ -277,6 +286,43 @@ def _resolve_js(module: str, path: str, paths: frozenset[str]) -> str | None:
     return next((c for c in candidates if c in paths), None)
 
 
+def _parse_go_module(text: str) -> str | None:
+    """The path of the ``module`` directive of a go.mod, or None."""
+    for raw in text.splitlines():
+        line = raw.split("//", 1)[0].strip()
+        if line.startswith("module") and line[6:7] in (" ", "	", "("):
+            value = line[6:].strip().strip("()").strip()
+            if value[:1] in ('"', "`") and value[-1:] == value[:1] and len(value) > 1:
+                value = value[1:-1]
+            return value or None
+    return None
+
+
+def _resolve_go_dir(module: str, path: str, paths: frozenset[str],
+                    go_modules: dict[str, str]) -> str | None:
+    """Directory of a package imported from the nearest go.mod's module, if it has .go files.
+
+    The module root itself ("") is not resolved: `resolvedDir` is a non-empty folder path.
+    """
+    directory = posixpath.dirname(path)
+    while True:
+        if directory in go_modules:
+            prefix = go_modules[directory]
+            break
+        if not directory:
+            return None
+        directory = posixpath.dirname(directory)
+    if not module.startswith(prefix + "/"):
+        return None
+    sub = module[len(prefix) + 1:].strip("/")
+    if not sub:
+        return None
+    target = posixpath.join(directory, sub) if directory else sub
+    if any(p.endswith(".go") and posixpath.dirname(p) == target for p in paths):
+        return target
+    return None
+
+
 def _resolve_java(module: str, paths: frozenset[str]) -> str | None:
     parts = module.split(".")
     for end in (len(parts), len(parts) - 1):  # class import, or static member import
@@ -306,6 +352,28 @@ def _find_snapshot(sdir: Path, sha: str) -> Path:
     raise IndexingError(f"Ambiguous sha prefix {sha!r}: {', '.join(p.name for p in matches)}")
 
 
+def _read_go_modules(sdir: Path, tree: dict) -> dict[str, str]:
+    """``{directory: module path}`` for every go.mod in the snapshot (warns once if unreadable)."""
+    modules: dict[str, str] = {}
+    bad: list[str] = []
+    for entry in tree["files"]:
+        if posixpath.basename(entry["path"]) != "go.mod":
+            continue
+        try:
+            text = kbio.blob_path(sdir, entry["blob"]).read_bytes().decode("utf-8")
+            module = _parse_go_module(text)
+        except (OSError, UnicodeDecodeError):
+            module = None
+        if module is None:
+            bad.append(entry["path"])
+        else:
+            modules[posixpath.dirname(entry["path"])] = module
+    if bad:
+        print(f"aviso: no se pudo leer la línea `module` de {', '.join(bad)}; "
+              "los imports de Go de ese módulo quedan sin resolver", file=sys.stderr)
+    return modules
+
+
 def index_snapshot(kb: Path | str, study: str, sha: str) -> dict:
     """Index a snapshot; rewrites tree.json ``indexed`` flags and writes symbols.json.
 
@@ -321,13 +389,15 @@ def index_snapshot(kb: Path | str, study: str, sha: str) -> dict:
     tree = kbio.read_json(snap / "tree.json")
     paths = frozenset(f["path"] for f in tree["files"])
 
+    go_modules = _read_go_modules(sdir, tree)
+
     files: dict[str, dict] = {}
     failed = 0
     for entry in tree["files"]:
         result = None
         try:
             source = kbio.blob_path(sdir, entry["blob"]).read_bytes()
-            result = extract(source, entry["language"], entry["path"], paths)
+            result = extract(source, entry["language"], entry["path"], paths, go_modules)
         except Exception as exc:  # one bad file never aborts the run
             print(f"aviso: no se pudo indexar {entry['path']} ({type(exc).__name__})", file=sys.stderr)
             failed += 1
