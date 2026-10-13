@@ -212,6 +212,8 @@ export interface ChangedFile {
   oldPath?: string;
   fromBlob?: string;
   toBlob?: string;
+  /** Modified, but only line endings differ (hunks is empty). Absent in v1 kbs. */
+  eolOnly?: boolean;
   hunks: Hunk[];
 }
 

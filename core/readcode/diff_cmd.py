@@ -15,8 +15,8 @@ class DiffError(RuntimeError):
     pass
 
 
-def _lines(sdir: Path, blob: str) -> list[str]:
-    return kbio.blob_lines(kbio.blob_path(sdir, blob).read_bytes())
+def _normalize_eol(data: bytes) -> bytes:
+    return data.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
 
 
 def _range(start: int, end: int) -> list[int] | None:
@@ -80,9 +80,16 @@ def diff_snapshots(kb: Path | str, study: str, sha_a: str, sha_b: str) -> dict:
             changes.append({"path": p, "status": "deleted", "fromBlob": f["blob"], "hunks": []})
     for p, f in sorted(new.items()):
         if p in old and old[p]["blob"] != f["blob"]:
-            hunks = compute_hunks(_lines(sdir, old[p]["blob"]), _lines(sdir, f["blob"]))
-            changes.append({"path": p, "status": "modified", "fromBlob": old[p]["blob"],
-                            "toBlob": f["blob"], "hunks": hunks})
+            old_bytes = kbio.blob_path(sdir, old[p]["blob"]).read_bytes()
+            new_bytes = kbio.blob_path(sdir, f["blob"]).read_bytes()
+            entry = {"path": p, "status": "modified", "fromBlob": old[p]["blob"],
+                     "toBlob": f["blob"]}
+            if _normalize_eol(old_bytes) == _normalize_eol(new_bytes):
+                entry.update(hunks=[], eolOnly=True)
+            else:
+                entry["hunks"] = compute_hunks(kbio.blob_lines(old_bytes),
+                                               kbio.blob_lines(new_bytes))
+            changes.append(entry)
     changes.sort(key=lambda c: c["path"])
 
     doc = {"schemaVersion": 1, "from": a, "to": b, "files": changes}

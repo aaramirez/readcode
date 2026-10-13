@@ -305,7 +305,8 @@ readcode validate <KB> <STUDY> --sha <SHA> --json
    explicaciones; uno ya estudiado conserva su estado).
 2. `readcode diff <KB> <STUDY> <shaA> <shaB>` → `DDIR = <SDIR>/diffs/<A>..<B>/changes.json`
    (shas completos en el nombre). Cada archivo trae `status` (`added|modified|deleted|renamed`),
-   `fromBlob`/`toBlob` y `hunks[{fromRange, toRange, header}]`.
+   `fromBlob`/`toBlob` y `hunks[{fromRange, toRange, header}]`. Los que traen `eolOnly: true`
+   solo cambian finales de línea: exclúyelos de la lista de archivos a explicar (paso 4).
 3. Mensajes de commit del rango (si hay checkout local, `repo.localPath`):
    `git -C <localPath> log --format="%h %s%n%b" <A>..<B>`. Guárdalos para los subagentes
    (cópialos en la `Tarea`, no en archivos).

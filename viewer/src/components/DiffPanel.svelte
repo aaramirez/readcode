@@ -69,6 +69,9 @@
       {change.path}
       {#if badge}<span class="status">{badge.title}</span>{/if}
     </h2>
+    {#if change.eolOnly}
+      <p class="eol" data-testid="eol-only">solo finales de línea</p>
+    {/if}
     {#await fileExplain}
       <div class="empty">Cargando…</div>
     {:then e}
@@ -127,6 +130,11 @@
     font-weight: normal;
     color: var(--fg-muted);
     margin-left: 6px;
+  }
+  .eol {
+    color: var(--fg-muted);
+    font-size: 13px;
+    font-style: italic;
   }
   .stats {
     color: var(--fg-muted);

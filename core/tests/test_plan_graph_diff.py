@@ -365,6 +365,19 @@ def _odd_study(tmp_path, old: bytes, new: bytes, path="m.py"):
     return kb, sd, a, b
 
 
+def test_diff_eol_only_change(tmp_path):
+    kb, _, a, b = _odd_study(tmp_path, b"a = 1\r\nb = 2\r\n", b"a = 1\nb = 2\n")
+    doc = diff_snapshots(kb, "demo", a, b)
+    (f,) = doc["files"]
+    assert f["status"] == "modified" and f["hunks"] == [] and f["eolOnly"] is True
+
+
+def test_diff_eol_with_real_change_is_not_eol_only(tmp_path):
+    kb, _, a, b = _odd_study(tmp_path, b"a = 1\r\nb = 2\r\n", b"a = 1\nb = 3\n")
+    (f,) = diff_snapshots(kb, "demo", a, b)["files"]
+    assert "eolOnly" not in f and len(f["hunks"]) == 1
+
+
 def test_diff_hunks_use_newline_only_lines(tmp_path):
     old = "a\fb\nc\x85d\ne\u2028f\ng\rh\nkeep\nold\n".encode("utf-8")
     new = "a\fb\nc\x85d\ne\u2028f\ng\rh\nkeep\nnew\n".encode("utf-8")

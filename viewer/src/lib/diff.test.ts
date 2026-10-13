@@ -72,6 +72,14 @@ describe('diffBadges', () => {
     expect(b.get('web/new.ts')!.title).toContain('web/old.ts');
     expect(b.get('app/refunds.py')!.title).toBe('añadido');
   });
+
+  it('labels eolOnly changes', () => {
+    const c: Changes = {
+      ...changes,
+      files: [{ path: 'x.py', status: 'modified', fromBlob: H('1'), toBlob: H('2'), eolOnly: true, hunks: [] }],
+    };
+    expect(diffBadges(c).get('x.py')!.title).toBe('solo finales de línea');
+  });
 });
 
 describe('diffLinkSha', () => {

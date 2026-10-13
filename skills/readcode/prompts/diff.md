@@ -56,6 +56,9 @@ borrado, la ruta borrada). No escribas ningún otro archivo. Forma
   cambio): escribe `hunks: []` y que el `summary` diga qué aporta o qué se pierde (¿quién lo
   usaba? ¿qué lo reemplaza?), con marcadores de líneas al contenido (de B si se añadió, de A si
   se borró).
+- Archivos con `eolOnly: true` en `changes.json` (modificados, `hunks: []`, solo cambian los
+  finales de línea): **no los expliques**; no escribas `explain/<path>.json` para ellos y no los
+  menciones como cambio de comportamiento en `explain.md` (a lo sumo, una línea aparte).
 - `renamed` sin hunks: `hunks: []` y el `summary` explica el renombrado.
 
 Ejemplo real (`examples/kb/fixture`, diff *initial* → *feature: refunds*,

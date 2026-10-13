@@ -40,7 +40,11 @@ export function diffTree(changes: Changes, treeA: Tree | null, treeB: Tree | nul
 export function diffBadges(changes: Changes): Map<string, DiffBadge> {
   const out = new Map<string, DiffBadge>();
   for (const c of changes.files) {
-    const title = c.status === 'renamed' && c.oldPath ? `renombrado desde ${c.oldPath}` : TITLES[c.status];
+    const title = c.eolOnly
+      ? 'solo finales de línea'
+      : c.status === 'renamed' && c.oldPath
+        ? `renombrado desde ${c.oldPath}`
+        : TITLES[c.status];
     out.set(c.path, { badge: BADGES[c.status], status: c.status, title });
   }
   return out;

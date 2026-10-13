@@ -47,6 +47,10 @@
             "$ref": "common.schema.json#/$defs/sha256",
             "description": "New blob hash (absent when deleted)."
           },
+          "eolOnly": {
+            "type": "boolean",
+            "description": "True when the file is modified but only its line endings differ (hunks is empty)."
+          },
           "hunks": {
             "type": "array",
             "description": "Hunks of the change.",
