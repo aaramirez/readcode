@@ -31,6 +31,9 @@ const SYMBOL_RE = new RegExp(`^([^${WS}#:|\\[\\]]*)#([^${WS}|\\[\\]#]+)$`);
 // Diagram names: no path separators and no ".." (they name diagrams/<name>.html).
 const ARCHIFY_RE = /^(?!.*\.\.)[A-Za-z0-9._-]+$/;
 const FENCE_RE = /^( {0,3})(`{3,}|~{3,})/;
+const LIST_ITEM_RE = /^ {0,3}(?:[-+*]|[0-9]{1,9}[.)])(?:[ \t]|$)/;
+const HEADING_RE = /^ {0,3}#{1,6}(?:[ \t]|$)/;
+const EOL_RE = /[\n\r\v\f\x1c\x1d\x1e\x85\u2028\u2029]+$/;
 const BACKTICKS_RE = /`+/g;
 const PARA_SEP_RE = /\n[ \t]*\n/g;
 // str.splitlines() boundaries.
@@ -83,13 +86,43 @@ function maskInline(para: string): string {
 function maskCode(text: string): string {
   const out: string[] = [];
   let fence: { ch: string; len: number } | null = null;
+  let afterBlank = true; // the previous line ends any paragraph (blank, code, fence, heading)
+  let inList = false;
+  let inIndented = false;
   for (const line of splitLines(text)) {
     const m = FENCE_RE.exec(line);
     if (fence === null) {
       if (m) {
         fence = { ch: m[2][0], len: m[2].length };
         out.push(blank(line));
-      } else out.push(line);
+        afterBlank = true;
+        inIndented = false;
+        continue;
+      }
+      const content = line.replace(EOL_RE, '');
+      if (/^[ \t]*$/.test(content)) {
+        out.push(line);
+        afterBlank = true; // inIndented survives blank lines between code lines
+        continue;
+      }
+      const lead = /^[ \t]*/.exec(content)![0];
+      let width = 0;
+      for (const c of lead) width = c === '\t' ? width + 4 - (width % 4) : width + 1;
+      // Indented code block (CommonMark): >= 4 columns, cannot interrupt a paragraph, and not
+      // inside a list (there the indentation is relative to the item).
+      if (width >= 4 && (afterBlank || inIndented) && !inList) {
+        out.push(blank(line));
+        inIndented = true;
+        afterBlank = true;
+        continue;
+      }
+      inIndented = false;
+      if (width < 4) {
+        if (LIST_ITEM_RE.test(content)) inList = true;
+        else if (afterBlank) inList = false;
+      }
+      afterBlank = HEADING_RE.test(content);
+      out.push(line);
     } else {
       out.push(blank(line));
       if (m && m[2][0] === fence.ch && m[2].length >= fence.len && PY_SPACE_ONLY.test(line.slice(m[0].length))) {

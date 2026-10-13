@@ -9,6 +9,10 @@ renamed files). Reported docs of snapshot B:
   that may now point at the wrong thing;
 - ``dirs``, ``tours`` (plus steps on changed files, 1-based) and ``overview``: markers only.
 
+A path-less line marker (``[[ref::Lx-y]]``) points at the file that owns the doc, so in an
+``explain/<path>.json`` of a changed file it is reported too (validate forbids it in dirs,
+overview and tours, where it is ignored). Diff explanations are not covered by ``stale``.
+
 A marker may be stale when it is a line marker into a changed file, a symbol marker to a changed
 definition or into a deleted / renamed-away file, or an unpathed ``#symbol`` with a changed name.
 """
@@ -54,12 +58,19 @@ class _Changes:
         self.changed, self.paths, self.gone = changed, paths, gone
         self.names = {n for names in changed.values() for n in names}
 
-    def markers(self, texts: list[str]) -> list[str]:
+    def markers(self, texts: list[str], owner: str | None = None,
+                pathless_only: bool = False) -> list[str]:
+        """Stale markers in ``texts``; ``owner`` is the file a path-less line marker
+        (``[[ref::Lx-y]]``) points at (only explain docs have one); ``pathless_only`` keeps only those."""
         hits = set()
         for text in texts:
             for m in refs.parse_markers(text.replace("\r\n", "\n").replace("\r", "\n")):
-                if m.kind == "lines" and m.path in self.paths:
-                    hits.add(m.path)
+                if pathless_only and (m.kind != "lines" or m.path):
+                    continue
+                if m.kind == "lines":
+                    target = m.path or owner
+                    if target in self.paths:
+                        hits.add(target)
                 elif m.kind == "symbol":
                     name = (m.symbol or "").rpartition(".")[2]
                     if m.path is None:
@@ -118,12 +129,18 @@ def stale_docs(kb: Path | str, study: str, sha_a: str, sha_b: str) -> dict:
     for info in _read(snap_b / "tree.json").get("files", []):
         path = info["path"]
         doc = _read(kbio.explain_path(snap_b, path))
-        if path in paths or not doc:
+        if not doc:
             continue
+        texts = [doc.get("summary", "")] + [b.get("body", "") for b in doc.get("blocks", [])]
+        if path in paths:  # changed file: re-explained anyway; only a path-less line marker
+            markers = ch.markers(texts, owner=path, pathless_only=True)
+            if markers:
+                explain.append({"path": path, "symbols": [], "markers": markers})
+            continue
+        markers = ch.markers(texts, owner=path)
         own = {d["name"] for d in sym_b.get(path, {}).get("defs", [])}
         code = sorted({r["name"] for r in sym_b.get(path, {}).get("refs", [])
                        if r["name"] in ch.names and r["name"] not in own})
-        markers = ch.markers([doc.get("summary", "")] + [b.get("body", "") for b in doc.get("blocks", [])])
         if code or markers:
             explain.append({"path": path, "symbols": code, "markers": markers})
 

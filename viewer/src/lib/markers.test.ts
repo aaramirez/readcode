@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import vectors from '../../../schemas/marker-vectors.json';
+import { renderMarkdown } from './markdown';
 import { parseMarkerBody, parseMarkers } from './markers';
 
 interface Vector {
@@ -16,6 +17,20 @@ describe('marker grammar parity (schemas/marker-vectors.json, shared with pytest
   for (const v of vectors as Vector[]) {
     it(v.name, () => {
       expect(parseMarkers(v.input)).toEqual(v.expected);
+    });
+  }
+});
+
+describe('marker detection through the real markdown-it pipeline (reference behavior)', () => {
+  // Code-detection vectors: the markers parseMarkers keeps must be exactly the ones markdown-it
+  // renders as refs, so code spans / blocks are detected the same way on both sides.
+  for (const v of (vectors as Vector[]).filter((x) => x.name.startsWith('código:'))) {
+    it(v.name, () => {
+      const html = renderMarkdown(v.input);
+      const rendered = [...html.matchAll(/class="rc-ref[^"]*"[^>]*>([^<]*)</g)].map((m) => m[1]);
+      const expected = (v.expected as { raw: string }[]).map((m) => m.raw);
+      expect(rendered.length).toBe(expected.length);
+      expect(parseMarkers(v.input).map((m) => m.raw)).toEqual(expected);
     });
   }
 });

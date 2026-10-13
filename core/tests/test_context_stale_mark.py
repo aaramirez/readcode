@@ -236,3 +236,14 @@ def test_stale_malformed_changes_is_a_clean_error(tmp_path, content):
     r = runner.invoke(app, ["stale", str(kb), "demo", a, b])
     assert r.exit_code == 1 and isinstance(r.exception, SystemExit)
     assert "error:" in r.output
+
+
+def test_stale_resolves_pathless_line_markers_against_the_owning_file(tmp_path):
+    kb, sd, a, b, _ = _stale_study(tmp_path, b"x = 1\ndef f\n", b"x = 2\ndef f\n", [2, 2])
+    snap = kbio.snapshot_dir(sd, b)
+    kbio.atomic_write_json(kbio.explain_path(snap, "m.py"), {
+        "summary": "Mira [[ref::L1-1]] y `[[ref::L2]]`.", "blocks": []})
+    kbio.atomic_write_json(snap / "dir-root.json", {"summary": "Raiz [[ref::L1-1]]."})
+    out = stale_docs(kb, "demo", a, b)
+    assert out["explain"] == [{"path": "m.py", "symbols": [], "markers": ["m.py"]}]
+    assert out["dirs"] == []  # path-less line markers are forbidden (and ignored) outside explain docs

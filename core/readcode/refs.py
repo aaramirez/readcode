@@ -4,7 +4,9 @@ Pure library: no I/O, no CLI.
 
 Marker grammar (the TypeScript viewer must re-implement exactly this)
 ---------------------------------------------------------------------
-Markers are searched in the Markdown source, OUTSIDE fenced code blocks
+Markers are searched in the Markdown source, OUTSIDE indented code blocks (a line
+indented by 4+ columns after a blank line, a heading or another code line, and not
+inside a list item), OUTSIDE fenced code blocks
 (``` or ~~~, closed by a fence of the same character and at least the same
 length) and OUTSIDE inline code spans. Inline code is resolved per paragraph
 (paragraphs are separated by a blank line: a newline, optional spaces/tabs,
@@ -65,6 +67,9 @@ _LINES_RE = re.compile(rf"^([^{_WS}#:|\[\]]*):L([0-9]+)(?:-([0-9]+))?$", re.ASCI
 _SYMBOL_RE = re.compile(rf"^([^{_WS}#:|\[\]]*)#([^{_WS}|\[\]#]+)$", re.ASCII)
 _ARCHIFY_RE = re.compile(r"^(?!.*\.\.)[A-Za-z0-9._-]+$", re.ASCII)
 _FENCE_RE = re.compile(r"^( {0,3})(`{3,}|~{3,})")
+_LIST_ITEM_RE = re.compile(r"^ {0,3}(?:[-+*]|[0-9]{1,9}[.)])(?:[ \t]|$)")
+_HEADING_RE = re.compile(r"^ {0,3}#{1,6}(?:[ \t]|$)")
+_EOL_CHARS = "\n\r\v\f\x1c\x1d\x1e\x85\u2028\u2029"  # str.splitlines() boundaries
 _BACKTICKS_RE = re.compile(r"`+")
 _PARA_SEP_RE = re.compile(r"\n[ \t]*\n")
 
@@ -114,14 +119,40 @@ def _mask_code(text: str) -> str:
     """Replace fenced blocks and inline code by spaces (same length)."""
     out: list[str] = []
     fence: tuple[str, int] | None = None
+    after_blank = True  # the previous line ends any paragraph (blank, code, fence, heading)
+    in_list = False
+    in_indented = False
     for line in text.splitlines(keepends=True):
         m = _FENCE_RE.match(line)
+        content = line.rstrip(_EOL_CHARS)
+        is_blank = content.strip(" \t") == ""
         if fence is None:
             if m:
                 fence = (m.group(2)[0], len(m.group(2)))
                 out.append(_blank(line))
-            else:
+                after_blank, in_indented = True, False
+                continue
+            if is_blank:
                 out.append(line)
+                after_blank = True  # in_indented survives blank lines between code lines
+                continue
+            indent = len(content) - len(content.lstrip(" \t"))
+            width = len(content[:indent].expandtabs(4))
+            # Indented code block (CommonMark): >= 4 columns, cannot interrupt a paragraph,
+            # and not inside a list (there the indentation is relative to the item; kept
+            # as text, like a paragraph, which is what markdown-it does for 4-5 columns).
+            if width >= 4 and (after_blank or in_indented) and not in_list:
+                out.append(_blank(line))
+                in_indented, after_blank = True, True
+                continue
+            in_indented = False
+            if width < 4:
+                if _LIST_ITEM_RE.match(content):
+                    in_list = True
+                elif after_blank:
+                    in_list = False
+            after_blank = bool(_HEADING_RE.match(content))
+            out.append(line)
         else:
             out.append(_blank(line))
             if (m and m.group(2)[0] == fence[0] and len(m.group(2)) >= fence[1]

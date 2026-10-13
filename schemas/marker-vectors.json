@@ -829,5 +829,94 @@
         "label": "😀"
       }
     ]
+  },
+  {
+    "name": "código: bloque indentado con 4 espacios",
+    "input": "para\n\n    [[ref:#a]]\n\n[[ref:#b]]",
+    "expected": [
+      {
+        "kind": "symbol",
+        "raw": "[[ref:#b]]",
+        "path": null,
+        "symbol": "b",
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "código: continuación perezosa con indentación no es bloque",
+    "input": "texto\n    [[ref:#a]]",
+    "expected": [
+      {
+        "kind": "symbol",
+        "raw": "[[ref:#a]]",
+        "path": null,
+        "symbol": "a",
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "código: fence ~~~",
+    "input": "~~~\n[[ref:#a]]\n~~~\n[[ref:#b]]",
+    "expected": [
+      {
+        "kind": "symbol",
+        "raw": "[[ref:#b]]",
+        "path": null,
+        "symbol": "b",
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "código: fence abierto con más backticks que el cierre",
+    "input": "````\n[[ref:#a]]\n```\n[[ref:#b]]\n````\n[[ref:#c]]",
+    "expected": [
+      {
+        "kind": "symbol",
+        "raw": "[[ref:#c]]",
+        "path": null,
+        "symbol": "c",
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "código: fence sin cerrar",
+    "input": "```\n[[ref:#a]]\n\n[[ref:#b]]",
+    "expected": []
+  },
+  {
+    "name": "código: inline de dos backticks que contiene un backtick",
+    "input": "``x ` [[ref:#a]]`` [[ref:#b]]",
+    "expected": [
+      {
+        "kind": "symbol",
+        "raw": "[[ref:#b]]",
+        "path": null,
+        "symbol": "b",
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "código: marcador dentro de HTML escapado",
+    "input": "<div>[[ref:#a]]</div> &#91;[ref:#b]]",
+    "expected": [
+      {
+        "kind": "symbol",
+        "raw": "[[ref:#a]]",
+        "path": null,
+        "symbol": "a",
+        "range": null,
+        "label": null
+      }
+    ]
   }
 ]
