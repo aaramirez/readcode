@@ -286,41 +286,71 @@ def _resolve_js(module: str, path: str, paths: frozenset[str]) -> str | None:
     return next((c for c in candidates if c in paths), None)
 
 
+def _strip_go_comment(line: str) -> str:
+    """Drop a trailing ``//`` comment, ignoring ``//`` inside quotes."""
+    quote = ""
+    for i, ch in enumerate(line):
+        if quote:
+            if ch == quote:
+                quote = ""
+        elif ch in ('"', "`"):
+            quote = ch
+        elif line.startswith("//", i):
+            return line[:i]
+    return line
+
+
+def _unquote_go(value: str) -> str:
+    value = value.strip()
+    if len(value) > 1 and value[0] in ('"', "`") and value[-1] == value[0]:
+        return value[1:-1]
+    return value
+
+
 def _parse_go_module(text: str) -> str | None:
-    """The path of the ``module`` directive of a go.mod, or None."""
-    for raw in text.splitlines():
-        line = raw.split("//", 1)[0].strip()
-        if line.startswith("module") and line[6:7] in (" ", "	", "("):
-            value = line[6:].strip().strip("()").strip()
-            if value[:1] in ('"', "`") and value[-1:] == value[:1] and len(value) > 1:
-                value = value[1:-1]
-            return value or None
+    """The path of the ``module`` directive of a go.mod (line or block form), or None."""
+    lines = [_strip_go_comment(raw).strip() for raw in text.lstrip("﻿").splitlines()]
+    for i, line in enumerate(lines):
+        if not line.startswith("module") or line[6:7] not in (" ", "	", "("):
+            continue
+        rest = line[6:].strip()
+        if rest.startswith("("):
+            rest = rest[1:].strip().rstrip(")").strip()
+            if not rest:  # block form: path on the following line
+                rest = next((ln.rstrip(")").strip() for ln in lines[i + 1:] if ln.strip(") ")), "")
+        return _unquote_go(rest) or None
     return None
+
+
+@lru_cache(maxsize=4)
+def _go_dirs(paths: frozenset[str]) -> frozenset[str]:
+    """Directories ("" = root) that directly contain at least one .go file."""
+    return frozenset(posixpath.dirname(p) for p in paths if p.endswith(".go"))
 
 
 def _resolve_go_dir(module: str, path: str, paths: frozenset[str],
                     go_modules: dict[str, str]) -> str | None:
     """Directory of a package imported from the nearest go.mod's module, if it has .go files.
 
-    The module root itself ("") is not resolved: `resolvedDir` is a non-empty folder path.
+    ``""`` is the repo root (the module root package); callers must test ``is not None``.
     """
     directory = posixpath.dirname(path)
-    while True:
-        if directory in go_modules:
-            prefix = go_modules[directory]
-            break
+    while directory not in go_modules:
         if not directory:
             return None
         directory = posixpath.dirname(directory)
-    if not module.startswith(prefix + "/"):
-        return None
-    sub = module[len(prefix) + 1:].strip("/")
-    if not sub:
+    prefix = go_modules[directory]
+    if module == prefix:
+        sub = ""
+    elif module.startswith(prefix + "/"):
+        sub = module[len(prefix) + 1:].strip("/")
+    else:
         return None
     target = posixpath.join(directory, sub) if directory else sub
-    if any(p.endswith(".go") and posixpath.dirname(p) == target for p in paths):
-        return target
-    return None
+    for other in go_modules:  # target inside a nested module -> not part of this one
+        if other != directory and (other == target or target.startswith(other + "/"))                 and (other.startswith(directory + "/") or not directory):
+            return None
+    return target if target in _go_dirs(paths) else None
 
 
 def _resolve_java(module: str, paths: frozenset[str]) -> str | None:
@@ -360,7 +390,7 @@ def _read_go_modules(sdir: Path, tree: dict) -> dict[str, str]:
         if posixpath.basename(entry["path"]) != "go.mod":
             continue
         try:
-            text = kbio.blob_path(sdir, entry["blob"]).read_bytes().decode("utf-8")
+            text = kbio.blob_path(sdir, entry["blob"]).read_bytes().decode("utf-8-sig")
             module = _parse_go_module(text)
         except (OSError, UnicodeDecodeError):
             module = None

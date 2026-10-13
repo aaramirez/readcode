@@ -101,7 +101,7 @@ export interface SymbolImport {
   module: string;
   line: number;
   resolved?: string | null;
-  /** Go: package directory the import resolves to. */
+  /** Go: package directory the import resolves to; "" = repo root (test `!== undefined`, not truthiness). */
   resolvedDir?: string;
 }
 

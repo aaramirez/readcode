@@ -120,8 +120,7 @@
                 },
                 "resolvedDir": {
                   "type": "string",
-                  "minLength": 1,
-                  "description": "Go: repo directory (package) the import resolves to; absent when unresolved."
+                  "description": "Go: repo directory (package) the import resolves to; \"\" = repo root (test `is not None`, never truthiness); absent when unresolved."
                 }
               },
               "required": [

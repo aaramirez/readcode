@@ -11,6 +11,7 @@ runner = CliRunner()
 
 FILES = {
     "go.mod": "module github.com/x/y\n\ngo 1.22\n",
+    "cmd/foo/foo.go": 'package main\nimport "github.com/x/y"\nimport "github.com/x/y/sub/pkg"\n',
     "main.go": 'package main\n\nimport (\n\t"fmt"\n\t"github.com/x/y/internal/app"\n\t"github.com/x/y/nogo"\n'
                '\t"github.com/x/y"\n\t"github.com/other/z/internal/app"\n)\n\nfunc main() { fmt.Println(app.X) }\n',
     "internal/app/app.go": 'package app\n\nimport "errors"\n\nvar ErrX = errors.New("x")\n\n'
@@ -56,7 +57,8 @@ def test_go_import_resolved_dir_and_nested_module(tmp_path):
     assert imports["github.com/x/y/internal/app"] == {
         "module": "github.com/x/y/internal/app", "line": 5, "resolved": None,
         "resolvedDir": "internal/app"}
-    for unresolved in ("fmt", "github.com/x/y/nogo", "github.com/x/y", "github.com/other/z/internal/app"):
+    assert imports["github.com/x/y"]["resolvedDir"] == ""
+    for unresolved in ("fmt", "github.com/x/y/nogo", "github.com/other/z/internal/app"):
         assert "resolvedDir" not in imports[unresolved] and imports[unresolved]["resolved"] is None
     # nested module resolves against its own go.mod, not the root one
     sub = {i["module"]: i for i in sym["files"]["sub/main.go"]["imports"]}
@@ -91,3 +93,24 @@ def test_parse_go_module():
 def test_extract_without_go_modules_leaves_unresolved():
     out = extract(b'package a\nimport "x/y"\n', "go", "a.go", frozenset({"a.go"}))
     assert out["imports"] == [{"module": "x/y", "line": 2, "resolved": None}]
+
+
+def test_go_root_import_from_subdir_and_nested_module_exclusion(tmp_path):
+    sym, _ = _index(tmp_path, FILES)
+    foo = {i["module"]: i for i in sym["files"]["cmd/foo/foo.go"]["imports"]}
+    assert foo["github.com/x/y"]["resolvedDir"] == ""
+    # sub/ has its own go.mod: the outer module must not claim sub/pkg
+    assert "resolvedDir" not in foo["github.com/x/y/sub/pkg"]
+
+
+def test_go_root_without_go_files_unresolved(tmp_path):
+    files = {k: v for k, v in FILES.items() if k != "main.go"}
+    sym, _ = _index(tmp_path, files)
+    foo = {i["module"]: i for i in sym["files"]["cmd/foo/foo.go"]["imports"]}
+    assert "resolvedDir" not in foo["github.com/x/y"]
+
+
+def test_parse_go_module_variants():
+    assert _parse_go_module("﻿module a.b/c\n") == "a.b/c"
+    assert _parse_go_module("module (\n\ta.b/c // x\n)\n") == "a.b/c"
+    assert _parse_go_module('module "a.b//c"\n') == "a.b//c"
