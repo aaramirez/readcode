@@ -11,6 +11,8 @@
     onStudy: (name: string) => void;
     onSha: (sha: string) => void;
     onTheme: () => void;
+    onBack: () => void;
+    onForward: () => void;
     /** Open the "Comparar…" dialog (null: not available). */
     onCompare: (() => void) | null;
     /** Open the Ctrl+K palette (null: not available). */
@@ -19,7 +21,21 @@
     diffLabel?: string | null;
   }
 
-  let { catalog, studyName, study, sha, theme, onStudy, onSha, onTheme, onCompare, onSearch, diffLabel = null }: Props = $props();
+  let {
+    catalog,
+    studyName,
+    study,
+    sha,
+    theme,
+    onStudy,
+    onSha,
+    onTheme,
+    onBack,
+    onForward,
+    onCompare,
+    onSearch,
+    diffLabel = null,
+  }: Props = $props();
 
   const snapshots = $derived(
     study ? [...study.snapshots].sort((a, b) => Date.parse(b.date) - Date.parse(a.date)) : [],
@@ -59,8 +75,8 @@
     onclick={() => onCompare?.()}>{diffLabel ?? 'Comparar…'}</button
   >
   <div class="nav">
-    <button title="Atrás" aria-label="Atrás" onclick={() => history.back()}>←</button>
-    <button title="Adelante" aria-label="Adelante" onclick={() => history.forward()}>→</button>
+    <button title="Atrás" aria-label="Atrás" onclick={onBack}>←</button>
+    <button title="Adelante" aria-label="Adelante" onclick={onForward}>→</button>
   </div>
   <button class="search" disabled={!onSearch} onclick={() => onSearch?.()} aria-label="Buscar (Ctrl+K)">
     <span>Buscar…</span><kbd>Ctrl+K</kbd>
