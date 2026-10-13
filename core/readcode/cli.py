@@ -232,7 +232,7 @@ def install_skill_cmd(
         "--dest", help="Directorio de skills de Claude Code (por defecto ~/.claude/skills).")] = None,
     force: Annotated[bool, typer.Option("--force", help="Sobrescribe una instalación existente.")] = False,
 ) -> None:
-    """Instala la skill /readcode de Claude Code (copia skills/readcode)."""
+    """Instala la skill /readcode de Claude Code (copia la skill empaquetada)."""
     from readcode.install_skill import InstallSkillError, install_skill
 
     try:

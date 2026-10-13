@@ -1,8 +1,9 @@
-"""``readcode install-skill``: copy the Claude Code skill (skills/readcode) to a skills directory."""
+"""``readcode install-skill``: copy the Claude Code skill (readcode/data/skills/readcode) to a skills directory."""
 
 from __future__ import annotations
 
 import shutil
+from importlib.resources import as_file, files
 from pathlib import Path
 
 
@@ -11,14 +12,17 @@ class InstallSkillError(RuntimeError):
 
 
 def skill_source() -> Path:
-    """skills/readcode of the readcode checkout this package runs from (editable install)."""
-    src = Path(__file__).resolve().parents[2] / "skills" / "readcode"
-    if not (src / "SKILL.md").is_file():
-        raise InstallSkillError(
-            f"skill sources not found at {src}; install readcode from a checkout "
-            "(pip install -e core) or copy skills/readcode by hand"
-        )
-    return src
+    """Directory of the skill packaged inside readcode (``readcode/data/skills/readcode``).
+
+    Only valid for installs on a regular filesystem (pip/pipx/editable); zipped installs
+    are not supported.
+    """
+    with as_file(files("readcode") / "data" / "skills" / "readcode") as src:
+        if not (src / "SKILL.md").is_file():
+            raise InstallSkillError(
+                f"skill sources not found at {src}; reinstall readcode (pip install ./core)"
+            )
+        return src
 
 
 def default_dest() -> Path:

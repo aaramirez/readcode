@@ -63,7 +63,7 @@ def _load(path: Path, kind: str, rel: str, out: _Collector) -> dict | None:
         return None
     errors = schema_validate(kind, data)
     for err in errors:
-        out.add(rel, f"schema {kind}: {err}", f"fix the field to match schemas/{kind}.schema.json")
+        out.add(rel, f"schema {kind}: {err}", f"fix the field to match readcode/data/schemas/{kind}.schema.json")
     return None if errors else data
 
 

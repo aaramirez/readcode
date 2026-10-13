@@ -22,11 +22,19 @@ En v1 el método soportado es la **instalación editable desde un clon**:
 git clone https://github.com/aaramirez/readcode
 cd readcode
 pip install -e core        # o: pipx install -e core
-readcode install-skill     # copia skills/readcode a ~/.claude/skills
+readcode install-skill     # copia la skill empaquetada a ~/.claude/skills
 readcode --help
 ```
 
-Limitación: `schemas/` y `skills/` viven en la raíz del repo, fuera de `core/`, y el paquete los busca allí. Una instalación no editable (`pip install ./core` o `pipx install "git+https://github.com/aaramirez/readcode#subdirectory=core"`) instala el CLI y el visor, pero `validate`, `init`, `snapshot`, etc. fallan con "schemas/ not found" e `install-skill` no encuentra la skill (verificado). Empaquetarlos queda para una versión posterior. Para actualizar: `git pull` dentro del clon.
+Instalación sin clonar (el paquete incluye el visor, los schemas y la skill):
+
+```bash
+pipx install "git+https://github.com/aaramirez/readcode#subdirectory=core"
+# o, desde un clon:
+pip install ./core
+```
+
+Para actualizar: `git pull` dentro del clon (instalación editable) o reinstalar con `pipx upgrade readcode` / `pip install --upgrade ./core`.
 
 ## Uso
 
@@ -53,7 +61,7 @@ Puedes probarlo ya con el estudio de ejemplo: `readcode serve examples/kb`.
 
 ## Formato del estudio
 
-La fuente de verdad son los JSON Schema de [`schemas/`](schemas/); el diseño completo está en la [especificación](docs/superpowers/specs/2026-10-12-readcode-design.md) (§4). Estructura:
+La fuente de verdad son los JSON Schema de [`core/readcode/data/schemas/`](core/readcode/data/schemas/); el diseño completo está en la [especificación](docs/superpowers/specs/2026-10-12-readcode-design.md) (§4). Estructura:
 
 ```text
 <kb>/catalog.json

@@ -1,4 +1,4 @@
-// Hand-written TypeScript mirror of schemas/*.schema.json (the study format contract).
+// Hand-written TypeScript mirror of core/readcode/data/schemas/*.schema.json (the study format contract).
 
 /** [startLine, endLine], 1-based inclusive. */
 export type Range = [number, number];

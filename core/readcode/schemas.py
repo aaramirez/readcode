@@ -1,16 +1,16 @@
-"""Access to the study-format JSON Schemas (source of truth: repo-root ``schemas/``)."""
+"""Access to the study-format JSON Schemas (source of truth: ``readcode/data/schemas/``, packaged data)."""
 
 from __future__ import annotations
 
 import json
 from functools import lru_cache
-from pathlib import Path
+from importlib.resources import files
 
 from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 from referencing.jsonschema import DRAFT202012
 
-SCHEMAS_DIR = Path(__file__).resolve().parents[2] / "schemas"
+SCHEMAS_DIR = files("readcode") / "data" / "schemas"
 
 KINDS = (
     "catalog",
@@ -36,8 +36,8 @@ def _read(name: str) -> dict:
     path = SCHEMAS_DIR / f"{name}.schema.json"
     if not path.is_file():
         raise SchemaError(
-            f"Schema file not found: {path}. readcode v1 expects the repo-root "
-            f"'schemas/' directory (editable install); packaging schemas is not supported yet."
+            f"Schema file not found: {path}. The package data 'readcode/data/schemas' is "
+            "missing; reinstall readcode."
         )
     return json.loads(path.read_text(encoding="utf-8"))
 

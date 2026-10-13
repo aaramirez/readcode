@@ -1,4 +1,4 @@
-"""Marker grammar parity: schemas/marker-vectors.json is also consumed by the
+"""Marker grammar parity: core/readcode/data/schemas/marker-vectors.json is also consumed by the
 viewer's vitest (viewer/src/lib/markers.test.ts), so the Python and TypeScript
 parsers cannot drift."""
 
@@ -10,7 +10,7 @@ import pytest
 from readcode.refs import parse_markers
 
 VECTORS = json.loads(
-    (Path(__file__).resolve().parents[2] / "schemas" / "marker-vectors.json").read_text(encoding="utf-8"))
+    (Path(__file__).resolve().parents[1] / "readcode" / "data" / "schemas" / "marker-vectors.json").read_text(encoding="utf-8"))
 
 
 def _as_dict(m) -> dict:

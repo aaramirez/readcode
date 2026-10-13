@@ -42,7 +42,7 @@ El visor no está atado a `code-kb`: recibe **cualquier directorio** provisto po
 
 ## 4. Formato del estudio (contrato generador ↔ visor)
 
-La fuente de verdad es `schemas/` (JSON Schema). Estructura:
+La fuente de verdad es `core/readcode/data/schemas/` (JSON Schema). Estructura:
 
 ```
 <kb-dir>/
@@ -113,7 +113,7 @@ Orden: mismo archivo → archivos importados (tags de import) → todo el repo. 
 
 tree-sitter **sugiere** límites (funciones, clases); el LLM decide la agrupación final. `validate` solo verifica coherencia de rangos (dentro del archivo, sin solapes inválidos).
 
-## 6. Skill de Claude Code (`skills/readcode/`)
+## 6. Skill de Claude Code (`core/readcode/data/skills/readcode/`)
 
 Se instala en `~/.claude/skills/`. Orquesta el CLI; los subagentes escriben JSON/Markdown que luego pasa por `validate`. Plantillas en `prompts/` (`explain-file.md`, `dir.md`, `overview.md`, `tour.md`, `diff.md`) con el schema y ejemplos.
 
@@ -186,9 +186,9 @@ Stack: Vite + Svelte + TypeScript; CodeMirror 6 (solo lectura, decoraciones de r
 ```
 readcode/
   core/            paquete Python `readcode` (CLI, indexer, validate, server)
+    readcode/data/schemas/       JSON Schema del formato de estudio
+    readcode/data/skills/readcode/ SKILL.md + prompts/*.md
   viewer/          Svelte + Vite; dist/ versionado
-  skills/readcode/ SKILL.md + prompts/*.md
-  schemas/         JSON Schema del formato de estudio
   examples/        repo fixture + estudio generado
   docs/            specs y planes
 ```

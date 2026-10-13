@@ -1,7 +1,7 @@
 // Marker parser: a TypeScript port of core/readcode/refs.py `parse_markers`.
 //
 // The grammar is documented in the refs.py module docstring and MUST stay
-// identical; schemas/marker-vectors.json is checked by both pytest
+// identical; core/readcode/data/schemas/marker-vectors.json is checked by both pytest
 // (core/tests/test_marker_vectors.py) and vitest (markers.test.ts).
 //
 // Python-isms reproduced on purpose so both sides agree on every input:

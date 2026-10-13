@@ -13,7 +13,7 @@ from readcode.cli import app
 from readcode.install_skill import install_skill, skill_source
 
 ROOT = Path(__file__).resolve().parents[2]
-SKILL = ROOT / "skills" / "readcode"
+SKILL = ROOT / "core" / "readcode" / "data" / "skills" / "readcode"
 EXAMPLE_KB = ROOT / "examples" / "kb"
 SHA2 = "074ec965eabffb43a0224ef9f1426515d2818975"
 PROMPTS = ["explain-file.md", "dir.md", "overview.md", "tour.md", "diff.md"]
@@ -86,7 +86,7 @@ def test_prompt_examples_quote_the_reference_study():
 # ------------------------------------------------------------------ install-skill
 
 
-def test_skill_source_is_repo_skill():
+def test_skill_source_is_packaged_skill():
     assert skill_source() == SKILL.resolve()
 
 

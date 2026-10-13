@@ -9,7 +9,7 @@ Un **estudio** es un directorio dentro de una base de conocimiento (KB) con una 
 por commit y su explicación. El CLI `readcode` hace todo lo determinista (snapshot, símbolos,
 plan de trabajo, diff, validación, catálogo) y **nunca llama a un LLM**. Esta skill pone la parte
 LLM: reparte el trabajo en subagentes, cada uno escribe archivos JSON/Markdown que cumplen
-`schemas/`, y todo pasa por `readcode validate` antes de darse por bueno.
+los JSON Schema de `readcode` (`schemas/`), y todo pasa por `readcode validate` antes de darse por bueno.
 
 Ejemplo de referencia de calidad: el estudio `fixture` de `examples/kb/` en el repo de readcode.
 

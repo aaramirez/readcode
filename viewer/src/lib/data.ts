@@ -1,4 +1,4 @@
-// Typed fetch client for a readcode kb (see schemas/ and spec §4).
+// Typed fetch client for a readcode kb (see core/readcode/data/schemas/ and spec §4).
 //
 // Every request is cached in memory as a promise (one network request per URL).
 // HTTP 404 resolves to null; any other failure throws (and is evicted from the

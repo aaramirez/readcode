@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import vectors from '../../../schemas/marker-vectors.json';
+import vectors from '../../../core/readcode/data/schemas/marker-vectors.json';
 import { renderMarkdown } from './markdown';
 import { parseMarkerBody, parseMarkers } from './markers';
 
@@ -9,7 +9,7 @@ interface Vector {
   expected: unknown[];
 }
 
-describe('marker grammar parity (schemas/marker-vectors.json, shared with pytest)', () => {
+describe('marker grammar parity (core/readcode/data/schemas/marker-vectors.json, shared with pytest)', () => {
   it('has vectors', () => {
     expect((vectors as Vector[]).length).toBeGreaterThanOrEqual(30);
   });
