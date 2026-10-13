@@ -11,7 +11,7 @@
         4
       ],
       "title": "Constructor: solo guarda datos",
-      "body": "`__init__` asigna `owner` y `total` sin comprobar nada: acepta totales negativos, strings o\n`None`. Esa permisividad es cómoda aquí (un reembolso podría modelarse como total negativo),\npero significa que cualquier validación tiene que vivir en quien construye la factura.\n\n¿Quién la construye? Una referencia sin ruta como [[ref:#process]] es **ambigua** desde este\narchivo, porque hay dos `process` en el repo y `models.py` no importa ninguno; solo el de\nfacturación ([[ref:app/services/billing.py#process]]) crea un `Invoice`.\n\nFíjate también en la diferencia con la tabla `invoices`: allí la factura apunta a un\n`user_id` entero, aquí a un `owner` que es el **nombre** del usuario. Si algún día se persiste,\nhabrá que resolver esa traducción."
+      "body": "`__init__` asigna `owner` y `total` sin comprobar nada: acepta totales negativos, strings o\n`None`. Esa permisividad es cómoda aquí (un reembolso podría modelarse como total negativo),\npero significa que cualquier validación tiene que vivir en quien construye la factura.\n\n¿Quién la construye? Una referencia sin ruta como [[ref:#process]] es **ambigua** desde este\narchivo, porque hay dos `process` en el repo y `models.py` no importa ninguno; en este snapshot\ncrean un `Invoice` el de facturación ([[ref:app/services/billing.py#process]]) y también\n[[ref:app/services/billing.py#refund]], al que llega [[ref:app/services/refunds.py#process_refund]].\n\nFíjate también en la diferencia con la tabla `invoices`: allí la factura apunta a un\n`user_id` entero, aquí a un `owner` que es el **nombre** del usuario. Si algún día se persiste,\nhabrá que resolver esa traducción."
     },
     {
       "id": "b2",

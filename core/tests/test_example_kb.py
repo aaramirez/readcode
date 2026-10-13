@@ -1,5 +1,6 @@
 """The committed example study (examples/kb/fixture) must stay valid and complete."""
 import json
+import re
 import shutil
 from pathlib import Path, PurePosixPath
 
@@ -59,9 +60,33 @@ def test_diff_is_explained():
         assert sorted(h["index"] for h in doc["hunks"]) == list(range(len(f["hunks"])))
 
 
+_LEAK_RE = re.compile(
+    r"(?<![A-Za-z0-9])[A-Za-z]:[\\/]\w"  # Windows drive paths (C:\x, C:/x), not "http://"
+    r"|[\\/]Users[\\/]|/home/|AppData"
+    r"|Alexander[ _]Ramirez",  # the author's user name
+    re.IGNORECASE,
+)
+
+
+def _strings(node):
+    """All strings (keys and values) of a JSON document, unescaped."""
+    if isinstance(node, str):
+        yield node
+    elif isinstance(node, dict):
+        for k, v in node.items():
+            yield k
+            yield from _strings(v)
+    elif isinstance(node, list):
+        for v in node:
+            yield from _strings(v)
+
+
 def test_example_has_no_machine_paths():
     assert "localPath" not in _study()["repo"]
     for p in EXAMPLE_KB.rglob("*"):
         if p.is_file() and p.suffix in {".json", ".md", ".mmd", ".html"}:
             text = p.read_text(encoding="utf-8")
-            assert ":\\Users" not in text and ":/Users" not in text, p
+            if p.suffix == ".json":  # scan decoded strings: JSON escapes like "\n" are not paths
+                text = "\n".join(_strings(json.loads(text)))
+            m = _LEAK_RE.search(text)
+            assert m is None, f"{p}: {m.group(0) if m else ''}"

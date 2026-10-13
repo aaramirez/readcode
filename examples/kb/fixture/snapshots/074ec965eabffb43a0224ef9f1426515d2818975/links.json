@@ -141,6 +141,26 @@
         ]
       },
       {
+        "raw": "[[ref:app/services/billing.py#refund]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/services/billing.py",
+        "range": [
+          13,
+          15
+        ]
+      },
+      {
+        "raw": "[[ref:app/services/refunds.py#process_refund]]",
+        "kind": "symbol",
+        "status": "exact",
+        "target": "app/services/refunds.py",
+        "range": [
+          4,
+          5
+        ]
+      },
+      {
         "raw": "[[ref:app/models.py#Invoice.describe]]",
         "kind": "symbol",
         "status": "exact",

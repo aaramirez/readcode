@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "path": "app/services/billing.py",
-  "summary": "Se añade `refund()` al final del módulo, sin tocar `compute_total` ni `process`. Al añadir y no\nmodificar, el riesgo de romper la facturación existente es nulo.",
+  "summary": "Se añade `refund()` al final del módulo, sin tocar `compute_total` ni `process`. Al añadir y no\nmodificar, el riesgo de romper la facturación existente es mínimo: solo\npodría afectarla un choque de nombres en el módulo, y `refund` no existía.",
   "hunks": [
     {
       "index": 0,
