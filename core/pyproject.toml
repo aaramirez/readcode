@@ -26,7 +26,7 @@ readcode = "readcode.cli:app"
 include = ["readcode*"]
 
 [tool.setuptools.package-data]
-readcode = ["viewer_dist/**"]
+readcode = ["viewer_dist/**", "queries/*.scm"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

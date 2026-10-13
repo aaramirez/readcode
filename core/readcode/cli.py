@@ -55,3 +55,23 @@ def snapshot(
         typer.echo(f"error: {exc}", err=True)
         raise typer.Exit(1)
     typer.echo(f"Snapshot {entry['sha']} ({entry['message']})")
+
+
+@app.command()
+def index(
+    kb_dir: Annotated[Path, typer.Argument(help="Directorio de la base de conocimiento.")],
+    study: Annotated[str, typer.Argument(help="Nombre del estudio.")],
+    sha: Annotated[str, typer.Option("--sha", help="SHA del snapshot (completo o prefijo único).")],
+) -> None:
+    """Extrae símbolos (defs, refs, imports) con tree-sitter: symbols.json."""
+    from readcode.indexer import IndexingError, index_snapshot
+
+    try:
+        result = index_snapshot(kb_dir, study, sha)
+    except IndexingError as exc:
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(1)
+    typer.echo(
+        f"Indexado {result['sha']}: {result['indexed']} archivos con símbolos, "
+        f"{result['skipped']} sin indexar"
+    )
