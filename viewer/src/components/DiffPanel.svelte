@@ -17,7 +17,7 @@
     changes: Changes;
     change: ChangedFile | null;
     badge?: DiffBadge;
-    shaFor: (target: string) => string;
+    shaFor: (target: string, snapshot?: 'A' | 'B') => string;
     activeHunk: number | null;
     onHunk: (index: number) => void;
   }

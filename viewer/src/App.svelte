@@ -325,7 +325,7 @@
     const pathsA = diff?.treeA ? new Set(diff.treeA.files.map((f) => f.path)) : null;
     const a = diffShas?.a ?? '';
     const b = diffShas?.b ?? '';
-    return (target: string) => diffLinkSha(target, pathsB, pathsA, a, b);
+    return (target: string, snapshot?: 'A' | 'B') => diffLinkSha(target, pathsB, pathsA, a, b, snapshot);
   });
   let hunkFocus = $state<{ index: number; tick: number } | null>(null);
   $effect(() => {

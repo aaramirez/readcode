@@ -49,6 +49,7 @@ export function diffBadges(changes: Changes): Map<string, DiffBadge> {
 /**
  * Snapshot a diff link target opens in: B when the file is in B's tree, else A
  * when it is in A's (e.g. a deleted file), else B (ruling 16).
+ * A link marked snapshot "A" (it only resolves in A, even if the file exists in B) opens A.
  */
 export function diffLinkSha(
   target: string,
@@ -56,7 +57,9 @@ export function diffLinkSha(
   pathsA: Set<string> | null,
   a: string,
   b: string,
+  snapshot?: 'A' | 'B',
 ): string {
+  if (snapshot === 'A') return a;
   if (pathsB?.has(target)) return b;
   if (pathsA?.has(target)) return a;
   return b;

@@ -31,7 +31,7 @@ export interface MarkdownContext {
   /** URL of diagrams/<name>.html; null for an unsafe name. */
   diagramUrl: (name: string) => string | null;
   /** Snapshot a ref target opens in (default: sha). Diffs open targets missing from B in A. */
-  shaFor?: (target: string) => string;
+  shaFor?: (target: string, snapshot?: 'A' | 'B') => string;
 }
 
 export interface Candidate {
@@ -61,8 +61,8 @@ function markerRule(state: StateInline, silent: boolean): boolean {
 
 md.inline.ruler.before('link', 'rc_marker', markerRule);
 
-function fileHref(ctx: MarkdownContext, target: string, range: [number, number]): string {
-  const sha = ctx.shaFor?.(target) ?? ctx.sha;
+function fileHref(ctx: MarkdownContext, target: string, range: [number, number], snapshot?: 'A' | 'B'): string {
+  const sha = ctx.shaFor?.(target, snapshot) ?? ctx.sha;
   return format({ kind: 'file', study: ctx.study, sha, path: target, range: { start: range[0], end: range[1] === range[0] ? undefined : range[1] } });
 }
 
@@ -106,13 +106,13 @@ function renderMarker(m: ParsedMarker, env: Env): string {
   const text = refText(m);
   const cls = m.label === null ? 'rc-ref rc-code' : 'rc-ref';
   if (ctx && entry?.status === 'exact' && entry.target && entry.range) {
-    const href = fileHref(ctx, entry.target, entry.range);
+    const href = fileHref(ctx, entry.target, entry.range, entry.snapshot);
     return `<a class="${cls}" href="${esc(href)}" title="${esc(rangeLabel(entry.target, entry.range))}">${esc(text)}</a>`;
   }
   if (ctx && entry?.status === 'ambiguous' && entry.candidates?.length) {
     const candidates: Candidate[] = entry.candidates.map((c) => ({
       label: rangeLabel(c.target, c.range),
-      href: fileHref(ctx, c.target, c.range),
+      href: fileHref(ctx, c.target, c.range, entry.snapshot),
     }));
     return (
       `<button type="button" class="${cls} rc-ambiguous" data-candidates="${esc(JSON.stringify(candidates))}" ` +

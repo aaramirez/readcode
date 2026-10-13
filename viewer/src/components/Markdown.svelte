@@ -15,7 +15,7 @@
     /** Identifies a custom `links` source (e.g. "diff:<a>..<b>") so docs of different sources never share a load. */
     scope?: string;
     /** Snapshot a ref target opens in (default: sha). */
-    shaFor?: (target: string) => string;
+    shaFor?: (target: string, snapshot?: 'A' | 'B') => string;
   }
 </script>
 

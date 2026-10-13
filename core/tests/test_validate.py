@@ -245,6 +245,32 @@ def test_diff_validation_and_links(mini):
     assert dl["docs"]["explain/app/util.py.json"][0]["target"] == "app/main.py"
 
 
+def test_diff_line_ref_only_in_a_gets_snapshot_a(mini):
+    kb, sd, snap = mini
+    study = kbio.read_json(sd / "study.json")
+    study["snapshots"].append({"sha": SHA2, "date": "2026-01-02T00:00:00Z", "message": "m2",
+                               "status": "indexed"})
+    kbio.atomic_write_json(sd / "study.json", study)
+    tree2 = kbio.read_json(snap / "tree.json")
+    tree2["sha"] = SHA2
+    for f in tree2["files"]:
+        if f["path"] == "app/main.py":
+            f["lines"] = 4  # shrinks in B: L5-6 exist only in A
+    kbio.atomic_write_json(kbio.snapshot_dir(sd, SHA2) / "tree.json", tree2)
+    ddir = sd / "diffs" / f"{SHA}..{SHA2}"
+    kbio.atomic_write_json(ddir / "changes.json", {
+        "schemaVersion": 1, "from": SHA, "to": SHA2, "files": [
+            {"path": "app/main.py", "status": "modified", "hunks": [
+                {"fromRange": [5, 6], "toRange": None}]}]})
+    kbio.atomic_write_text(ddir / "explain.md", "A [[ref:app/main.py:L5-6]] y B [[ref:app/main.py:L1-2]]\n")
+    assert _problems(kb) == []
+    dl = kbio.read_json(ddir / "links.json")
+    assert validate("links", dl) == []
+    a_ref, b_ref = dl["docs"]["explain.md"]
+    assert a_ref["snapshot"] == "A" and a_ref["status"] == "exact"
+    assert "snapshot" not in b_ref
+
+
 def test_tour_steps_get_their_own_doc_keys(mini):
     """The same raw marker in two steps resolves relative to each step's file."""
     kb, _, snap = mini

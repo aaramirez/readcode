@@ -50,6 +50,13 @@
               "$ref": "common.schema.json#/$defs/range",
               "description": "Resolved range (exact)."
             },
+            "snapshot": {
+              "enum": [
+                "A",
+                "B"
+              ],
+              "description": "Diff links only: snapshot the marker resolved against. Omitted means B; \"A\" means it only resolves in snapshot A (file, symbol or line range absent in B)."
+            },
             "candidates": {
               "type": "array",
               "description": "Candidates when ambiguous.",

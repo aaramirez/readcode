@@ -84,11 +84,14 @@ class _Resolver:
         entries = self.docs.setdefault(key, [])
         for marker in refs.parse_markers(_lf(text)):
             res = refs.resolve(marker, current_path, self.tree, self.symbols, self.diagrams)
+            from_a = False
             if res.status == "broken" and self.fallback and marker.kind in ("symbol", "lines"):
                 alt = refs.resolve(marker, current_path, *self.fallback, self.diagrams)
                 if alt.status != "broken":
-                    res = alt
+                    res, from_a = alt, True
             entry = res.to_link_entry()
+            if from_a:
+                entry["snapshot"] = "A"  # only resolves in snapshot A; B-resolved refs omit it
             # The viewer looks markers up by raw text within a doc key: one raw, one meaning.
             if any(e["raw"] == entry["raw"] and e != entry for e in entries):
                 out.add(rel, f"marker {res.raw} in {where} resolves differently elsewhere in "

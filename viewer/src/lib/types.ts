@@ -185,6 +185,8 @@ export interface LinkMarker {
   status: MarkerStatus;
   target?: string;
   range?: Range;
+  /** Diff links only: "A" when the marker only resolves in snapshot A; omitted = B. */
+  snapshot?: 'A' | 'B';
   candidates?: LinkCandidate[];
 }
 

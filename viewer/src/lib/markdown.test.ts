@@ -57,6 +57,16 @@ describe('renderMarkdown markers', () => {
     expect(amb).toContain(`#/fixture/${ctx.sha}/f/app/services/auth.py:L5-7`);
   });
 
+  it('opens a ref marked snapshot "A" in snapshot A even if the file exists in B', () => {
+    const A = 'a'.repeat(40);
+    const l: Links = {
+      ...links,
+      docs: { 'explain.md': [{ raw: '[[ref:app/main.py:L5-6]]', kind: 'lines', status: 'exact', target: 'app/main.py', range: [5, 6], snapshot: 'A' }] },
+    };
+    const c: MarkdownContext = { ...ctx, links: l, docKey: 'explain.md', shaFor: (_t, snap) => (snap === 'A' ? A : ctx.sha) };
+    expect(renderMarkdown('[[ref:app/main.py:L5-6]]', c)).toContain(`href="#/fixture/${A}/f/app/main.py:L5-6"`);
+  });
+
   it('renders single-line and labelled refs', () => {
     expect(renderMarkdown('[[ref::L2]]', ctx)).toContain('href="#/fixture/074ec965eabffb43a0224ef9f1426515d2818975/f/app/models.py:L2"');
     expect(renderMarkdown('[[ref::L2]]', ctx)).toContain('>L2</a>');

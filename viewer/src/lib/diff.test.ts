@@ -85,6 +85,7 @@ describe('diffLinkSha', () => {
   });
   it('defaults to B when the target is in neither tree', () => {
     expect(diffLinkSha('nope.py', inB, inA, A, B)).toBe(B);
+    expect(diffLinkSha('app/billing.py', inB, inA, A, B, 'A')).toBe(A);
     expect(diffLinkSha('db/queries.sql', null, null, A, B)).toBe(B);
   });
 });
