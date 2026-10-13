@@ -148,8 +148,9 @@ export class StudyData {
    */
   async dirDoc(sha: string, path: string): Promise<{ summary: DirSummary | null; key: string }> {
     if (path !== '') {
-      const key = `dirs/${encodePath(path)}.json`;
-      return { summary: await this.kb.json<DirSummary>(this.snap(sha, key)), key };
+      // The doc key is the raw path (as in links.json); only the URL is encoded.
+      const key = `dirs/${path}.json`;
+      return { summary: await this.kb.json<DirSummary>(this.snap(sha, `dirs/${encodePath(path)}.json`)), key };
     }
     const root = await this.kb.json<DirSummary>(this.snap(sha, 'dir-root.json'));
     if (root) return { summary: root, key: 'dir-root.json' };

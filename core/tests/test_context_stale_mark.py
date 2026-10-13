@@ -91,6 +91,17 @@ def test_stale_on_example_update():
                                "app/services/refunds.py#process_refund"]
 
 
+def test_stale_reports_root_summary_from_dir_root(kb):
+    snap = kbio.snapshot_dir(kb / "fixture", SHA2)
+    path = snap / "dir-root.json"
+    assert path.is_file()
+    doc = kbio.read_json(path)
+    doc["summary"] += " Ver [[ref:app/services/billing.py#refund]]."
+    kbio.atomic_write_json(path, doc)
+    out = stale_docs(kb, "fixture", SHA1[:7], SHA2[:7])
+    assert {"path": "", "markers": ["app/services/billing.py#refund"]} in out["dirs"]
+
+
 def test_stale_flags_code_refs_line_markers_and_unpathed(kb):
     snap2 = kbio.snapshot_dir(kb / "fixture", SHA2)
     syms = kbio.read_json(snap2 / "symbols.json")

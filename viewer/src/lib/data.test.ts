@@ -85,6 +85,14 @@ describe('KbClient', () => {
     const summary = (p: string) => ({ schemaVersion: 1, path: p, summary: 'x', children: [] });
     const tree = (paths: string[]) => ({ files: paths.map((path) => ({ path })) });
 
+    it('keys sub-directory docs by the raw path and fetches the encoded URL', async () => {
+      const f = mockFetch({ [base + 'dirs/mi%20dir/documentaci%C3%B3n.json']: summary('mi dir/documentación') });
+      const r = await new KbClient('kb/', f).study('fixture').dirDoc(SHA, 'mi dir/documentación');
+      expect(r.key).toBe('dirs/mi dir/documentación.json');
+      expect(r.summary).not.toBeNull();
+      expect(f.mock.calls[0][0]).toBe(base + 'dirs/mi%20dir/documentaci%C3%B3n.json');
+    });
+
     it('prefers dir-root.json', async () => {
       const f = mockFetch({ [base + 'dir-root.json']: summary(''), [base + 'dirs/_root.json']: summary('legacy') });
       const r = await new KbClient('kb/', f).study('fixture').dirDoc(SHA, '');
