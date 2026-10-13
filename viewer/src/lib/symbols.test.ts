@@ -107,4 +107,13 @@ describe('refOffset', () => {
     expect(refOffset('  process()', 7, 'process')).toBe(2);
     expect(refOffset('nothing here', 0, 'process')).toBeNull();
   });
+
+  it('only accepts whole-word matches, nearest to the column', () => {
+    expect(refOffset('reprocess(); process()', 99, 'process')).toBe(13);
+    expect(refOffset('reprocess(); process()', 0, 'process')).toBe(13);
+    expect(refOffset('processor()', 0, 'process')).toBeNull();
+    expect(refOffset('process(process)', 9, 'process')).toBe(8);
+    expect(refOffset('process(process)', 7, 'process')).toBe(8);
+    expect(refOffset('$process + process_x', 0, 'process')).toBeNull();
+  });
 });

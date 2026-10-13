@@ -31,7 +31,8 @@ not rely on them).
                ("Class.method" is allowed; the last "." splits parent/name)
     N, M     = decimal digits
     label    = any chars except "]" and newline (non-empty)
-    name     = one or more chars except whitespace, "|", "[", "]", ":" (no label)
+    name     = one or more of [A-Za-z0-9._-], not containing ".." (no label,
+               no path separators: it names diagrams/<name>.html)
 
 The body never contains "]" or a newline. Anything that starts with
 "[[ref:" or "[[archify:" and closes with "]]" but does not match the grammar
@@ -62,7 +63,7 @@ _WS = r" \t\n\r\f\v"  # regex-escaped class body: ASCII whitespace only
 _MARKER_RE = re.compile(r"\[\[(ref|archify):([^\]\n]*)\]\]", re.ASCII)
 _LINES_RE = re.compile(rf"^([^{_WS}#:|\[\]]*):L([0-9]+)(?:-([0-9]+))?$", re.ASCII)
 _SYMBOL_RE = re.compile(rf"^([^{_WS}#:|\[\]]*)#([^{_WS}|\[\]#]+)$", re.ASCII)
-_ARCHIFY_RE = re.compile(rf"^[^{_WS}|\[\]:]+$", re.ASCII)
+_ARCHIFY_RE = re.compile(r"^(?!.*\.\.)[A-Za-z0-9._-]+$", re.ASCII)
 _FENCE_RE = re.compile(r"^( {0,3})(`{3,}|~{3,})")
 _BACKTICKS_RE = re.compile(r"`+")
 _PARA_SEP_RE = re.compile(r"\n[ \t]*\n")

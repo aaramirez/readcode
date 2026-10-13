@@ -227,3 +227,10 @@ export function topVisibleLine(view: EditorView): number {
   const block = view.lineBlockAtHeight(top - view.documentTop);
   return view.state.doc.lineAt(block.from).number;
 }
+
+/** Last (mostly) visible line of the view. */
+export function bottomVisibleLine(view: EditorView): number {
+  const bottom = view.scrollDOM.getBoundingClientRect().bottom - 4;
+  const block = view.lineBlockAtHeight(bottom - view.documentTop);
+  return view.state.doc.lineAt(block.from).number;
+}

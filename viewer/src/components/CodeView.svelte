@@ -6,8 +6,16 @@
   import { Compartment, EditorState } from '@codemirror/state';
   import { EditorView } from '@codemirror/view';
   import { onMount, untrack } from 'svelte';
-  import { activeBlock, blockForRange } from '../lib/blocks';
-  import { codeViewExtensions, loadLanguage, setLineMarks, themeExtension, topVisibleLine, type RefSpan } from '../lib/codemirror';
+  import { activeBlock, activeBlockAtBottom, blockForRange } from '../lib/blocks';
+  import {
+    bottomVisibleLine,
+    codeViewExtensions,
+    loadLanguage,
+    setLineMarks,
+    themeExtension,
+    topVisibleLine,
+    type RefSpan,
+  } from '../lib/codemirror';
   import type { StudyData } from '../lib/data';
   import { format, navigate, type LineRange } from '../lib/router';
   import { findUsages, refOffset, resolveName } from '../lib/symbols';
@@ -158,7 +166,11 @@
         if (performance.now() < ignoreScrollUntil || frame) return;
         frame = requestAnimationFrame(() => {
           frame = 0;
-          if (view === v) onActive(activeBlock(blocks, topVisibleLine(v)));
+          if (view !== v) return;
+          const s = v.scrollDOM;
+          const atBottom = s.scrollTop > 0 && s.scrollTop + s.clientHeight >= s.scrollHeight - 2;
+          const top = topVisibleLine(v);
+          onActive(atBottom ? activeBlockAtBottom(blocks, top, bottomVisibleLine(v)) : activeBlock(blocks, top));
         });
       };
       v.scrollDOM.addEventListener('scroll', onScroll, { passive: true });

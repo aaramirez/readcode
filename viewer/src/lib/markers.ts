@@ -28,7 +28,8 @@ const WS = ' \\t\\n\\r\\f\\v'; // regex class body: ASCII whitespace only
 const MARKER_RE = /\[\[(ref|archify):([^\]\n]*)\]\]/g;
 const LINES_RE = new RegExp(`^([^${WS}#:|\\[\\]]*):L([0-9]+)(?:-([0-9]+))?$`);
 const SYMBOL_RE = new RegExp(`^([^${WS}#:|\\[\\]]*)#([^${WS}|\\[\\]#]+)$`);
-const ARCHIFY_RE = new RegExp(`^[^${WS}|\\[\\]:]+$`);
+// Diagram names: no path separators and no ".." (they name diagrams/<name>.html).
+const ARCHIFY_RE = /^(?!.*\.\.)[A-Za-z0-9._-]+$/;
 const FENCE_RE = /^( {0,3})(`{3,}|~{3,})/;
 const BACKTICKS_RE = /`+/g;
 const PARA_SEP_RE = /\n[ \t]*\n/g;
@@ -106,6 +107,11 @@ function maskCode(text: string): string {
   }
   parts.push(maskInline(masked.slice(pos)));
   return parts.join('');
+}
+
+/** True if `name` is a valid archify diagram name (safe to use as diagrams/<name>.html). */
+export function isDiagramName(name: string): boolean {
+  return ARCHIFY_RE.test(name);
 }
 
 /** Parse the body of one marker ("ref" | "archify", text between ":" and "]]"). */

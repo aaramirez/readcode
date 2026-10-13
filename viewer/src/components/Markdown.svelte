@@ -25,15 +25,16 @@
 
   // links.json is cached by StudyData; wait for it so markers don't flash as broken.
   let loaded = $state<{ key: string; links: Links | null } | null>(null);
-  const linksKey = $derived(doc ? `${doc.study}@${doc.sha}` : '');
+  const linksKey = $derived(doc ? `${doc.study}@${doc.sha}@${doc.links ? 'custom:' + doc.docKey : ''}` : '');
   $effect(() => {
     const d = doc;
     const key = linksKey;
     if (!d) return;
-    (d.links ?? d.data.links(d.sha)).then(
-      (links) => (loaded = { key, links }),
-      () => (loaded = { key, links: null }),
-    );
+    // Ignore a promise that resolves after the doc changed (it would never match).
+    const accept = (links: Links | null) => {
+      if (key === linksKey) loaded = { key, links };
+    };
+    (d.links ?? d.data.links(d.sha)).then(accept, () => accept(null));
   });
 
   const html = $derived.by(() => {

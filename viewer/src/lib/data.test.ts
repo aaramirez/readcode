@@ -120,6 +120,9 @@ describe('KbClient', () => {
         { name: 'flujo', broken: false },
       ]);
       expect(s.diagramUrl(SHA, 'flujo')).toBe(`kb/fixture/snapshots/${SHA}/diagrams/flujo.html`);
+      expect(s.diagramUrl(SHA, '../x')).toBeNull();
+      expect(s.diagramUrl(SHA, 'a/b')).toBeNull();
+      expect(s.diagramUrl(SHA, String.raw`a\b`)).toBeNull();
     });
 
     it('shares one links.json request between both lists', async () => {

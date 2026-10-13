@@ -717,6 +717,106 @@
     ]
   },
   {
+    "name": "archify: nombres sin rutas ni ..",
+    "input": "[[archify:../x]] [[archify:a/b]] [[archify:a\\b]] [[archify:a..b]] [[archify:..]] [[archify:a&b]] [[archify:ñandú]] [[archify:a#b]]",
+    "expected": [
+      {
+        "kind": "invalid",
+        "raw": "[[archify:../x]]",
+        "path": null,
+        "symbol": null,
+        "range": null,
+        "label": null
+      },
+      {
+        "kind": "invalid",
+        "raw": "[[archify:a/b]]",
+        "path": null,
+        "symbol": null,
+        "range": null,
+        "label": null
+      },
+      {
+        "kind": "invalid",
+        "raw": "[[archify:a\\b]]",
+        "path": null,
+        "symbol": null,
+        "range": null,
+        "label": null
+      },
+      {
+        "kind": "invalid",
+        "raw": "[[archify:a..b]]",
+        "path": null,
+        "symbol": null,
+        "range": null,
+        "label": null
+      },
+      {
+        "kind": "invalid",
+        "raw": "[[archify:..]]",
+        "path": null,
+        "symbol": null,
+        "range": null,
+        "label": null
+      },
+      {
+        "kind": "invalid",
+        "raw": "[[archify:a&b]]",
+        "path": null,
+        "symbol": null,
+        "range": null,
+        "label": null
+      },
+      {
+        "kind": "invalid",
+        "raw": "[[archify:ñandú]]",
+        "path": null,
+        "symbol": null,
+        "range": null,
+        "label": null
+      },
+      {
+        "kind": "invalid",
+        "raw": "[[archify:a#b]]",
+        "path": null,
+        "symbol": null,
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "archify: nombres válidos",
+    "input": "[[archify:v1.2_flujo-X]] [[archify:.]] [[archify:a.b.c]]",
+    "expected": [
+      {
+        "kind": "archify",
+        "raw": "[[archify:v1.2_flujo-X]]",
+        "path": null,
+        "symbol": "v1.2_flujo-X",
+        "range": null,
+        "label": null
+      },
+      {
+        "kind": "archify",
+        "raw": "[[archify:.]]",
+        "path": null,
+        "symbol": ".",
+        "range": null,
+        "label": null
+      },
+      {
+        "kind": "archify",
+        "raw": "[[archify:a.b.c]]",
+        "path": null,
+        "symbol": "a.b.c",
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
     "name": "caracteres astrales antes del marcador",
     "input": "😀 `😀` [[ref:a.py#f|😀]]",
     "expected": [

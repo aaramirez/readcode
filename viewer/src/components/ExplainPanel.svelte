@@ -1,6 +1,7 @@
 <script lang="ts">
   // Right pane: file explanation (summary + block cards synced with the code)
   // or a directory summary.
+  import { tick } from 'svelte';
   import type { StudyData } from '../lib/data';
   import { format } from '../lib/router';
   import type { Block, Tree } from '../lib/types';
@@ -46,14 +47,26 @@
   $effect(() => {
     const id = activeId;
     const p = panel;
-    if (!id || !p) return;
-    const card = p.querySelector<HTMLElement>(`[data-block="${CSS.escape(id)}"]`);
-    if (!card) return;
-    const pr = p.getBoundingClientRect();
-    const cr = card.getBoundingClientRect();
-    if (cr.top < pr.top || cr.top > pr.bottom - 48) {
-      p.scrollTo({ top: p.scrollTop + cr.top - pr.top - 8, behavior: 'smooth' });
-    }
+    const ex = explain;
+    if (!id || !p || !ex) return;
+    // The cards exist only once the explanation has loaded and rendered.
+    let cancelled = false;
+    ex.then(() => tick()).then(
+      () => {
+        if (cancelled) return;
+        const card = p.querySelector<HTMLElement>(`[data-block="${CSS.escape(id)}"]`);
+        if (!card) return;
+        const pr = p.getBoundingClientRect();
+        const cr = card.getBoundingClientRect();
+        if (cr.top < pr.top || cr.top > pr.bottom - 48) {
+          p.scrollTo({ top: p.scrollTop + cr.top - pr.top - 8, behavior: 'smooth' });
+        }
+      },
+      () => {},
+    );
+    return () => {
+      cancelled = true;
+    };
   });
 
   function cardClick(e: MouseEvent, b: Block) {

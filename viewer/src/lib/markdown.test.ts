@@ -21,6 +21,9 @@ const links: Links = {
       { raw: '[[ref:app/x.py#gone]]', kind: 'symbol', status: 'broken' },
       { raw: '[[archify:missing]]', kind: 'archify', status: 'broken', target: 'diagrams/missing.html' },
       { raw: '[[archify:arquitectura]]', kind: 'archify', status: 'exact', target: 'diagrams/arquitectura.html' },
+      // a hostile/garbled links.json: unsafe archify name marked exact, target with quotes and markup
+      { raw: '[[archify:../x]]', kind: 'archify', status: 'exact', target: 'diagrams/../x.html' },
+      { raw: '[[ref:evil.py#f]]', kind: 'symbol', status: 'exact', target: 'a"b<c>.py', range: [1, 2] },
     ],
   },
 };
@@ -107,5 +110,29 @@ describe('renderMarkdown markers', () => {
     const html = renderMarkdown('| a | b |\n|---|---|\n| x | [[ref:app/main.py#main]] |\n\n- [[ref:#process]]', ctx);
     expect(html).toContain('<td><a class="rc-ref rc-code"');
     expect(html).toContain('<li><button');
+  });
+
+  it('renders an archify marker missing from links.json as broken, not as an iframe', () => {
+    const html = renderMarkdown('[[archify:otro]]', ctx);
+    expect(html).not.toContain('<iframe');
+    expect(html).toContain('Diagrama no encontrado: <code>otro</code>');
+  });
+
+  it('never embeds path-like archify names, even if links.json says exact', () => {
+    for (const src of ['[[archify:../x]]', '[[archify:a/b]]', String.raw`[[archify:a\b]]`, '[[archify:a..b]]']) {
+      const html = renderMarkdown(src, ctx);
+      expect(html, src).not.toContain('<iframe');
+      expect(html, src).not.toContain('href=');
+    }
+    // invalid by grammar -> greyed invalid marker
+    expect(renderMarkdown('[[archify:../x]]', ctx)).toContain('title="marcador inválido">[[archify:../x]]</span>');
+  });
+
+  it('escapes links.json targets in href and title, and invalid archify names', () => {
+    const html = renderMarkdown('[[ref:evil.py#f]]', ctx);
+    expect(html).toContain('href="#/fixture/074ec965eabffb43a0224ef9f1426515d2818975/f/a%22b%3Cc%3E.py:L1-2"');
+    expect(html).toContain('title="a&quot;b&lt;c&gt;.py:L1-2"');
+    expect(html).not.toMatch(/<c>/);
+    expect(renderMarkdown('[[archify:a&b]]', ctx)).toContain('>[[archify:a&amp;b]]</span>');
   });
 });

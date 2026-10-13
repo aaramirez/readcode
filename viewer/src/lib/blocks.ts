@@ -29,3 +29,17 @@ export function blockForRange(blocks: readonly Block[], start: number, end: numb
   const exact = blocks.find((b) => b.range[0] === start && b.range[1] === end);
   return exact ? exact.id : activeBlock(blocks, start);
 }
+
+/**
+ * Block to activate when the code is scrolled to the very bottom (the tail
+ * blocks of a file can never reach the top line): the last block whose start
+ * line is visible (topLine..bottomLine), else the usual activeBlock(topLine).
+ */
+export function activeBlockAtBottom(blocks: readonly Block[], topLine: number, bottomLine: number): string | null {
+  let best: Block | null = null;
+  for (const b of blocks) {
+    if (b.range[0] < topLine || b.range[0] > bottomLine) continue;
+    if (!best || b.range[0] > best.range[0] || (b.range[0] === best.range[0] && b.range[1] < best.range[1])) best = b;
+  }
+  return best ? best.id : activeBlock(blocks, topLine);
+}

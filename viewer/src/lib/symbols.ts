@@ -89,7 +89,19 @@ export function refOffset(lineText: string, col: number, name: string): number |
     const c = lineText.codePointAt(off)!;
     off += c > 0xffff ? 2 : 1;
   }
-  if (lineText.startsWith(name, off)) return off;
-  const found = lineText.indexOf(name);
-  return found < 0 ? null : found;
+  if (lineText.startsWith(name, off) && isWholeWord(lineText, off, name.length)) return off;
+  // Fallback: the whole-word occurrence nearest to the declared column.
+  let best: number | null = null;
+  for (let i = lineText.indexOf(name); i >= 0; i = lineText.indexOf(name, i + 1)) {
+    if (isWholeWord(lineText, i, name.length) && (best === null || Math.abs(i - off) < Math.abs(best - off))) best = i;
+  }
+  return best;
+}
+
+const IDENT_CHAR = /[\p{L}\p{N}_$]/u;
+
+function isWholeWord(text: string, at: number, len: number): boolean {
+  const before = at > 0 ? String.fromCodePoint(text.codePointAt(at - 1)!) : '';
+  const after = at + len < text.length ? String.fromCodePoint(text.codePointAt(at + len)!) : '';
+  return !IDENT_CHAR.test(before) && !IDENT_CHAR.test(after);
 }

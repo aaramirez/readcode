@@ -4,6 +4,7 @@
 // HTTP 404 resolves to null; any other failure throws (and is evicted from the
 // cache so a later call can retry).
 
+import { isDiagramName } from './markers';
 import type {
   Catalog,
   Changes,
@@ -166,14 +167,15 @@ export class StudyData {
       for (const m of markers) {
         if (m.kind !== 'archify') continue;
         const name = ARCHIFY_RAW.exec(m.raw)?.[1];
-        if (name) broken.set(name, (broken.get(name) ?? true) && m.status === 'broken');
+        if (name) broken.set(name, (broken.get(name) ?? true) && !(m.status === 'exact' && isDiagramName(name)));
       }
     }
     return [...broken.keys()].sort().map((name) => ({ name, broken: broken.get(name)! }));
   }
 
-  /** Relative URL of an archify diagram page (for an iframe). */
-  diagramUrl(sha: string, name: string): string {
+  /** Relative URL of an archify diagram page (for an iframe); null for an unsafe name. */
+  diagramUrl(sha: string, name: string): string | null {
+    if (!isDiagramName(name)) return null;
     return this.kb.url(this.snap(sha, `diagrams/${encodeURIComponent(name)}.html`));
   }
 

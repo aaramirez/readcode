@@ -33,13 +33,13 @@
           <div class="empty">Selecciona un diagrama.</div>
         {:else if !selected}
           <div class="empty">El diagrama <code>{name}</code> no está referenciado en este commit.</div>
-        {:else if selected.broken}
+        {:else if selected.broken || !data.diagramUrl(sha, selected.name)}
           <div class="error">
             El diagrama <code>{name}</code> está referenciado pero no existe <code>diagrams/{name}.html</code> en este commit
             (marcador <code>[[archify:{name}]]</code> roto).
           </div>
         {:else}
-          {@const url = data.diagramUrl(sha, selected.name)}
+          {@const url = data.diagramUrl(sha, selected.name) ?? ''}
           <div class="toolbar">
             <strong>{selected.name}</strong>
             <a href={url} target="_blank" rel="noopener">abrir en pestaña</a>

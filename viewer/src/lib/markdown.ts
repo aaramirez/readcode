@@ -10,12 +10,12 @@
 //                       ambiguous -> <button class="rc-ref rc-ambiguous" data-candidates="[{label, href}]">
 //                       otherwise -> <span class="rc-ref rc-broken" title="referencia rota">
 //   [[archify:name]] -> sandboxed, lazy iframe + "abrir en pestaña" link
-//                       (an error note when links.json marks it broken)
+//                       only when links.json resolves it as exact; otherwise an error note
 //   ```mermaid       -> <div class="rc-mermaid"><pre class="rc-mermaid-src">source</pre></div>,
 //                       rendered later by lib/mermaid.ts (the <pre> is the fallback).
 
 import MarkdownIt, { type Env as MdEnv, type StateInline, type Token } from 'markdown-it';
-import { markerAt, type ParsedMarker } from './markers';
+import { isDiagramName, markerAt, type ParsedMarker } from './markers';
 import { format } from './router';
 import type { LinkMarker, Links } from './types';
 
@@ -27,8 +27,8 @@ export interface MarkdownContext {
   links: Links | null;
   /** Key of the doc in links.json, e.g. "explain/app/main.py.json", "overview.md". */
   docKey: string;
-  /** URL of diagrams/<name>.html. */
-  diagramUrl: (name: string) => string;
+  /** URL of diagrams/<name>.html; null for an unsafe name. */
+  diagramUrl: (name: string) => string | null;
 }
 
 export interface Candidate {
@@ -86,10 +86,12 @@ function renderMarker(m: ParsedMarker, env: Env): string {
   if (m.kind === 'invalid') return broken(m.raw, 'rc-ref', 'marcador inválido');
   if (m.kind === 'archify') {
     const name = m.symbol ?? '';
-    if (!ctx || entry?.status === 'broken') {
+    // Embed only diagrams links.json resolved (exact) and whose name is safe.
+    const rawUrl = ctx && entry?.status === 'exact' && isDiagramName(name) ? ctx.diagramUrl(name) : null;
+    if (rawUrl === null) {
       return `<span class="rc-archify rc-archify-broken">Diagrama no encontrado: <code>${esc(name)}</code></span>`;
     }
-    const url = esc(ctx.diagramUrl(name));
+    const url = esc(rawUrl);
     return (
       `<span class="rc-archify">` +
       `<iframe sandbox="allow-scripts" loading="lazy" src="${url}" title="Diagrama ${esc(name)}"></iframe>` +
