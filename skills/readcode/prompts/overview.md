@@ -114,8 +114,10 @@ archivo. Tu mensaje incluye la ruta de `archify.mjs`.
    indique un checkout del repo exactamente en `SHA`: el working copy puede estar en otro commit
    y la evidencia no casaría) y repara hasta que pase, dentro de los límites
    de reparación de Archify.
-4. Copia **solo** dos archivos a `<SNAP>/diagrams/`: el HTML como `<nombre>.html` y el candidato
-   como `<nombre>.json` (la fuente, para poder regenerarlo). Nada más.
+4. Instala el diagrama en la KB con
+   `readcode archify <KB> <STUDY> <SHA> <nombre> <tipo> candidate.json`: renderiza el candidato
+   y escribe **solo** `<SNAP>/diagrams/<nombre>.html` y `<nombre>.json` (la fuente, para poder
+   regenerarlo). No copies nada más. (Termina con código 2 si falta `node` o Archify.)
 5. Si Archify no pasa tras sus reparaciones, no copies nada y responde con el error; el
    orquestador lo anotará.
 

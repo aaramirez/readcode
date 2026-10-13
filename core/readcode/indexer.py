@@ -48,6 +48,10 @@ class _Lang:
     query: object | None  # None -> generic fallback (indexed, but no symbols)
 
 
+# Pack names whose grammar could not be loaded (typically: download failed offline).
+LOAD_FAILURES: set[str] = set()
+
+
 @lru_cache(maxsize=None)
 def _load(pack_name: str) -> _Lang | None:
     """Parser language + combined query for ``pack_name``; None if unsupported."""
@@ -59,6 +63,7 @@ def _load(pack_name: str) -> _Lang | None:
             return None
         language = tslp.get_language(pack_name)
     except Exception:  # unknown language, grammar download/load failure
+        LOAD_FAILURES.add(pack_name)
         return None
     parts: list[str] = []
     for name in TAGS_FROM.get(pack_name, [pack_name]):
@@ -329,6 +334,9 @@ def index_snapshot(kb: Path | str, study: str, sha: str) -> dict:
         if result is not None:
             files[entry["path"]] = result
 
+    if LOAD_FAILURES:
+        print(f"aviso: no se pudo cargar la gramática de {', '.join(sorted(LOAD_FAILURES))}; "
+              "si falta red, ejecuta `readcode grammars --fetch` y vuelve a indexar", file=sys.stderr)
     symbols = {"schemaVersion": 1, "sha": tree["sha"], "files": files}
     for kind, data in (("symbols", symbols), ("tree", tree)):
         errors = validate(kind, data)

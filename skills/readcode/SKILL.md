@@ -180,8 +180,9 @@ Solo si `plan.json` → `overview` es `true` (si el overview se heredó, salta a
      aporta algo que la arquitectura no muestra (un pipeline de datos, un request típico).
    - Un subagente por diagrama, en paralelo, plantilla `overview.md` (sección *Diagrama
      Archify*), `Tarea`: `diagrama <nombre> de tipo <tipo>` y la ruta de `archify.mjs`.
-     El subagente trabaja en un directorio temporal fuera de la KB y copia solo
-     `<nombre>.html` y su fuente `<nombre>.json` a `<SNAP>/diagrams/`.
+     El subagente trabaja en un directorio temporal fuera de la KB y lo instala con
+     `readcode archify <KB> <STUDY> <SHA> <nombre> <tipo> candidate.json`, que escribe solo
+     `<nombre>.html` y su fuente `<nombre>.json` en `<SNAP>/diagrams/`.
    - Si `diagrams/` ya tiene diagramas heredados y la estructura de directorios no cambió,
      consérvalos.
    - Sin Archify: el subagente del overview escribe `diagrams/arquitectura.mmd` (Mermaid) en su

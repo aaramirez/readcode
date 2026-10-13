@@ -310,3 +310,43 @@ def mark(
         typer.echo(f"error: {exc}", err=True)
         raise typer.Exit(1)
     typer.echo("study.json actualizado")
+
+
+@app.command()
+def archify(
+    kb_dir: Annotated[Path, typer.Argument(help="Directorio de la base de conocimiento.")],
+    study: Annotated[str, typer.Argument(help="Nombre del estudio.")],
+    sha: Annotated[str, typer.Argument(help="SHA del snapshot (completo o prefijo único).")],
+    name: Annotated[str, typer.Argument(help="Nombre del diagrama ([A-Za-z0-9._-]).")],
+    diagram_type: Annotated[str, typer.Argument(
+        metavar="TYPE", help="Tipo Archify (architecture, dataflow, sequence...).")],
+    input_json: Annotated[Path, typer.Argument(help="JSON de entrada para Archify.")],
+) -> None:
+    """Renderiza un diagrama con Archify: diagrams/<name>.html y .json. Exit 2 si falta node o Archify."""
+    from readcode.archify_cmd import ArchifyError, render_diagram
+
+    try:
+        out = render_diagram(kb_dir, study, sha, name, diagram_type, input_json)
+    except ArchifyError as exc:
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(2)
+    typer.echo(f"Diagrama escrito en {out}")
+
+
+@app.command()
+def grammars(
+    langs: Annotated[Optional[list[str]], typer.Argument(help="Gramáticas (todas si se omite).")] = None,
+    fetch: Annotated[bool, typer.Option("--fetch", help="Descarga las gramáticas indicadas.")] = False,
+) -> None:
+    """Lista las gramáticas tree-sitter y si están en caché; --fetch las descarga."""
+    from readcode.grammars_cmd import GrammarsError, fetch_grammars, grammar_status
+
+    try:
+        if fetch:
+            typer.echo(f"Gramáticas disponibles: {', '.join(fetch_grammars(langs or None))}")
+            return
+        for lang, cached in grammar_status(langs or None):
+            typer.echo(f"{lang}\t{'en caché' if cached else 'falta (readcode grammars --fetch)'}")
+    except GrammarsError as exc:
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(1)
