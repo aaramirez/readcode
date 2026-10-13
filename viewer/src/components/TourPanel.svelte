@@ -33,7 +33,7 @@
   );
 </script>
 
-<div class="tour">
+<div class="tour" data-testid="tour-panel">
   <div class="head">
     <span class="tour-title">{tour.title}</span>
     <a class="exit" href={exitHref} title="Salir del tour y seguir en este archivo">salir del tour ✕</a>

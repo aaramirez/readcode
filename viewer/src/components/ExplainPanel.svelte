@@ -87,7 +87,7 @@
   }
 </script>
 
-<div class="panel" bind:this={panel}>
+<div class="panel" data-testid="explain-panel" bind:this={panel}>
   {#if !target}
     <div class="empty">Selecciona un archivo o directorio para ver su explicación.</div>
   {:else if target.kind === 'dir'}

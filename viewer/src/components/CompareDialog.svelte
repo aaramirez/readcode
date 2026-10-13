@@ -20,13 +20,18 @@
   const snapshots = $derived([...study.snapshots].sort((x, y) => Date.parse(x.date) - Date.parse(y.date)));
 
   // initial picks only: later prop changes must not reset the user's choice
-  function initialA(): string {
+  // A = the snapshot before the current one, B = the current one; when the current
+  // snapshot is the oldest, A = current and B = the next one (never A = B by default).
+  function initialPair(): { a: string; b: string } {
     const list = [...study.snapshots].sort((x, y) => Date.parse(x.date) - Date.parse(y.date));
     const i = list.findIndex((s) => s.sha === sha);
-    return (i > 0 ? list[i - 1] : list[0])?.sha ?? '';
+    if (i > 0) return { a: list[i - 1].sha, b: sha };
+    if (i === 0 && list.length > 1) return { a: sha, b: list[1].sha };
+    return { a: list[0]?.sha ?? '', b: sha };
   }
-  let a = $state(untrack(initialA));
-  let b = $state(untrack(() => sha));
+  const pair = untrack(initialPair);
+  let a = $state(pair.a);
+  let b = $state(pair.b);
 
   // which B's have a generated diff for the chosen A
   let available = $state<{ a: string; has: Set<string> } | null>(null);

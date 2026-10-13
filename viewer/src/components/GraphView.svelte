@@ -185,7 +185,7 @@
   });
 </script>
 
-<div class="graph">
+<div class="graph" data-testid="graph-view">
   {#if model?.key !== key}
     <div class="empty">Cargando grafo…</div>
   {:else if model.error}

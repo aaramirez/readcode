@@ -265,7 +265,7 @@
 
 <div class="code">
   <div class="header">
-    <span class="path">{path}</span>
+    <span class="path" data-testid="code-path">{path}</span>
     {#if file}<span class="meta">{file.language ?? 'texto'} · {file.lines} líneas</span>{/if}
     {#if current?.symbols?.files[path]}
       <span class="hint">Ctrl+clic en un identificador: ir a la definición · ◇ en el margen: ver usos</span>

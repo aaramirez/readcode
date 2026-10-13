@@ -377,7 +377,8 @@
   onMount(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'k') {
-        if (!data || !sha || !tree) return;
+        // the compare dialog is modal (top layer): the palette would open underneath it
+        if (!data || !sha || !tree || compareOpen) return;
         e.preventDefault();
         searchOpen = true;
         return;
@@ -592,7 +593,8 @@
                   />
                 {/if}
               {:else}
-                <ToursView {data} study={study.name} {sha} />
+                <!-- the list has no route: opening the tour already in the hash causes no hashchange -->
+                <ToursView {data} study={study.name} {sha} onStart={() => (tourListForced = false)} />
               {/if}
             {:else if tab === 'code'}
               {#if currentCode?.kind === 'dir' && tree}

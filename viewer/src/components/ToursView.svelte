@@ -5,7 +5,15 @@
   import type { Tour } from '../lib/types';
   import Markdown from './Markdown.svelte';
 
-  let { data, study, sha }: { data: StudyData; study: string; sha: string } = $props();
+  interface Props {
+    data: StudyData;
+    study: string;
+    sha: string;
+    /** A tour link was clicked (its hash may equal the current one: no hashchange). */
+    onStart?: (id: string) => void;
+  }
+
+  let { data, study, sha, onStart }: Props = $props();
 
   const list = $derived(
     data.tours(sha).then((entries) =>
@@ -14,7 +22,7 @@
   );
 </script>
 
-<div class="tours">
+<div class="tours" data-testid="tours">
   {#await list}
     <div class="empty">Cargando…</div>
   {:then tours}
@@ -25,11 +33,11 @@
         <section class="card">
           {#if t.tour}
             <header>
-              <a class="title" href={format({ kind: 'tour', study, sha, id: t.id, step: 1 })}>{t.tour.title}</a>
+              <a class="title" href={format({ kind: 'tour', study, sha, id: t.id, step: 1 })} onclick={() => onStart?.(t.id)}>{t.tour.title}</a>
               <span class="chip">{t.tour.steps.length} {t.tour.steps.length === 1 ? 'paso' : 'pasos'}</span>
             </header>
             <Markdown source={t.tour.description} doc={{ data, study, sha, docKey: `tours/${t.id}.json` }} />
-            <a class="start" href={format({ kind: 'tour', study, sha, id: t.id, step: 1 })}>Empezar ▶</a>
+            <a class="start" data-testid="tour-start" href={format({ kind: 'tour', study, sha, id: t.id, step: 1 })} onclick={() => onStart?.(t.id)}>Empezar ▶</a>
           {:else}
             <header><span class="title">{t.id}</span></header>
             <div class="empty">No se encontró tours/{t.id}.json.</div>

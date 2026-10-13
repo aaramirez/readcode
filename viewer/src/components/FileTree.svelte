@@ -65,7 +65,7 @@
   });
 </script>
 
-<div class="tree">
+<div class="tree" data-testid="file-tree">
   <div class="tools">
     <input type="search" placeholder="Filtrar archivos…" bind:value={query} aria-label="Filtrar archivos" />
     {#if !diffMode}

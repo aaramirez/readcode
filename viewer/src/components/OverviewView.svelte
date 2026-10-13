@@ -7,7 +7,7 @@
   const overview = $derived(data.overview(sha));
 </script>
 
-<div class="overview">
+<div class="overview" data-testid="overview">
   {#await overview}
     <div class="empty">Cargando…</div>
   {:then text}

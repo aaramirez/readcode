@@ -45,7 +45,7 @@
   });
 </script>
 
-<div class="panel">
+<div class="panel" data-testid="diff-panel">
   {#if !change}
     <h2>Cambios {a.slice(0, 7)} → {b.slice(0, 7)}</h2>
     <p class="stats">
