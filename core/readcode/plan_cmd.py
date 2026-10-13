@@ -107,6 +107,39 @@ def plan_snapshot(kb: Path | str, study: str, sha: str, batch_lines: int = 1500)
 
     all_dirs = {d for f in tree["files"] for d in _parents(f["path"])} | {""}
     dirty = {d for f in pending for d in _parents(f["path"])}
+    reused_dirs = 0
+    changed_set = False
+    if other is not None:
+        other_dir = kbio.snapshot_dir(sdir, other)
+        other_tree = other_dir / "tree.json"
+        old_paths = [f["path"] for f in kbio.read_json(other_tree)["files"]] if other_tree.is_file() else []
+        new_paths = [f["path"] for f in tree["files"]]
+        changed_set = set(old_paths) != set(new_paths)
+        old_sets: dict[str, set[str]] = {}
+        new_sets: dict[str, set[str]] = {}
+        for paths, sets in ((old_paths, old_sets), (new_paths, new_sets)):
+            for path in paths:
+                for d in _parents(path):
+                    sets.setdefault(d, set()).add(path)
+        for d in all_dirs:
+            if d in dirty or old_sets.get(d) != new_sets.get(d):
+                continue
+            mine, theirs = kbio.dir_summary_path(snap, d), kbio.dir_summary_path(other_dir, d)
+            if not mine.is_file() and theirs.is_file():
+                kbio.atomic_write_bytes(mine, theirs.read_bytes())
+                reused_dirs += 1
+        for sub in ("tours", "diagrams"):
+            src = other_dir / sub
+            if src.is_dir():
+                for f in src.rglob("*"):
+                    dest = snap / sub / f.relative_to(src)
+                    if f.is_file() and not dest.exists():
+                        kbio.atomic_write_bytes(dest, f.read_bytes())
+        if not pending and not changed_set and not (snap / "overview.md").is_file():
+            ov = other_dir / "overview.md"
+            if ov.is_file():
+                kbio.atomic_write_bytes(snap / "overview.md", ov.read_bytes())
+
     pending_dirs = [d for d in all_dirs if d in dirty or not kbio.dir_summary_path(snap, d).is_file()]
     pending_dirs.sort(key=lambda d: (-(len(d.split("/")) if d else 0), d))
 
@@ -117,6 +150,7 @@ def plan_snapshot(kb: Path | str, study: str, sha: str, batch_lines: int = 1500)
     result = {
         "sha": sha,
         "reused": reused,
+        "reusedDirs": reused_dirs,
         "batches": _batches(pending, batch_lines),
         "dirs": pending_dirs,
         "overview": overview_pending,
@@ -130,7 +164,7 @@ def plan_snapshot(kb: Path | str, study: str, sha: str, batch_lines: int = 1500)
 def summarize(plan: dict) -> str:
     nfiles = sum(len(b["files"]) for b in plan["batches"])
     return (
-        f"Plan {plan['sha']}: {plan['reused']} explicaciones reutilizadas, "
+        f"Plan {plan['sha']}: {plan['reused']} explicaciones y {plan['reusedDirs']} directorios reutilizados, "
         f"{nfiles} archivos pendientes en {len(plan['batches'])} lotes, "
         f"{len(plan['dirs'])} directorios pendientes, "
         f"overview={'pendiente' if plan['overview'] else 'ok'}, "

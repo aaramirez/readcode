@@ -8,7 +8,7 @@ from readcode import graph_cmd, kbio
 from readcode.cli import app
 from readcode.diff_cmd import DiffError, compute_hunks, diff_snapshots
 from readcode.graph_cmd import graph_snapshot
-from readcode.plan_cmd import plan_snapshot
+from readcode.plan_cmd import _parents, plan_snapshot
 from readcode.schemas import validate
 
 runner = CliRunner()
@@ -42,14 +42,9 @@ def fake_explain(sd, sha, only=None):
 
 def fake_dirs(sd, sha):
     snap = kbio.snapshot_dir(sd, sha)
-    for d in {x for f in tree(sd, sha)["files"] for x in plan_parents(f["path"])}:
+    for d in {x for f in tree(sd, sha)["files"] for x in _parents(f["path"])}:
         kbio.atomic_write_json(kbio.dir_summary_path(snap, d),
                                {"schemaVersion": 1, "path": d, "summary": "s", "children": []})
-
-
-def plan_parents(path):
-    from readcode.plan_cmd import _parents
-    return _parents(path)
 
 
 def test_path_helpers(tmp_path):
@@ -89,6 +84,40 @@ def test_plan_reuse_and_pending(study):
     assert plan["overview"] and plan["tours"]
 
 
+def test_plan_inherits_dirs_tours_diagrams(study):
+    kb, sd, sha1, sha2 = study
+    fake_explain(sd, sha1)
+    fake_dirs(sd, sha1)
+    s1 = kbio.snapshot_dir(sd, sha1)
+    kbio.atomic_write_text(s1 / "overview.md", "# o\n")
+    kbio.atomic_write_json(s1 / "tours" / "t.json", {"id": "t"})
+    kbio.atomic_write_text(s1 / "diagrams" / "a.mmd", "graph TD\n")
+    plan = plan_snapshot(kb, "demo", sha2)
+    s2 = kbio.snapshot_dir(sd, sha2)
+    all_dirs = {x for f in tree(sd, sha2)["files"] for x in _parents(f["path"])}
+    affected = {"app/services", "app", "web/src", "web", "db", ""}
+    assert set(plan["dirs"]) == affected
+    assert plan["reusedDirs"] == len(all_dirs) - len(affected) > 0
+    assert (s2 / "dirs" / "worker.json").is_file()
+    assert not (s2 / "dirs" / "db.json").exists()
+    assert plan["overview"] and not (s2 / "overview.md").exists()
+    assert plan["tours"] is False and (s2 / "tours" / "t.json").is_file()
+    assert (s2 / "diagrams" / "a.mmd").is_file()
+
+
+def test_plan_same_tree_inherits_overview(study):
+    kb, sd, sha1, _ = study
+    fake_explain(sd, sha1)
+    fake_dirs(sd, sha1)
+    kbio.atomic_write_text(kbio.snapshot_dir(sd, sha1) / "overview.md", "# o\n")
+    sha2 = study[3]
+    snap2 = kbio.snapshot_dir(sd, sha2)
+    kbio.atomic_write_json(snap2 / "tree.json", {**tree(sd, sha1), "sha": sha2})
+    plan = plan_snapshot(kb, "demo", sha2)
+    assert plan["overview"] is False and (snap2 / "overview.md").is_file()
+    assert plan["batches"] == [] and plan["dirs"] == []
+
+
 def test_plan_done(study):
     kb, sd, sha1, _ = study
     fake_explain(sd, sha1)
@@ -97,7 +126,7 @@ def test_plan_done(study):
     kbio.atomic_write_text(snap / "overview.md", "# o\n")
     kbio.atomic_write_json(snap / "tours" / "t.json", {})
     plan = plan_snapshot(kb, "demo", sha1)
-    assert plan == {"sha": sha1, "reused": 0, "batches": [], "dirs": [], "overview": False,
+    assert plan == {"sha": sha1, "reused": 0, "reusedDirs": 0, "batches": [], "dirs": [], "overview": False,
                     "tours": False, "done": True}
 
 

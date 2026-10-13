@@ -16,7 +16,7 @@ class DiffError(RuntimeError):
 
 
 def _lines(sdir: Path, blob: str) -> list[str]:
-    return kbio.blob_path(sdir, blob).read_bytes().decode("utf-8").splitlines(keepends=True)
+    return kbio.blob_path(sdir, blob).read_bytes().decode("utf-8", errors="replace").splitlines(keepends=True)
 
 
 def _range(start: int, end: int) -> list[int] | None:
