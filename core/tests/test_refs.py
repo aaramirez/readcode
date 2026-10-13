@@ -213,3 +213,101 @@ def test_repo_tier_candidates_sorted():
     r = resolve(one("[[ref:#p]]"), "cur.py", TREE, syms)
     assert [c for c in r.candidates] == [("b.py", (2, 2)), ("b.py", (9, 9)),
                                          ("z.py", (2, 2)), ("z.py", (9, 9))]
+
+
+# ------------------------------------------------------------------ Go tiers
+
+
+def _d(name, rng=(1, 2)):
+    return {"name": name, "kind": "function", "range": list(rng)}
+
+
+def _f(*names, imports=()):
+    return {"defs": [_d(n) for n in names], "refs": [], "imports": list(imports)}
+
+
+GO_SYMS = {"files": {
+    "internal/app/a.go": _f("Run", imports=[{"module": "x/internal/util", "line": 3,
+                                             "resolved": None, "resolvedDir": "internal/util"}]),
+    "internal/app/b.go": _f("Foo"),
+    "internal/app/b_test.go": _f("TestHelper", "OnlyInTest"),
+    "internal/app/c_test.go": _f("Use"),
+    "internal/app/sub/s.go": _f("InSub"),
+    "internal/util/u.go": _f("Bar", "Foo2"),
+    "internal/util/u_test.go": _f("UtilTest"),
+    "other/o.go": _f("Foo", "Bar", "InSub", "OnlyInTest", "UtilTest"),
+}}
+
+
+def go_res(text, cur):
+    return resolve(one(text), cur, {"files": []}, GO_SYMS)
+
+
+def test_go_same_package_beats_other_package():
+    r = go_res("[[ref:#Foo]]", "internal/app/a.go")
+    assert (r.status, r.target) == ("exact", "internal/app/b.go")
+
+
+def test_go_imported_package_beats_repo():
+    r = go_res("[[ref:#Bar]]", "internal/app/a.go")
+    assert (r.status, r.target) == ("exact", "internal/util/u.go")
+
+
+def test_go_subdir_is_not_same_package():
+    r = go_res("[[ref:#InSub]]", "internal/app/a.go")
+    assert (r.status, r.target) == ("ambiguous", None)
+    assert {c[0] for c in r.candidates} == {"internal/app/sub/s.go", "other/o.go"}
+
+
+def test_go_test_files_excluded_for_non_test_current():
+    # tests are skipped in the package tiers, so the match falls to the repo tier
+    # (where every file counts) and is ambiguous with other/o.go
+    r = go_res("[[ref:#OnlyInTest]]", "internal/app/a.go")
+    assert r.status == "ambiguous"
+    assert {c[0] for c in r.candidates} == {"internal/app/b_test.go", "other/o.go"}
+    r = go_res("[[ref:#UtilTest]]", "internal/app/a.go")
+    assert {c[0] for c in r.candidates} == {"internal/util/u_test.go", "other/o.go"}
+
+
+def test_go_test_files_included_for_test_current():
+    r = go_res("[[ref:#OnlyInTest]]", "internal/app/c_test.go")
+    assert (r.status, r.target) == ("exact", "internal/app/b_test.go")
+    r = go_res("[[ref:#Foo]]", "internal/app/c_test.go")
+    assert (r.status, r.target) == ("exact", "internal/app/b.go")
+    syms = {"files": {**GO_SYMS["files"], "internal/app/c_test.go": _f(
+        "Use", imports=[{"module": "m", "line": 1, "resolved": None, "resolvedDir": "internal/util"}])}}
+    r = resolve(one("[[ref:#UtilTest]]"), "internal/app/c_test.go", {"files": []}, syms)
+    assert (r.status, r.target) == ("exact", "internal/util/u_test.go")
+
+
+def test_go_repo_fallback_and_broken():
+    assert go_res("[[ref:#Foo2]]", "other/o.go").target == "internal/util/u.go"
+    assert go_res("[[ref:#Nope]]", "other/o.go").status == "broken"
+
+
+def test_go_root_package_files():
+    syms = {"files": {"main.go": _f("Main"), "x.go": _f("Helper"), "d/y.go": _f("Helper")}}
+    r = resolve(one("[[ref:#Helper]]"), "main.go", {"files": []}, syms)
+    assert (r.status, r.target) == ("exact", "x.go")
+
+
+def test_non_go_ignores_resolved_dir_and_same_dir():
+    syms = {"files": {
+        "pkg/a.java": _f("Foo", imports=[{"module": "m", "line": 1, "resolved": "lib/B.java"}]),
+        "pkg/c.java": _f("Same"), "lib/B.java": _f("Bee"), "z/Same.java": _f("Same")}}
+    assert resolve(one("[[ref:#Bee]]"), "pkg/a.java", {"files": []}, syms).target == "lib/B.java"
+    r = resolve(one("[[ref:#Same]]"), "pkg/a.java", {"files": []}, syms)
+    assert r.status == "ambiguous"  # no same-directory tier outside Go
+    syms2 = {"files": {"a.js": _f("f", imports=[{"module": "./b", "line": 1, "resolved": "b.js"}]),
+                       "b.js": _f("g"), "c/g.js": _f("g")}}
+    assert resolve(one("[[ref:#g]]"), "a.js", {"files": []}, syms2).target == "b.js"
+
+
+def test_go_resolved_dir_empty_string_is_repo_root():
+    syms = {"files": {
+        "cmd/m.go": _f("Run", imports=[{"module": "x", "line": 1, "resolved": None, "resolvedDir": ""}]),
+        "root.go": _f("RootFn"), "root_test.go": _f("RootTest"), "pkg/p.go": _f("RootFn", "RootTest")}}
+    r = resolve(one("[[ref:#RootFn]]"), "cmd/m.go", {"files": []}, syms)
+    assert (r.status, r.target) == ("exact", "root.go")
+    r = resolve(one("[[ref:#RootTest]]"), "cmd/m.go", {"files": []}, syms)
+    assert {c[0] for c in r.candidates} == {"root_test.go", "pkg/p.go"}  # test skipped -> repo tier

@@ -241,13 +241,38 @@ def _candidates(files: dict, paths: list[str], symbol: str) -> list[tuple[str, R
     return result
 
 
+def _go_dir_files(files: dict, directory: str, include_tests: bool) -> list[str]:
+    """`.go` files directly in `directory` ("" = repo root); subfolders are other packages."""
+    out = []
+    for p in sorted(files):
+        d, _, name = p.rpartition("/")
+        if d == directory and name.endswith(".go") and (include_tests or not name.endswith("_test.go")):
+            out.append(p)
+    return out
+
+
+def _go_tiers(current_path: str, imports: list[dict], files: dict) -> list[list[str]]:
+    """Go: file -> same package -> packages of imports (`resolvedDir`) -> whole repo.
+
+    `_test.go` files only count when the current file is itself a test."""
+    tests = current_path.endswith("_test.go")
+    same = [p for p in _go_dir_files(files, current_path.rpartition("/")[0], tests)
+            if p != current_path]
+    imported: list[str] = []
+    for i in imports:
+        if i.get("resolvedDir") is not None:
+            imported += _go_dir_files(files, i["resolvedDir"].strip("/"), tests)
+    return [[current_path], same, list(dict.fromkeys(imported)), sorted(files)]
+
+
 def resolve(marker: Marker, current_path: str, tree: dict, symbols: dict,
             diagrams: set[str] | None = None) -> Resolution:
     """Resolve one marker against tree.json / symbols.json contents (dicts).
 
     lines: exact iff the file is in the tree and 1 <= start <= end <= lines.
     symbol with path: exact (first definition) iff that file defines it.
-    symbol without path: tiers current file -> imported files -> whole repo;
+    symbol without path: tiers current file -> imported files -> whole repo
+    (Go: file -> same package -> imported packages -> repo);
     the first tier with matches decides (1 -> exact, >1 -> ambiguous with all
     candidates of that tier); none -> broken. "Class.method" matches a def
     named method whose parent is Class.
@@ -283,12 +308,15 @@ def resolve(marker: Marker, current_path: str, tree: dict, symbols: dict,
             base.target, base.range = found[0]
         return base
 
-    imported = [i["resolved"] for i in files.get(current_path, {}).get("imports", [])
-                if i.get("resolved")]
-    tiers = [[current_path], list(dict.fromkeys(imported)), sorted(files)]
+    imports = files.get(current_path, {}).get("imports", [])
+    imported = [i["resolved"] for i in imports if i.get("resolved")]
+    if (current_path or "").endswith(".go"):
+        tiers = _go_tiers(current_path, imports, files)
+    else:
+        tiers = [[current_path], list(dict.fromkeys(imported)), sorted(files)]
     for t, paths in enumerate(tiers):
         found = _candidates(files, paths, symbol)
-        if t == 2:
+        if t == len(tiers) - 1:
             found.sort(key=lambda c: (c[0], c[1]))
         if len(found) == 1:
             base.status = "exact"
