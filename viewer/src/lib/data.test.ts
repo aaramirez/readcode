@@ -112,9 +112,13 @@ describe('KbClient', () => {
       expect(await s.tours(SHA)).toEqual([{ id: 'alta-usuario' }, { id: 'login' }]);
     });
 
-    it('derives unique archify names, skipping broken ones', async () => {
+    it('derives unique archify names, flagging broken ones', async () => {
       const { s } = setup();
-      expect(await s.diagrams(SHA)).toEqual(['arquitectura', 'flujo']);
+      expect(await s.diagrams(SHA)).toEqual([
+        { name: 'arquitectura', broken: false },
+        { name: 'falta', broken: true },
+        { name: 'flujo', broken: false },
+      ]);
       expect(s.diagramUrl(SHA, 'flujo')).toBe(`kb/fixture/snapshots/${SHA}/diagrams/flujo.html`);
     });
 

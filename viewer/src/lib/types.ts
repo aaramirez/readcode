@@ -240,3 +240,9 @@ export type Graph = Record<string, unknown>;
 export interface TourListEntry {
   id: string;
 }
+
+/** An archify diagram referenced by a snapshot (broken: no diagrams/<name>.html). */
+export interface DiagramEntry {
+  name: string;
+  broken: boolean;
+}

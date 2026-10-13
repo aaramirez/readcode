@@ -8,6 +8,7 @@ import type {
   Catalog,
   Changes,
   DiffFileExplain,
+  DiagramEntry,
   DirSummary,
   Explain,
   Graph,
@@ -153,22 +154,22 @@ export class StudyData {
   }
 
   /**
-   * Archify diagram names of a snapshot, derived from links.json markers of kind
-   * "archify" (unique, sorted; broken ones — no diagrams/<name>.html — are skipped).
-   * Mermaid diagrams are inline in markdown and not listed.
+   * Archify diagrams of a snapshot, derived from links.json markers of kind
+   * "archify" (unique names, sorted). A name is broken when no marker resolves
+   * it (no diagrams/<name>.html). Mermaid diagrams are inline and not listed.
    */
-  async diagrams(sha: string): Promise<string[]> {
+  async diagrams(sha: string): Promise<DiagramEntry[]> {
     const links = await this.links(sha);
     if (!links) return [];
-    const names = new Set<string>();
+    const broken = new Map<string, boolean>();
     for (const markers of Object.values(links.docs)) {
       for (const m of markers) {
-        if (m.kind !== 'archify' || m.status === 'broken') continue;
+        if (m.kind !== 'archify') continue;
         const name = ARCHIFY_RAW.exec(m.raw)?.[1];
-        if (name) names.add(name);
+        if (name) broken.set(name, (broken.get(name) ?? true) && m.status === 'broken');
       }
     }
-    return [...names].sort();
+    return [...broken.keys()].sort().map((name) => ({ name, broken: broken.get(name)! }));
   }
 
   /** Relative URL of an archify diagram page (for an iframe). */

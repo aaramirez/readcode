@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import CodeView from './components/CodeView.svelte';
+  import DiagramsView from './components/DiagramsView.svelte';
+  import DirView from './components/DirView.svelte';
   import ExplainPanel from './components/ExplainPanel.svelte';
   import FileTree from './components/FileTree.svelte';
   import OverviewView from './components/OverviewView.svelte';
@@ -10,6 +12,7 @@
   import { KbClient } from './lib/data';
   import { loadPref, savePref, type Theme } from './lib/prefs';
   import {
+    format,
     latestSnapshot,
     navigate,
     parse,
@@ -19,7 +22,8 @@
     type LineRange,
     type Route,
   } from './lib/router';
-  import type { Catalog, Study, Tree } from './lib/types';
+  import { themeState } from './lib/theme.svelte';
+  import type { Block, Catalog, Study, Tree } from './lib/types';
 
   const kb = new KbClient('kb/');
 
@@ -92,7 +96,8 @@
     { id: 'tours', label: 'Tours' },
   ];
   let tab = $state<Tab>('overview');
-  let lastFile = $state<{ study: string; path: string; range?: LineRange } | null>(null);
+  // Last file or directory shown in the Código tab (a d/ route shows the dir there).
+  let lastCode = $state<{ study: string; kind: 'file' | 'dir'; path: string; range?: LineRange } | null>(null);
 
   $effect(() => {
     const r = route;
@@ -103,7 +108,11 @@
         break;
       case 'file':
         tab = 'code';
-        lastFile = { study: r.study, path: r.path, range: r.range };
+        lastCode = { study: r.study, kind: 'file', path: r.path, range: r.range };
+        break;
+      case 'dir':
+        tab = 'code';
+        lastCode = { study: r.study, kind: 'dir', path: r.path };
         break;
       case 'graph':
         tab = 'graph';
@@ -117,15 +126,17 @@
     }
   });
 
-  const currentFile = $derived(lastFile && lastFile.study === studyName ? lastFile : null);
+  const currentCode = $derived(lastCode && lastCode.study === studyName ? lastCode : null);
 
   function selectTab(t: Tab) {
     if (!studyName || !sha) return;
     if (t === 'overview') navigate({ kind: 'overview', study: studyName, sha });
     else if (t === 'graph') navigate({ kind: 'graph', study: studyName, sha });
     else if (t === 'diagrams') navigate({ kind: 'diagrams', study: studyName, sha });
-    else if (t === 'code' && currentFile) {
-      navigate({ kind: 'file', study: studyName, sha, path: currentFile.path, range: currentFile.range });
+    else if (t === 'code' && currentCode?.kind === 'file') {
+      navigate({ kind: 'file', study: studyName, sha, path: currentCode.path, range: currentCode.range });
+    } else if (t === 'code' && currentCode?.kind === 'dir') {
+      navigate({ kind: 'dir', study: studyName, sha, path: currentCode.path });
     } else tab = t;
   }
 
@@ -133,6 +144,29 @@
     route.kind === 'file' ? { kind: 'file' as const, path: route.path } : route.kind === 'dir' ? { kind: 'dir' as const, path: route.path } : null,
   );
   const panelTarget = $derived(treeSelected ?? { kind: 'dir' as const, path: '' });
+
+  // ---- block <-> code sync
+  let activeBlockId = $state<string | null>(null);
+  let revealTick = $state(0);
+  const codeKey = $derived(`${sha}:${currentCode?.kind}:${currentCode?.path}`);
+  $effect(() => {
+    // a different file (or snapshot) starts without an active block
+    void codeKey;
+    activeBlockId = null;
+  });
+  function onBlock(b: Block) {
+    if (!studyName || !sha || panelTarget.kind !== 'file') return;
+    const target = format({
+      kind: 'file',
+      study: studyName,
+      sha,
+      path: panelTarget.path,
+      range: { start: b.range[0], end: b.range[1] },
+    });
+    activeBlockId = b.id;
+    if (location.hash === target && tab === 'code') revealTick++;
+    else location.hash = target;
+  }
 
   // ---- top bar actions
   function onStudy(name: string) {
@@ -157,9 +191,17 @@
 
   // ---- theme
   let theme = $state<Theme>(loadPref<Theme>('theme', 'auto'));
+  const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
+  let osDark = $state(darkQuery.matches);
+  onMount(() => {
+    const onChange = () => (osDark = darkQuery.matches);
+    darkQuery.addEventListener('change', onChange);
+    return () => darkQuery.removeEventListener('change', onChange);
+  });
   $effect(() => {
     if (theme === 'auto') delete document.documentElement.dataset.theme;
     else document.documentElement.dataset.theme = theme;
+    themeState.dark = theme === 'dark' || (theme === 'auto' && osDark);
   });
   function cycleTheme() {
     theme = theme === 'auto' ? 'light' : theme === 'light' ? 'dark' : 'auto';
@@ -228,10 +270,24 @@
           {#if route.kind === 'diff'}
             <div class="empty">La vista de comparación estará disponible próximamente.</div>
           {:else if tab === 'overview'}
-            <OverviewView {data} {sha} />
+            <OverviewView {data} study={study.name} {sha} />
+          {:else if tab === 'diagrams'}
+            <DiagramsView {data} study={study.name} {sha} name={route.kind === 'diagrams' ? route.name : undefined} />
           {:else if tab === 'code'}
-            {#if currentFile && tree}
-              <CodeView {data} {tree} path={currentFile.path} range={currentFile.range} />
+            {#if currentCode?.kind === 'dir' && tree}
+              <DirView {data} study={study.name} {sha} {tree} path={currentCode.path} />
+            {:else if currentCode?.kind === 'file' && tree}
+              <CodeView
+                {data}
+                study={study.name}
+                {sha}
+                {tree}
+                path={currentCode.path}
+                range={currentCode.range}
+                activeId={activeBlockId}
+                {revealTick}
+                onActive={(id) => (activeBlockId = id)}
+              />
             {:else}
               <div class="empty">Selecciona un archivo en el árbol.</div>
             {/if}
@@ -242,7 +298,16 @@
       </main>
       <Splitter onDrag={(dx) => (rightW = clamp(rightW - dx))} onEnd={savePanes} />
       <aside class="pane" style="width: {rightW}px">
-        <ExplainPanel {data} study={study.name} {sha} target={panelTarget} />
+        <ExplainPanel
+          {data}
+          study={study.name}
+          {sha}
+          {tree}
+          target={panelTarget}
+          showChildren={!(tab === 'code' && route.kind === 'dir')}
+          activeId={panelTarget.kind === 'file' && tab === 'code' ? activeBlockId : null}
+          {onBlock}
+        />
       </aside>
     </div>
   {/if}

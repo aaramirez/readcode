@@ -1,0 +1,733 @@
+[
+  {
+    "name": "symbol con ruta",
+    "input": "a [[ref:app/x.py#f]] b",
+    "expected": [
+      {
+        "kind": "symbol",
+        "raw": "[[ref:app/x.py#f]]",
+        "path": "app/x.py",
+        "symbol": "f",
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "símbolo del archivo actual y Clase.método",
+    "input": "[[ref:#Cls.meth]]",
+    "expected": [
+      {
+        "kind": "symbol",
+        "raw": "[[ref:#Cls.meth]]",
+        "path": null,
+        "symbol": "Cls.meth",
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "rango de líneas",
+    "input": "[[ref:a/b.py:L10-31]]",
+    "expected": [
+      {
+        "kind": "lines",
+        "raw": "[[ref:a/b.py:L10-31]]",
+        "path": "a/b.py",
+        "symbol": null,
+        "range": [
+          10,
+          31
+        ],
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "línea única",
+    "input": "[[ref:a/b.py:L7]]",
+    "expected": [
+      {
+        "kind": "lines",
+        "raw": "[[ref:a/b.py:L7]]",
+        "path": "a/b.py",
+        "symbol": null,
+        "range": [
+          7,
+          7
+        ],
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "líneas del archivo actual",
+    "input": "[[ref::L5-6]]",
+    "expected": [
+      {
+        "kind": "lines",
+        "raw": "[[ref::L5-6]]",
+        "path": null,
+        "symbol": null,
+        "range": [
+          5,
+          6
+        ],
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "ceros y rango invertido (válidos para la gramática)",
+    "input": "[[ref:a.py:L0]] [[ref:a.py:L3-1]] [[ref:a.py:L007]]",
+    "expected": [
+      {
+        "kind": "lines",
+        "raw": "[[ref:a.py:L0]]",
+        "path": "a.py",
+        "symbol": null,
+        "range": [
+          0,
+          0
+        ],
+        "label": null
+      },
+      {
+        "kind": "lines",
+        "raw": "[[ref:a.py:L3-1]]",
+        "path": "a.py",
+        "symbol": null,
+        "range": [
+          3,
+          1
+        ],
+        "label": null
+      },
+      {
+        "kind": "lines",
+        "raw": "[[ref:a.py:L007]]",
+        "path": "a.py",
+        "symbol": null,
+        "range": [
+          7,
+          7
+        ],
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "etiquetas",
+    "input": "[[ref:a.py#f|texto visible]] y [[ref:a.py:L1-2|ver]]",
+    "expected": [
+      {
+        "kind": "symbol",
+        "raw": "[[ref:a.py#f|texto visible]]",
+        "path": "a.py",
+        "symbol": "f",
+        "range": null,
+        "label": "texto visible"
+      },
+      {
+        "kind": "lines",
+        "raw": "[[ref:a.py:L1-2|ver]]",
+        "path": "a.py",
+        "symbol": null,
+        "range": [
+          1,
+          2
+        ],
+        "label": "ver"
+      }
+    ]
+  },
+  {
+    "name": "etiqueta con barra",
+    "input": "[[ref:a.py#f|uno|dos]]",
+    "expected": [
+      {
+        "kind": "symbol",
+        "raw": "[[ref:a.py#f|uno|dos]]",
+        "path": "a.py",
+        "symbol": "f",
+        "range": null,
+        "label": "uno|dos"
+      }
+    ]
+  },
+  {
+    "name": "etiqueta vacía es inválida",
+    "input": "[[ref:a.py#f|]]",
+    "expected": [
+      {
+        "kind": "invalid",
+        "raw": "[[ref:a.py#f|]]",
+        "path": null,
+        "symbol": null,
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "archify",
+    "input": "[[archify:overview]] y [[archify:flujo-pagos.v2]]",
+    "expected": [
+      {
+        "kind": "archify",
+        "raw": "[[archify:overview]]",
+        "path": null,
+        "symbol": "overview",
+        "range": null,
+        "label": null
+      },
+      {
+        "kind": "archify",
+        "raw": "[[archify:flujo-pagos.v2]]",
+        "path": null,
+        "symbol": "flujo-pagos.v2",
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "archify inválidos",
+    "input": "[[archify:]] [[archify:a:b]] [[archify:a b]] [[archify:x|y]]",
+    "expected": [
+      {
+        "kind": "invalid",
+        "raw": "[[archify:]]",
+        "path": null,
+        "symbol": null,
+        "range": null,
+        "label": null
+      },
+      {
+        "kind": "invalid",
+        "raw": "[[archify:a:b]]",
+        "path": null,
+        "symbol": null,
+        "range": null,
+        "label": null
+      },
+      {
+        "kind": "invalid",
+        "raw": "[[archify:a b]]",
+        "path": null,
+        "symbol": null,
+        "range": null,
+        "label": null
+      },
+      {
+        "kind": "invalid",
+        "raw": "[[archify:x|y]]",
+        "path": null,
+        "symbol": null,
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "ref inválidos",
+    "input": "[[ref:]] [[ref:path]] [[ref:a.py#]] [[ref:a.py#b#c]] [[ref:a b.py#f]] [[ref:a:b.py#f]] [[ref:a.py:L5-]] [[ref:a.py:Lx]] [[ref:#a b]]",
+    "expected": [
+      {
+        "kind": "invalid",
+        "raw": "[[ref:]]",
+        "path": null,
+        "symbol": null,
+        "range": null,
+        "label": null
+      },
+      {
+        "kind": "invalid",
+        "raw": "[[ref:path]]",
+        "path": null,
+        "symbol": null,
+        "range": null,
+        "label": null
+      },
+      {
+        "kind": "invalid",
+        "raw": "[[ref:a.py#]]",
+        "path": null,
+        "symbol": null,
+        "range": null,
+        "label": null
+      },
+      {
+        "kind": "invalid",
+        "raw": "[[ref:a.py#b#c]]",
+        "path": null,
+        "symbol": null,
+        "range": null,
+        "label": null
+      },
+      {
+        "kind": "invalid",
+        "raw": "[[ref:a b.py#f]]",
+        "path": null,
+        "symbol": null,
+        "range": null,
+        "label": null
+      },
+      {
+        "kind": "invalid",
+        "raw": "[[ref:a:b.py#f]]",
+        "path": null,
+        "symbol": null,
+        "range": null,
+        "label": null
+      },
+      {
+        "kind": "invalid",
+        "raw": "[[ref:a.py:L5-]]",
+        "path": null,
+        "symbol": null,
+        "range": null,
+        "label": null
+      },
+      {
+        "kind": "invalid",
+        "raw": "[[ref:a.py:Lx]]",
+        "path": null,
+        "symbol": null,
+        "range": null,
+        "label": null
+      },
+      {
+        "kind": "invalid",
+        "raw": "[[ref:#a b]]",
+        "path": null,
+        "symbol": null,
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "no son marcadores",
+    "input": "[[REF:a#b]] [[ref a#b]] [ref:a#b] [[ref:a#b] [[link]] [[ref:a\n#b]]",
+    "expected": []
+  },
+  {
+    "name": "corchete extra antes",
+    "input": "[[[ref:a.py#f]]]",
+    "expected": [
+      {
+        "kind": "symbol",
+        "raw": "[[ref:a.py#f]]",
+        "path": "a.py",
+        "symbol": "f",
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "cuerpo con corchete",
+    "input": "[[ref:a[0].py#f]] [[ref:a.py#f]]",
+    "expected": [
+      {
+        "kind": "symbol",
+        "raw": "[[ref:a.py#f]]",
+        "path": "a.py",
+        "symbol": "f",
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "unicode en ruta y símbolo",
+    "input": "[[ref:docs/año/ñandú.py#función]] [[ref:日本/x.ts#名前]]",
+    "expected": [
+      {
+        "kind": "symbol",
+        "raw": "[[ref:docs/año/ñandú.py#función]]",
+        "path": "docs/año/ñandú.py",
+        "symbol": "función",
+        "range": null,
+        "label": null
+      },
+      {
+        "kind": "symbol",
+        "raw": "[[ref:日本/x.ts#名前]]",
+        "path": "日本/x.ts",
+        "symbol": "名前",
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "varios en una línea",
+    "input": "[[ref:a.py#f]][[ref:b.py#g]][[archify:d]]",
+    "expected": [
+      {
+        "kind": "symbol",
+        "raw": "[[ref:a.py#f]]",
+        "path": "a.py",
+        "symbol": "f",
+        "range": null,
+        "label": null
+      },
+      {
+        "kind": "symbol",
+        "raw": "[[ref:b.py#g]]",
+        "path": "b.py",
+        "symbol": "g",
+        "range": null,
+        "label": null
+      },
+      {
+        "kind": "archify",
+        "raw": "[[archify:d]]",
+        "path": null,
+        "symbol": "d",
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "ignorados en bloque ```",
+    "input": "antes [[ref:a.py#f]]\n```\n[[ref:b.py#g]]\n```\ndespués [[ref:c.py#h]]",
+    "expected": [
+      {
+        "kind": "symbol",
+        "raw": "[[ref:a.py#f]]",
+        "path": "a.py",
+        "symbol": "f",
+        "range": null,
+        "label": null
+      },
+      {
+        "kind": "symbol",
+        "raw": "[[ref:c.py#h]]",
+        "path": "c.py",
+        "symbol": "h",
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "ignorados en bloque ~~~ con info",
+    "input": "~~~python\n[[ref:b.py#g]]\n~~~\n[[ref:c.py#h]]",
+    "expected": [
+      {
+        "kind": "symbol",
+        "raw": "[[ref:c.py#h]]",
+        "path": "c.py",
+        "symbol": "h",
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "cierre más largo cierra; más corto no",
+    "input": "````\n[[ref:a.py#f]]\n```\n[[ref:b.py#g]]\n`````\n[[ref:c.py#h]]",
+    "expected": [
+      {
+        "kind": "symbol",
+        "raw": "[[ref:c.py#h]]",
+        "path": "c.py",
+        "symbol": "h",
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "cierre con otro carácter no cierra",
+    "input": "```\n~~~\n[[ref:a.py#f]]\n```\n[[ref:b.py#g]]",
+    "expected": [
+      {
+        "kind": "symbol",
+        "raw": "[[ref:b.py#g]]",
+        "path": "b.py",
+        "symbol": "g",
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "cierre con texto no cierra",
+    "input": "```\n``` x\n[[ref:a.py#f]]\n```\n[[ref:b.py#g]]",
+    "expected": [
+      {
+        "kind": "symbol",
+        "raw": "[[ref:b.py#g]]",
+        "path": "b.py",
+        "symbol": "g",
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "fence sin cerrar oculta el resto",
+    "input": "[[ref:a.py#f]]\n```\n[[ref:b.py#g]]\n\n[[ref:c.py#h]]",
+    "expected": [
+      {
+        "kind": "symbol",
+        "raw": "[[ref:a.py#f]]",
+        "path": "a.py",
+        "symbol": "f",
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "fence con sangría de 3 sí, de 4 no",
+    "input": "   ```\n[[ref:a.py#f]]\n   ```\n    ```\n[[ref:b.py#g]]",
+    "expected": [
+      {
+        "kind": "symbol",
+        "raw": "[[ref:b.py#g]]",
+        "path": "b.py",
+        "symbol": "g",
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "fence dentro de lista sangrada 2",
+    "input": "- x\n  ```\n  [[ref:a.py#f]]\n  ```\n- [[ref:b.py#g]]",
+    "expected": [
+      {
+        "kind": "symbol",
+        "raw": "[[ref:b.py#g]]",
+        "path": "b.py",
+        "symbol": "g",
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "código en línea",
+    "input": "usa `[[ref:a.py#f]]` y [[ref:b.py#g]]",
+    "expected": [
+      {
+        "kind": "symbol",
+        "raw": "[[ref:b.py#g]]",
+        "path": "b.py",
+        "symbol": "g",
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "código en línea doble con backtick dentro",
+    "input": "``a ` [[ref:a.py#f]]`` [[ref:b.py#g]]",
+    "expected": [
+      {
+        "kind": "symbol",
+        "raw": "[[ref:b.py#g]]",
+        "path": "b.py",
+        "symbol": "g",
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "backtick sin cierre es literal",
+    "input": "un ` suelto [[ref:a.py#f]]",
+    "expected": [
+      {
+        "kind": "symbol",
+        "raw": "[[ref:a.py#f]]",
+        "path": "a.py",
+        "symbol": "f",
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "span cruza saltos simples pero no líneas en blanco",
+    "input": "`abre\n[[ref:a.py#f]]\ncierra` [[ref:b.py#g]]\n\n`otro\n\n[[ref:c.py#h]]`",
+    "expected": [
+      {
+        "kind": "symbol",
+        "raw": "[[ref:b.py#g]]",
+        "path": "b.py",
+        "symbol": "g",
+        "range": null,
+        "label": null
+      },
+      {
+        "kind": "symbol",
+        "raw": "[[ref:c.py#h]]",
+        "path": "c.py",
+        "symbol": "h",
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "línea en blanco con espacios separa párrafos",
+    "input": "`x\n  \t\n[[ref:a.py#f]] `",
+    "expected": [
+      {
+        "kind": "symbol",
+        "raw": "[[ref:a.py#f]]",
+        "path": "a.py",
+        "symbol": "f",
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "las líneas de fence cuentan como blanco",
+    "input": "`abre\n```\nx\n```\n[[ref:a.py#f]]`",
+    "expected": [
+      {
+        "kind": "symbol",
+        "raw": "[[ref:a.py#f]]",
+        "path": "a.py",
+        "symbol": "f",
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "tamaños de backticks distintos no cierran",
+    "input": "`` x ` [[ref:a.py#f]] ``` y",
+    "expected": [
+      {
+        "kind": "symbol",
+        "raw": "[[ref:a.py#f]]",
+        "path": "a.py",
+        "symbol": "f",
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "CRLF",
+    "input": "a [[ref:a.py#f]]\r\n```\r\n[[ref:b.py#g]]\r\n```\r\n[[ref:c.py:L1]]\r\n",
+    "expected": [
+      {
+        "kind": "symbol",
+        "raw": "[[ref:a.py#f]]",
+        "path": "a.py",
+        "symbol": "f",
+        "range": null,
+        "label": null
+      },
+      {
+        "kind": "lines",
+        "raw": "[[ref:c.py:L1]]",
+        "path": "c.py",
+        "symbol": null,
+        "range": [
+          1,
+          1
+        ],
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "tab y form feed no permitidos en ruta",
+    "input": "[[ref:a\tb.py#f]] [[ref:a\fb.py#f]]",
+    "expected": [
+      {
+        "kind": "invalid",
+        "raw": "[[ref:a\tb.py#f]]",
+        "path": null,
+        "symbol": null,
+        "range": null,
+        "label": null
+      },
+      {
+        "kind": "invalid",
+        "raw": "[[ref:a\fb.py#f]]",
+        "path": null,
+        "symbol": null,
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "marcador dentro de enlace markdown",
+    "input": "[ver [[ref:a.py#f]]](http://x) y [[ref:a.py#f|ok]]",
+    "expected": [
+      {
+        "kind": "symbol",
+        "raw": "[[ref:a.py#f]]",
+        "path": "a.py",
+        "symbol": "f",
+        "range": null,
+        "label": null
+      },
+      {
+        "kind": "symbol",
+        "raw": "[[ref:a.py#f|ok]]",
+        "path": "a.py",
+        "symbol": "f",
+        "range": null,
+        "label": "ok"
+      }
+    ]
+  },
+  {
+    "name": "cierre seguido de espacio no ASCII (str.strip) cierra",
+    "input": "```\n``` \n[[ref:a.py#f]]",
+    "expected": [
+      {
+        "kind": "symbol",
+        "raw": "[[ref:a.py#f]]",
+        "path": "a.py",
+        "symbol": "f",
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "separadores de línea de splitlines (U+2028, VT)",
+    "input": "``` [[ref:a.py#f]]\n```\n[[ref:b.py#g]] x\u000b```\n[[ref:c.py#h]]",
+    "expected": [
+      {
+        "kind": "symbol",
+        "raw": "[[ref:b.py#g]]",
+        "path": "b.py",
+        "symbol": "g",
+        "range": null,
+        "label": null
+      }
+    ]
+  },
+  {
+    "name": "caracteres astrales antes del marcador",
+    "input": "😀 `😀` [[ref:a.py#f|😀]]",
+    "expected": [
+      {
+        "kind": "symbol",
+        "raw": "[[ref:a.py#f|😀]]",
+        "path": "a.py",
+        "symbol": "f",
+        "range": null,
+        "label": "😀"
+      }
+    ]
+  }
+]

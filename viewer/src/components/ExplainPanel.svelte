@@ -1,28 +1,76 @@
 <script lang="ts">
-  // Right pane: directory summary or file explanation (basic; Task 10 adds
-  // markers, block sync and diagrams).
+  // Right pane: file explanation (summary + block cards synced with the code)
+  // or a directory summary.
   import type { StudyData } from '../lib/data';
   import { format } from '../lib/router';
+  import type { Block, Tree } from '../lib/types';
   import Markdown from './Markdown.svelte';
 
   interface Props {
     data: StudyData;
     study: string;
     sha: string;
+    tree: Tree | null;
     target: { kind: 'file' | 'dir'; path: string } | null;
+    /** List the directory's children (off when the center already shows them). */
+    showChildren?: boolean;
+    activeId: string | null;
+    onBlock: (block: Block) => void;
   }
 
-  let { data, study, sha, target }: Props = $props();
+  let { data, study, sha, tree, target, showChildren = true, activeId, onBlock }: Props = $props();
 
   const dir = $derived(target?.kind === 'dir' ? data.dir(sha, target.path) : null);
   const explain = $derived(target?.kind === 'file' ? data.explain(sha, target.path) : null);
+  const treeFile = $derived(target?.kind === 'file' ? tree?.files.find((f) => f.path === target.path) : undefined);
+  const excluded = $derived(target?.kind === 'file' ? tree?.excluded.find((e) => e.path === target.path) : undefined);
+
+  const REASONS: Record<string, string> = {
+    gitignore: 'está ignorado por .gitignore',
+    default: 'coincide con las exclusiones por defecto',
+    study: 'coincide con las exclusiones del estudio',
+    binary: 'es un archivo binario',
+    size: 'pesa más de 1 MB',
+  };
 
   function name(path: string): string {
     return path.slice(path.lastIndexOf('/') + 1);
   }
+
+  function blockHref(path: string, b: Block): string {
+    return format({ kind: 'file', study, sha, path, range: { start: b.range[0], end: b.range[1] } });
+  }
+
+  // Keep the active card in view (scroll the panel only, never the page).
+  let panel: HTMLElement | undefined = $state();
+  $effect(() => {
+    const id = activeId;
+    const p = panel;
+    if (!id || !p) return;
+    const card = p.querySelector<HTMLElement>(`[data-block="${CSS.escape(id)}"]`);
+    if (!card) return;
+    const pr = p.getBoundingClientRect();
+    const cr = card.getBoundingClientRect();
+    if (cr.top < pr.top || cr.top > pr.bottom - 48) {
+      p.scrollTo({ top: p.scrollTop + cr.top - pr.top - 8, behavior: 'smooth' });
+    }
+  });
+
+  function cardClick(e: MouseEvent, b: Block) {
+    const t = e.target as Element;
+    if (t.closest('a, button, iframe, input, select, .rc-mermaid')) return;
+    if (window.getSelection()?.toString()) return; // the user is selecting text
+    onBlock(b);
+  }
+
+  function headerClick(e: MouseEvent, b: Block) {
+    if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    onBlock(b);
+  }
 </script>
 
-<div class="panel">
+<div class="panel" bind:this={panel}>
   {#if !target}
     <div class="empty">Selecciona un archivo o directorio para ver su explicación.</div>
   {:else if target.kind === 'dir'}
@@ -33,8 +81,11 @@
       {#if !d}
         <div class="empty">Sin resumen para este directorio.</div>
       {:else}
-        <Markdown source={d.summary} />
-        {#if d.children.length > 0}
+        <Markdown
+          source={d.summary}
+          doc={{ data, study, sha, docKey: `dirs/${target.path === '' ? '_root' : target.path}.json` }}
+        />
+        {#if showChildren && d.children.length > 0}
           <h3>Contenido</h3>
           <ul class="children">
             {#each d.children as c (c.path)}
@@ -52,23 +103,35 @@
       <div class="empty">Error: {err.message}</div>
     {/await}
   {:else}
-    <h2>{name(target.path)}</h2>
+    {@const path = target.path}
+    <h2>{name(path)}</h2>
     {#await explain}
       <div class="empty">Cargando…</div>
     {:then e}
       {#if !e}
-        <div class="empty">Sin explicación para este archivo.</div>
+        <div class="empty">
+          <strong>Este archivo no tiene explicación.</strong>
+          {#if excluded}
+            <p>Está excluido del estudio: {REASONS[excluded.reason] ?? excluded.reason}.</p>
+          {:else if !treeFile}
+            <p>El archivo no existe en este commit.</p>
+          {:else if !treeFile.indexed}
+            <p>No está indexado ({treeFile.language ? `lenguaje «${treeFile.language}» sin análisis de símbolos` : 'tipo de archivo no reconocido'}) y no se generó explicación para él.</p>
+          {:else}
+            <p>Todavía no se generó su explicación en este commit.</p>
+          {/if}
+        </div>
       {:else}
-        <Markdown source={e.summary} />
+        {@const doc = { data, study, sha, docKey: `explain/${path}.json` }}
+        <div class="summary"><Markdown source={e.summary} {doc} /></div>
         {#each e.blocks as b (b.id)}
-          <section class="block">
-            <h3>
-              <a href={format({ kind: 'file', study, sha, path: target.path, range: { start: b.range[0], end: b.range[1] } })}
-                >{b.title}</a
-              >
-              <span class="range">L{b.range[0]}–{b.range[1]}</span>
-            </h3>
-            <Markdown source={b.body} />
+          <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+          <section class="card" class:active={b.id === activeId} data-block={b.id} onclick={(ev) => cardClick(ev, b)}>
+            <header>
+              <a class="title" href={blockHref(path, b)} onclick={(ev) => headerClick(ev, b)}>{b.title}</a>
+              <span class="chip">L{b.range[0]}–{b.range[1]}</span>
+            </header>
+            <Markdown source={b.body} {doc} />
           </section>
         {/each}
       {/if}
@@ -80,7 +143,7 @@
 
 <style>
   .panel {
-    padding: 8px 14px;
+    padding: 8px 12px 40px;
     overflow: auto;
     height: 100%;
   }
@@ -108,14 +171,49 @@
     color: var(--fg-muted);
     margin-left: 6px;
   }
-  .block {
-    border-top: 1px solid var(--border);
-    margin-top: 10px;
+  .summary {
+    margin-bottom: 12px;
   }
-  .range {
+  .card {
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px 4px;
+    margin: 10px 0;
+    cursor: pointer;
+    background: var(--bg);
+  }
+  .card:hover {
+    border-left-color: var(--fg-faint);
+  }
+  .card.active {
+    border-left-color: var(--accent);
+    background: var(--bg-block);
+  }
+  .card header {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .title {
+    font-weight: 600;
+    color: var(--fg);
+    text-decoration: none;
+    flex: 1;
+  }
+  .title:hover {
+    text-decoration: underline;
+  }
+  .chip {
+    font-family: var(--font-code);
+    font-size: 11px;
+    background: var(--badge-bg);
     color: var(--fg-muted);
-    font-weight: normal;
-    font-size: 12px;
-    margin-left: 6px;
+    border-radius: 10px;
+    padding: 1px 8px;
+    white-space: nowrap;
+  }
+  .empty p {
+    margin: 6px 0 0;
   }
 </style>

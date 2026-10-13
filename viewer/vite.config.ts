@@ -60,6 +60,8 @@ export default defineConfig({
   build: {
     outDir: '../core/readcode/viewer_dist',
     emptyOutDir: true,
+    // mermaid's lazy layout chunks (elk ~1.5 MB) are only fetched when a diagram needs them.
+    chunkSizeWarningLimit: 1600,
   },
   test: {
     include: ['src/**/*.test.ts'],
