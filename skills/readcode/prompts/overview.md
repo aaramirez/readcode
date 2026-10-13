@@ -109,15 +109,18 @@ archivo. Tu mensaje incluye la ruta de `archify.mjs`.
    `<dir de Archify>/examples/locales/<idioma>.json` (p. ej. `es.json`). Si no hay catálogo para
    el idioma, omite `meta.locale` y dilo en tu respuesta (los controles del visor quedarán en
    inglés; los textos del diagrama van igualmente en {{LANGUAGE}}).
-3. Ejecuta `node <archify.mjs> finalize <tipo> candidate.json <nombre>.html --json` (con las
+3. Valida el candidato con `node <archify.mjs> validate <tipo> candidate.json --json` (con las
    opciones de calidad que indique su SKILL.md; **no** pases `--repo-root` salvo que tu mensaje
    indique un checkout del repo exactamente en `SHA`: el working copy puede estar en otro commit
    y la evidencia no casaría) y repara hasta que pase, dentro de los límites
    de reparación de Archify.
 4. Instala el diagrama en la KB con
-   `readcode archify <KB> <STUDY> <SHA> <nombre> <tipo> candidate.json`: renderiza el candidato
-   y escribe **solo** `<SNAP>/diagrams/<nombre>.html` y `<nombre>.json` (la fuente, para poder
-   regenerarlo). No copies nada más. (Termina con código 2 si falta `node` o Archify.)
+   `readcode archify <KB> <STUDY> <SHA> <nombre> <tipo> candidate.json [--repo-root <checkout en SHA>]`
+   (mismas opciones que usaste al validar; `--quality standard|showcase` si aplica). Ejecuta
+   `finalize` de Archify por ti, con sus controles de calidad y procedencia, y escribe **solo**
+   `<SNAP>/diagrams/<nombre>.html` y `<nombre>.json` (la fuente, para poder regenerarlo). No
+   copies nada más. Termina con código 2 si falta `node` o Archify, o si `finalize` falla: repara
+   y reintenta dentro de los límites de reparación.
 5. Si Archify no pasa tras sus reparaciones, no copies nada y responde con el error; el
    orquestador lo anotará.
 

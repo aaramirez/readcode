@@ -316,6 +316,8 @@ def index_snapshot(kb: Path | str, study: str, sha: str) -> dict:
     if not (sdir / "study.json").is_file():
         raise IndexingError(f"{sdir / 'study.json'} not found; run `readcode init` first")
     snap = _find_snapshot(sdir, sha)
+    LOAD_FAILURES.clear()  # per run; _load is cached, so drop it to re-record failures
+    _load.cache_clear()
     tree = kbio.read_json(snap / "tree.json")
     paths = frozenset(f["path"] for f in tree["files"])
 

@@ -2,20 +2,25 @@
 
 import json
 import shutil
+from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
 
-from readcode import grammars_cmd, indexer
+from readcode import archify_cmd, grammars_cmd, indexer
 from readcode.cli import app
 
 runner = CliRunner()
 SHA = "a" * 40
 
 FAKE_OK = """import { writeFileSync } from 'node:fs';
-const [, , cmd, type, input, out] = process.argv;
-if (cmd !== 'render') process.exit(3);
+const argv = process.argv.slice(2);
+const [cmd, type, input, out] = argv;
+if (cmd !== 'finalize' || !argv.includes('--out-dir')) process.exit(3);
 writeFileSync(out, `<html><body>${type}</body></html>`);
+const od = argv[argv.indexOf('--out-dir') + 1];
+writeFileSync(od + '/receipt.json', JSON.stringify(argv));
+writeFileSync(process.env.ARGV_LOG || od + '/argv.log', JSON.stringify(argv));
 """
 FAKE_FAIL = """import { writeFileSync } from 'node:fs';
 writeFileSync(process.argv[5], '<html>partial');
@@ -49,11 +54,30 @@ def test_archify_renders_and_copies_source(study, tmp_path, monkeypatch):
         pytest.skip("node no está en el PATH")
     kb, diagrams, src = study
     _fake(tmp_path, monkeypatch, FAKE_OK)
-    result = runner.invoke(app, _args(kb, src, sha=SHA[:8]))
+    log = tmp_path / "argv.json"
+    monkeypatch.setenv("ARGV_LOG", str(log))
+    result = runner.invoke(app, _args(kb, src, sha=SHA[:8]) + ["--repo-root", str(tmp_path), "--quality", "showcase"])
     assert result.exit_code == 0, result.output
+    argv = json.loads(log.read_text(encoding="utf-8"))
+    assert argv[0] == "finalize" and "--out-dir" in argv
+    out_dir = argv[argv.index("--out-dir") + 1]
+    assert Path(out_dir).parent != diagrams and not Path(out_dir).exists()  # temp dir outside kb, removed
+    assert argv[argv.index("--repo-root") + 1] == str(tmp_path) and "showcase" in argv
     assert (diagrams / "arquitectura.html").read_text(encoding="utf-8") == "<html><body>architecture</body></html>"
     assert json.loads((diagrams / "arquitectura.json").read_text(encoding="utf-8")) == {"meta": {}}
     assert [p.name for p in diagrams.iterdir()] == ["arquitectura.html", "arquitectura.json"]
+
+
+def test_archify_bin_may_be_a_directory(study, tmp_path, monkeypatch):
+    if not shutil.which("node"):
+        pytest.skip("node no está en el PATH")
+    kb, diagrams, src = study
+    (tmp_path / "bin").mkdir()
+    (tmp_path / "bin" / "archify.mjs").write_text(FAKE_OK, encoding="utf-8")
+    monkeypatch.setenv("ARCHIFY_BIN", str(tmp_path))
+    monkeypatch.setenv("ARGV_LOG", str(tmp_path / "log.json"))
+    assert runner.invoke(app, _args(kb, src)).exit_code == 0
+    assert (diagrams / "arquitectura.html").is_file()
 
 
 def test_archify_failed_render_leaves_nothing(study, tmp_path, monkeypatch):
@@ -80,7 +104,7 @@ def test_archify_missing_archify_exits_2(study, tmp_path, monkeypatch):
 def test_archify_missing_node_exits_2(study, tmp_path, monkeypatch):
     kb, _, src = study
     _fake(tmp_path, monkeypatch, FAKE_OK)
-    monkeypatch.setattr(shutil, "which", lambda name: None)
+    monkeypatch.setattr(archify_cmd.shutil, "which", lambda name: None)
     result = runner.invoke(app, _args(kb, src))
     assert result.exit_code == 2
     assert "node" in result.output

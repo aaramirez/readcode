@@ -321,12 +321,16 @@ def archify(
     diagram_type: Annotated[str, typer.Argument(
         metavar="TYPE", help="Tipo Archify (architecture, dataflow, sequence...).")],
     input_json: Annotated[Path, typer.Argument(help="JSON de entrada para Archify.")],
+    repo_root: Annotated[Optional[Path], typer.Option(
+        "--repo-root", help="Checkout del repo en el SHA (para la evidencia de Archify).")] = None,
+    quality: Annotated[Optional[str], typer.Option(
+        "--quality", help="standard | showcase (nivel de calidad de Archify).")] = None,
 ) -> None:
-    """Renderiza un diagrama con Archify: diagrams/<name>.html y .json. Exit 2 si falta node o Archify."""
+    """Finaliza un diagrama con Archify: diagrams/<name>.html y .json. Exit 2 si falta node o Archify, o falla."""
     from readcode.archify_cmd import ArchifyError, render_diagram
 
     try:
-        out = render_diagram(kb_dir, study, sha, name, diagram_type, input_json)
+        out = render_diagram(kb_dir, study, sha, name, diagram_type, input_json, repo_root, quality)
     except ArchifyError as exc:
         typer.echo(f"error: {exc}", err=True)
         raise typer.Exit(2)
