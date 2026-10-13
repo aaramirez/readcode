@@ -82,7 +82,7 @@ Marcadores en el Markdown de las explicaciones:
 
 En `changes.json`, un cambio con `eolOnly: true` es un archivo modificado cuyos hunks están vacíos porque solo cambian los finales de línea (CRLF/LF); el visor lo etiqueta como tal. El campo es opcional: para recalcularlo en diffs viejos hay que volver a correr `readcode diff`.
 
-Las referencias se resuelven en este orden: mismo archivo, archivos importados, todo el repo; si son ambiguas se conservan todos los candidatos y `readcode validate` informa las rotas.
+Las referencias se resuelven en este orden: mismo archivo, archivos importados, todo el repo (en Go, entre el archivo y los importados entra el mismo paquete, es decir, los demás `.go` de la carpeta); si son ambiguas se conservan todos los candidatos y `readcode validate` informa las rotas.
 
 ## Referencia del CLI
 
@@ -101,7 +101,7 @@ Casi todos los comandos reciben `<kb> <estudio>` (ver `readcode <comando> --help
 | `readcode catalog <kb>` | Regenera `<kb>/catalog.json`. |
 | `readcode serve <kb> [--port] [--no-open] [--no-refresh]` | Sirve el visor en `/` y la KB en `/kb/`. |
 | `readcode install-skill [--dest] [--force]` | Instala la skill `/readcode` en `~/.claude/skills`. |
-| `readcode context <kb> <estudio> <rutas...> --sha <sha>` | Contexto de archivos para la skill: blob, defs, imports, usos, vecinos en el grafo. |
+| `readcode context <kb> <estudio> <rutas...> --sha <sha>` | Contexto de archivos para la skill: blob, defs, imports, usos, vecinos en el grafo y `neighbourDefs` (definiciones de los archivos importados y del mismo paquete, con tope de 40 por archivo y 200 en total). |
 | `readcode stale <kb> <estudio> <shaA> <shaB>` | Documentos heredados que pueden haber quedado viejos tras un update. |
 | `readcode mark <kb> <estudio> [--sha --status] [--archify true\|false]` | Fija el estado de un snapshot y/o `tools.archify`. |
 | `readcode archify <kb> <estudio> <sha> <nombre> <tipo> <entrada.json>` | Finaliza un diagrama con Archify a `diagrams/<nombre>.html` (+ `.json`); opciones `--repo-root`, `--quality`. Busca `$ARCHIFY_BIN` o `~/.agents/skills/archify`; sale con código 2 si falta `node` o Archify. |
