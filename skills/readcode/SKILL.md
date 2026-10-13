@@ -127,10 +127,10 @@ readcode plan <KB> <STUDY> --sha <SHA> --json
 - `readcode graph` sin Graphify solo avisa; sigue adelante.
 - `readcode plan` escribe `<SNAP>/plan.json`:
   `{sha, reusedFrom, reused, reusedDirs, batches: [{id, files: [{path, lines, language}]}],
-  dirs: [...], overview, tours, abandoned: [...], done}`. Es la cola de trabajo y la **fuente de
-  verdad** de lo pendiente. `reusedFrom` es el snapshot del que hereda (o `null`); `abandoned`
-  son archivos sin explicar que el generador abandonó (ver Fase 2), que no cuentan como
-  pendientes.
+  dirs: [...], overview, tours, abandoned: [...], abandonedDirs: [...], done}`. Es la cola de
+  trabajo y la **fuente de verdad** de lo pendiente. `reusedFrom` es el snapshot del que hereda
+  (o `null`); `abandoned` son archivos sin explicar y `abandonedDirs` directorios sin resumir
+  (`""` = raíz) que el generador abandonó (ver Fases 2 y 3), que no cuentan como pendientes.
 
 ### Fase 2 — Archivos (en paralelo)
 
@@ -165,7 +165,9 @@ readcode plan <KB> <STUDY> --sha <SHA> --json
    construye con los de sus hijos.
 5. Al final, `readcode plan <KB> <STUDY> --sha <SHA> --json` debe dejar `dirs` vacío; si no,
    repite solo los que falten; tras el segundo intento fallido regístralo en `issues.json`
-   (`"file": "dirs/<ruta>.json"`, `source: "generator"`) y sigue (el snapshot quedará `partial`).
+   (`"file": "dirs/<ruta>.json"`, `source: "generator"`; para la raíz `"file": "dirs/_root.json"`)
+   y sigue (el snapshot quedará `partial`). Desde entonces `readcode plan` lo lista en
+   `abandonedDirs` y no en `dirs`; para reintentarlo, el usuario borra esa entrada.
 
 ### Fase 4 — Diagramas y overview
 
@@ -225,8 +227,8 @@ readcode validate <KB> <STUDY> --sha <SHA> --json
 
 ### Fase 7 — Cierre
 
-1. `readcode plan <KB> <STUDY> --sha <SHA> --json`. Si `done` es `true`, `abandoned` está vacío
-   y `<SNAP>/issues.json` no tiene problemas, el estado es `explained`; si no, `partial`:
+1. `readcode plan <KB> <STUDY> --sha <SHA> --json`. Si `done` es `true`, `abandoned` y
+   `abandonedDirs` están vacíos y `<SNAP>/issues.json` no tiene problemas, el estado es `explained`; si no, `partial`:
    `readcode mark <KB> <STUDY> --sha <SHA> --status explained` (o `--status partial`).
 2. `readcode catalog <KB>`.
 3. Informa: archivos explicados/heredados, directorios, diagramas, tours, problemas restantes
@@ -241,13 +243,19 @@ readcode validate <KB> <STUDY> --sha <SHA> --json
 
    ```bash
    readcode snapshot <KB> <STUDY> --sha <rev>
+   ```
+
+   `snapshot` conserva el `status` de un sha que ya estaba en el estudio (solo un snapshot
+   nuevo empieza `partial`). Si en `study.json` ese snapshot está `explained`, no hay nada que
+   actualizar: dilo y termina. Si no, sigue:
+
+   ```bash
    readcode index <KB> <STUDY> --sha <SHA>
    readcode graph <KB> <STUDY> --sha <SHA>
    readcode plan <KB> <STUDY> --sha <SHA> --json
    ```
 
-   Si en `study.json` ese snapshot ya está `explained`, no hay nada que actualizar: dilo y
-   termina. `plan` hereda por hash de blob las explicaciones de archivos sin cambio, los
+   `plan` hereda por hash de blob las explicaciones de archivos sin cambio, los
    resúmenes de directorios cuyo subárbol es idéntico, tours, diagramas (y el overview si el
    árbol entero es idéntico); `plan.json` lista solo lo que falta.
 2. `PREV` = `plan.json` → `reusedFrom` (el snapshot del que `plan` heredó; usa siempre este,
@@ -293,7 +301,8 @@ readcode validate <KB> <STUDY> --sha <SHA> --json
 
 1. Ambos commits deben ser snapshots del estudio (prefijo de sha válido). Si alguno no lo es,
    créalo: `readcode snapshot <KB> <STUDY> --sha <rev>` y `readcode index <KB> <STUDY> --sha <SHA>`
-   (no hace falta explicarlo entero; queda `indexed`).
+   (no hace falta explicarlo entero: `index` deja `indexed` un snapshot nuevo sin
+   explicaciones; uno ya estudiado conserva su estado).
 2. `readcode diff <KB> <STUDY> <shaA> <shaB>` → `DDIR = <SDIR>/diffs/<A>..<B>/changes.json`
    (shas completos en el nombre). Cada archivo trae `status` (`added|modified|deleted|renamed`),
    `fromBlob`/`toBlob` y `hunks[{fromRange, toRange, header}]`.

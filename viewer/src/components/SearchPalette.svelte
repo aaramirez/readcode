@@ -1,12 +1,13 @@
 <script lang="ts">
   // Ctrl+K palette over tree paths, symbol definitions and explanation block
-  // titles. Files and symbols are indexed at once; explain/<path>.json files are
-  // fetched in the background (6 at a time) and their blocks join the results
-  // as they arrive. Enter (or click) navigates.
+  // titles. Files and symbols are indexed at once; block titles come from the
+  // snapshot's search.json (one request, written by `readcode validate`) or, for
+  // kbs without it, from every explain/<path>.json fetched in the background
+  // (6 at a time), joining the results as they arrive. Enter (or click) navigates.
   import { onMount, tick } from 'svelte';
   import type { StudyData } from '../lib/data';
   import { format, navigate } from '../lib/router';
-  import { blockItems, fileItems, mapLimit, rankItems, symbolItems, type SearchItem } from '../lib/search';
+  import { SearchIndex, fileItems, loadBlockItems, rankItems, symbolItems, type SearchItem } from '../lib/search';
   import type { Tree } from '../lib/types';
 
   interface Props {
@@ -20,52 +21,70 @@
   let { data, study, sha, tree, onClose }: Props = $props();
 
   let query = $state('');
-  let index = $state<SearchItem[]>([]);
+  // The index grows in place (no copies); `version` is the reactive signal of a change.
+  const index = new SearchIndex();
+  let version = $state(0);
+  let loadingBlocks = $state(true);
   let pending = $state(0);
   let cursor = $state(0);
+
+  function add(items: readonly SearchItem[]) {
+    index.add(items);
+    version = index.version;
+  }
 
   // The palette is mounted per opening, so the index is built for the props at mount time.
   onMount(() => {
     let cancelled = false;
-    index = fileItems(tree, study, sha);
+    let frame = 0;
+    add(fileItems(tree, study, sha));
     data.symbols(sha).then(
       (s) => {
-        if (!cancelled && s) index = [...index, ...symbolItems(s, study, sha)];
+        if (!cancelled && s) add(symbolItems(s, study, sha));
       },
       () => {},
     );
-    // every file may have an explanation (also non-indexed ones such as README.md)
-    const files = tree.files;
-    pending = files.length;
+
     let batch: SearchItem[] = [];
-    let frame = 0;
     const flush = () => {
       frame = 0;
       if (cancelled || batch.length === 0) return;
-      index = [...index, ...batch];
+      add(batch);
       batch = [];
     };
-    mapLimit(
-      files,
-      6,
-      (f) =>
-        data.explain(sha, f.path).finally(() => {
-          if (!cancelled) pending--;
-        }),
-      (ex) => {
-        if (!ex) return;
-        batch.push(...blockItems(ex, study, sha));
+    loadBlockItems(
+      data,
+      tree,
+      study,
+      sha,
+      (items) => {
+        for (const item of items) batch.push(item); // no spread: search.json can be large
         if (!frame) frame = requestAnimationFrame(flush);
       },
-      () => cancelled,
-    );
+      {
+        cancelled: () => cancelled,
+        onPending: (n) => {
+          loadingBlocks = false;
+          pending = n;
+        },
+      },
+    ).finally(() => {
+      if (!cancelled) loadingBlocks = false;
+    });
     return () => {
       cancelled = true;
       cancelAnimationFrame(frame);
     };
   });
 
-  const results = $derived(rankItems(index, query, 50));
+  const results = $derived.by(() => {
+    void version;
+    return rankItems(index.items, query, 50);
+  });
+  const count = $derived.by(() => {
+    void version;
+    return index.items.length;
+  });
   $effect(() => {
     void query;
     cursor = 0;
@@ -134,7 +153,7 @@
     </ul>
     <div class="foot">
       {#if query.trim() && results.length === 0}Sin resultados. ·{/if}
-      {pending > 0 ? `indexando explicaciones… (${pending})` : `${index.length} entradas`}
+      {loadingBlocks ? 'indexando explicaciones…' : pending > 0 ? `indexando explicaciones… (${pending})` : `${count} entradas`}
       · ↑↓ elegir · Enter abrir · Esc cerrar
     </div>
   </div>

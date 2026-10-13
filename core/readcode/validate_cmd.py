@@ -1,13 +1,18 @@
 """`readcode validate`: the gate every generated study file passes through.
 
 Checks schemas, explain/tour ranges and markers, and writes ``links.json``
-(for every snapshot and every diff validated) plus the snapshot ``issues.json``.
+(for every snapshot and every diff validated) plus the snapshot ``issues.json`` and
+``search.json`` (every block of every schema-valid explanation, for the viewer's Ctrl+K).
 
 Problem ``file`` values are paths relative to the study directory
 (``snapshots/<sha>/explain/app/x.py.json``). In ``issues.json`` the same
 problems are stored with ``file`` relative to the snapshot directory, i.e. the
 same key the doc has in ``links.json``. Problems of study.json and of diffs are
 only reported on output (issues.json is per snapshot).
+
+Doc keys in ``links.json`` are the doc's path relative to the snapshot (or diff) directory,
+except tour steps: a tour's description is ``tours/<id>.json`` and step ``n`` (1-based) is
+``tours/<id>.json#<n>``, because each step resolves markers relative to its own file.
 """
 
 from __future__ import annotations
@@ -83,7 +88,13 @@ class _Resolver:
                 alt = refs.resolve(marker, current_path, *self.fallback, self.diagrams)
                 if alt.status != "broken":
                     res = alt
-            entries.append(res.to_link_entry())
+            entry = res.to_link_entry()
+            # The viewer looks markers up by raw text within a doc key: one raw, one meaning.
+            if any(e["raw"] == entry["raw"] and e != entry for e in entries):
+                out.add(rel, f"marker {res.raw} in {where} resolves differently elsewhere in "
+                             f"the same doc ({key})",
+                        "report this as a readcode bug (each doc key needs one resolution per marker)")
+            entries.append(entry)
             self._report(res, rel, where, out)
 
     @staticmethod
@@ -122,7 +133,7 @@ def _write_links(path: Path, links: dict, rel: str, out: _Collector) -> None:
 
 
 def _check_explain(snap: Path, sp: str, rel_path: str, files: dict, res: _Resolver,
-                   out: _Collector) -> None:
+                   search: list[dict], out: _Collector) -> None:
     key = f"explain/{rel_path}"
     rel = f"{sp}/{key}"
     res.doc(key)
@@ -133,6 +144,8 @@ def _check_explain(snap: Path, sp: str, rel_path: str, files: dict, res: _Resolv
     if doc["path"] != location:
         out.add(rel, f"path {doc['path']!r} does not match its location ({location!r})",
                 f"set \"path\": \"{location}\" or move the file")
+    search.extend({"path": location, "blockId": b["id"], "title": b["title"],
+                   "range": b["range"]} for b in doc["blocks"])
     info = files.get(location)
     lines = None
     if info is None:
@@ -196,6 +209,7 @@ def _check_tour(snap: Path, sp: str, rel_path: str, files: dict, res: _Resolver,
         out.add(rel, f"tour id {doc['id']!r} does not match the file name",
                 f"set \"id\": \"{tour_id}\"")
     res.markdown(key, rel, doc["description"], None, "description", out)
+    # Each step resolves relative to its own file, so it gets its own doc key.
     for i, step in enumerate(doc["steps"], 1):
         info = files.get(step["path"])
         if info is None:
@@ -205,7 +219,7 @@ def _check_tour(snap: Path, sp: str, rel_path: str, files: dict, res: _Resolver,
             bad = _range_problem(step["range"], info["lines"])
             if bad:
                 out.add(rel, f"tour step {i}: {bad}", "fix the step range")
-        res.markdown(key, rel, step["body"], step["path"], f"step {i}", out)
+        res.markdown(f"{key}#{i}", rel, step["body"], step["path"], f"step {i}", out)
 
 
 def _validate_snapshot(sdir: Path, sha: str, out: _Collector) -> None:
@@ -226,9 +240,10 @@ def _validate_snapshot(sdir: Path, sha: str, out: _Collector) -> None:
     files = {f["path"]: f for f in tree["files"]}
     diagrams = {p.name for p in (snap / "diagrams").glob("*.html")} if (snap / "diagrams").is_dir() else set()
     res = _Resolver(tree, symbols, diagrams)
+    search: list[dict] = []
 
     for rel_path in _rel_json_files(snap / "explain"):
-        _check_explain(snap, sp, rel_path, files, res, out)
+        _check_explain(snap, sp, rel_path, files, res, search, out)
     for rel_path in _rel_json_files(snap / "dirs"):
         _check_dir(snap, sp, rel_path, res, out)
     for rel_path in _rel_json_files(snap / "tours"):
@@ -243,6 +258,10 @@ def _validate_snapshot(sdir: Path, sha: str, out: _Collector) -> None:
         res.markdown("overview.md", f"{sp}/overview.md", text, None, "overview", out)
 
     _write_links(snap / "links.json", res.links(sha), f"{sp}/links.json", out)
+    for err in schema_validate("search", search):
+        out.add(f"{sp}/search.json", f"internal: generated search.json invalid: {err}",
+                "report this as a readcode bug")
+    kbio.atomic_write_json(snap / "search.json", search)
     _write_issues(snap, sp, out.problems[start:], out)
 
 

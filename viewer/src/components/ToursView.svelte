@@ -2,6 +2,7 @@
   // Tours tab (no tour playing): the snapshot's tours with title, description and step count.
   import type { StudyData } from '../lib/data';
   import { format } from '../lib/router';
+  import { tourDocKey } from '../lib/tours';
   import type { Tour } from '../lib/types';
   import Markdown from './Markdown.svelte';
 
@@ -36,7 +37,7 @@
               <a class="title" href={format({ kind: 'tour', study, sha, id: t.id, step: 1 })} onclick={() => onStart?.(t.id)}>{t.tour.title}</a>
               <span class="chip">{t.tour.steps.length} {t.tour.steps.length === 1 ? 'paso' : 'pasos'}</span>
             </header>
-            <Markdown source={t.tour.description} doc={{ data, study, sha, docKey: `tours/${t.id}.json` }} />
+            <Markdown source={t.tour.description} doc={{ data, study, sha, docKey: tourDocKey(t.id) }} />
             <a class="start" data-testid="tour-start" href={format({ kind: 'tour', study, sha, id: t.id, step: 1 })} onclick={() => onStart?.(t.id)}>Empezar ▶</a>
           {:else}
             <header><span class="title">{t.id}</span></header>

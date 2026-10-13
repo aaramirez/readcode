@@ -9,6 +9,7 @@ Captures used: ``@name`` with ``@definition.<kind>`` / ``@reference.<kind>``, an
 from __future__ import annotations
 
 import posixpath
+import sys
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path, PurePosixPath
@@ -303,7 +304,8 @@ def _find_snapshot(sdir: Path, sha: str) -> Path:
 def index_snapshot(kb: Path | str, study: str, sha: str) -> dict:
     """Index a snapshot; rewrites tree.json ``indexed`` flags and writes symbols.json.
 
-    Returns ``{"sha", "indexed", "skipped"}``.
+    Returns ``{"sha", "indexed", "skipped", "failed"}`` (``failed`` files raised while being
+    extracted; each one is reported on stderr and counts as skipped).
     """
     sdir = kbio.study_dir(kb, study)
     if not (sdir / "study.json").is_file():
@@ -313,12 +315,15 @@ def index_snapshot(kb: Path | str, study: str, sha: str) -> dict:
     paths = frozenset(f["path"] for f in tree["files"])
 
     files: dict[str, dict] = {}
+    failed = 0
     for entry in tree["files"]:
         result = None
         try:
             source = kbio.blob_path(sdir, entry["blob"]).read_bytes()
             result = extract(source, entry["language"], entry["path"], paths)
-        except Exception:  # one bad file never aborts the run
+        except Exception as exc:  # one bad file never aborts the run
+            print(f"aviso: no se pudo indexar {entry['path']} ({type(exc).__name__})", file=sys.stderr)
+            failed += 1
             result = None
         entry["indexed"] = result is not None
         if result is not None:
@@ -331,4 +336,23 @@ def index_snapshot(kb: Path | str, study: str, sha: str) -> dict:
             raise IndexingError(f"Invalid {kind}.json: " + "; ".join(errors[:10]))
     kbio.atomic_write_json(snap / "symbols.json", symbols)
     kbio.atomic_write_json(snap / "tree.json", tree)
-    return {"sha": tree["sha"], "indexed": len(files), "skipped": len(tree["files"]) - len(files)}
+    _upgrade_status(sdir, tree["sha"], snap)
+    return {"sha": tree["sha"], "indexed": len(files), "skipped": len(tree["files"]) - len(files),
+            "failed": failed}
+
+
+def _upgrade_status(sdir: Path, sha: str, snap: Path) -> None:
+    """A "partial" snapshot with no explain/ files yet becomes "indexed" in study.json."""
+    study_json = sdir / "study.json"
+    study_data = kbio.read_json(study_json)
+    entry = next((s for s in study_data.get("snapshots", []) if s.get("sha") == sha), None)
+    explain = snap / "explain"
+    if entry is None or entry.get("status") != "partial":
+        return
+    if explain.is_dir() and any(p.is_file() for p in explain.rglob("*.json")):
+        return
+    entry["status"] = "indexed"
+    errors = validate("study", study_data)
+    if errors:
+        raise IndexingError("Invalid study.json: " + "; ".join(errors[:10]))
+    kbio.atomic_write_json(study_json, study_data)

@@ -160,3 +160,68 @@ def test_mark_cli(kb):
     assert r.exit_code == 1
     r = runner.invoke(app, ["mark", str(kb), "fixture"])
     assert r.exit_code == 1
+
+
+def _stale_study(tmp_path, old: bytes, new: bytes, def_range):
+    from readcode.snapshot import count_lines
+
+    kb, sd = tmp_path / "kb", tmp_path / "kb" / "demo"
+    a, b = "a" * 40, "b" * 40
+    kbio.atomic_write_json(sd / "study.json", {
+        "schemaVersion": 1, "name": "demo", "title": "D", "repo": {"url": "x"},
+        "language": "es", "exclude": [], "tools": {"graphify": False, "archify": False},
+        "snapshots": [{"sha": a, "date": "2026-01-01T00:00:00Z", "message": "1", "status": "indexed"},
+                      {"sha": b, "date": "2026-01-02T00:00:00Z", "message": "2", "status": "indexed"}]})
+    hashes = {}
+    for sha, data in ((a, old), (b, new)):
+        h = hashes[sha] = kbio.sha256_hex(data)
+        kbio.atomic_write_bytes(kbio.blob_path(sd, h), data)
+        snap = kbio.snapshot_dir(sd, sha)
+        kbio.atomic_write_json(snap / "tree.json", {
+            "schemaVersion": 1, "sha": sha, "excluded": [], "files": [
+                {"path": "m.py", "blob": h, "language": "python", "lines": count_lines(data),
+                 "bytes": len(data), "indexed": True}]})
+        kbio.atomic_write_json(snap / "symbols.json", {"schemaVersion": 1, "sha": sha, "files": {
+            "m.py": {"defs": [{"name": "f", "kind": "function", "range": def_range}],
+                     "refs": [], "imports": []}}})
+    kbio.atomic_write_json(sd / "diffs" / f"{a}..{b}" / "changes.json", {
+        "schemaVersion": 1, "from": a, "to": b, "files": [
+            {"path": "m.py", "status": "modified", "fromBlob": hashes[a], "toBlob": hashes[b],
+             "hunks": [{"fromRange": [1, 1], "toRange": [1, 1], "header": "@@ -1,1 +1,1 @@"}]}]})
+    return kb, sd, a, b, hashes
+
+
+def test_stale_def_texts_use_newline_only_lines(tmp_path):
+    # f is line 2 ("def f") in both; only line 1 changed. Splitting on the lone \r or on
+    # U+2028 / \x85 / \f would shift "line 2" into the changed text.
+    old = "x\ry = 1\u2028\x85\f\ndef f\n".encode("utf-8")
+    new = "x\rz = 2\u2028\x85\f\ndef f\n".encode("utf-8")
+    kb, _, a, b, _ = _stale_study(tmp_path, old, new, [2, 2])
+    assert stale_docs(kb, "demo", a, b)["changedSymbols"] == {}
+    kb2, _, a, b, _ = _stale_study(tmp_path / "2", old, "x\ry\ndef g\n".encode(), [2, 2])
+    assert stale_docs(kb2, "demo", a, b)["changedSymbols"] == {"m.py": ["f"]}
+
+
+def test_stale_missing_blob_is_a_clean_error(tmp_path):
+    kb, sd, a, b, hashes = _stale_study(tmp_path, b"a\ndef f\n", b"b\ndef f\n", [2, 2])
+    kbio.blob_path(sd, hashes[a]).unlink()
+    with pytest.raises(StaleError, match="unreadable"):
+        stale_docs(kb, "demo", a, b)
+    r = runner.invoke(app, ["stale", str(kb), "demo", a, b])
+    assert r.exit_code == 1 and isinstance(r.exception, SystemExit)
+    assert "error:" in r.output
+
+
+@pytest.mark.parametrize("content", [
+    "{not json",
+    '{"schemaVersion": 1, "from": "x", "to": "y", "files": [{"status": "modified"}]}',
+    "[]",
+])
+def test_stale_malformed_changes_is_a_clean_error(tmp_path, content):
+    kb, sd, a, b, _ = _stale_study(tmp_path, b"a\ndef f\n", b"b\ndef f\n", [2, 2])
+    kbio.atomic_write_text(sd / "diffs" / f"{a}..{b}" / "changes.json", content)
+    with pytest.raises(StaleError, match="readcode diff"):
+        stale_docs(kb, "demo", a, b)
+    r = runner.invoke(app, ["stale", str(kb), "demo", a, b])
+    assert r.exit_code == 1 and isinstance(r.exception, SystemExit)
+    assert "error:" in r.output

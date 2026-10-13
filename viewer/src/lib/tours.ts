@@ -13,3 +13,18 @@ export function stepNav(total: number, step: number): { prev: number | null; nex
   if (cur === 0) return { prev: null, next: null };
   return { prev: cur > 1 ? cur - 1 : null, next: cur < total ? cur + 1 : null };
 }
+
+/** links.json doc key of a tour's description. */
+export function tourDocKey(id: string): string {
+  return `tours/${id}.json`;
+}
+
+/** links.json doc key of tour step `step` (1-based): steps resolve refs from their own file. */
+export function tourStepDocKey(id: string, step: number): string {
+  return `${tourDocKey(id)}#${step}`;
+}
+
+/** Tour id of a links.json doc key ("tours/<id>.json" or "tours/<id>.json#<n>"), else null. */
+export function tourIdOfDocKey(key: string): string | null {
+  return /^tours\/(.+)\.json(?:#\d+)?$/.exec(key)?.[1] ?? null;
+}

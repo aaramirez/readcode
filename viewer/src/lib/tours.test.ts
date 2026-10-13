@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clampStep, stepNav } from './tours';
+import { clampStep, stepNav, tourDocKey, tourIdOfDocKey, tourStepDocKey } from './tours';
 
 describe('clampStep', () => {
   it('defaults to the first step', () => {
@@ -33,5 +33,22 @@ describe('stepNav', () => {
     expect(stepNav(1, 1)).toEqual({ prev: null, next: null });
     expect(stepNav(3, 10)).toEqual({ prev: 2, next: null });
     expect(stepNav(0, 1)).toEqual({ prev: null, next: null });
+  });
+});
+
+describe('tour doc keys', () => {
+  it('uses tours/<id>.json for the description and tours/<id>.json#<n> per step', () => {
+    expect(tourDocKey('login')).toBe('tours/login.json');
+    expect(tourStepDocKey('login', 1)).toBe('tours/login.json#1');
+    expect(tourStepDocKey('login', 12)).toBe('tours/login.json#12');
+  });
+
+  it('extracts the tour id from either kind of key', () => {
+    expect(tourIdOfDocKey('tours/login.json')).toBe('login');
+    expect(tourIdOfDocKey('tours/login.json#3')).toBe('login');
+    expect(tourIdOfDocKey('tours/a.b.json#10')).toBe('a.b');
+    expect(tourIdOfDocKey('explain/tours/x.py.json')).toBeNull();
+    expect(tourIdOfDocKey('tours/login.json#x')).toBeNull();
+    expect(tourIdOfDocKey('overview.md')).toBeNull();
   });
 });

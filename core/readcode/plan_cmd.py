@@ -60,23 +60,29 @@ def _parents(path: str) -> list[str]:
     return out
 
 
-def _abandoned(snap: Path) -> set[str]:
-    """Files given up by the generator: issues.json entries with source "generator"
-    whose file is ``explain/<path>.json``."""
+def _abandoned(snap: Path) -> tuple[set[str], set[str]]:
+    """(files, dirs) given up by the generator: issues.json entries with source "generator"
+    whose file is ``explain/<path>.json`` or ``dirs/<path>.json`` (root: ``dirs/_root.json``)."""
     path = snap / "issues.json"
     if not path.is_file():
-        return set()
+        return set(), set()
     try:
         issues = kbio.read_json(path).get("issues", [])
     except (ValueError, AttributeError):
-        return set()
-    out = set()
-    for issue in issues:
-        f = issue.get("file") if isinstance(issue, dict) else None
-        if (issue.get("source") == "generator" and isinstance(f, str)
-                and f.startswith("explain/") and f.endswith(".json")):
-            out.add(f[len("explain/"):-len(".json")])
-    return out
+        return set(), set()
+    files, dirs = set(), set()
+    for issue in issues if isinstance(issues, list) else []:
+        if not isinstance(issue, dict) or issue.get("source") != "generator":
+            continue
+        f = issue.get("file")
+        if not isinstance(f, str) or not f.endswith(".json"):
+            continue
+        if f.startswith("explain/"):
+            files.add(f[len("explain/"):-len(".json")])
+        elif f.startswith("dirs/"):
+            d = f[len("dirs/"):-len(".json")]
+            dirs.add("" if d == "_root" else d)
+    return files, dirs
 
 
 def _subtrees(files: list[dict]) -> dict[str, dict[str, str]]:
@@ -124,7 +130,7 @@ def plan_snapshot(kb: Path | str, study: str, sha: str, batch_lines: int = 1500)
     explainable = [f for f in tree["files"] if not (f["language"] is None and f["bytes"] == 0)]
 
     other = reuse_source(sdir, study_data, sha)
-    given_up = _abandoned(snap)
+    given_up, given_up_dirs = _abandoned(snap)
     reused = 0
     pending: list[dict] = []
     abandoned: list[str] = []
@@ -159,9 +165,11 @@ def plan_snapshot(kb: Path | str, study: str, sha: str, batch_lines: int = 1500)
             if not mine.is_file() and theirs.is_file():
                 kbio.atomic_write_bytes(mine, theirs.read_bytes())
                 reused_dirs += 1
+        # Copied only into a snapshot that never had the directory: once it exists (even
+        # emptied by the user) deleted tours/diagrams are not resurrected on later runs.
         for sub in ("tours", "diagrams"):
             src = other_dir / sub
-            if src.is_dir():
+            if src.is_dir() and not (snap / sub).exists():
                 for f in src.rglob("*"):
                     dest = snap / sub / f.relative_to(src)
                     if f.is_file() and not dest.exists():
@@ -171,8 +179,10 @@ def plan_snapshot(kb: Path | str, study: str, sha: str, batch_lines: int = 1500)
             if ov.is_file():
                 kbio.atomic_write_bytes(snap / "overview.md", ov.read_bytes())
 
-    pending_dirs = [d for d in all_dirs if d in dirty or not kbio.dir_summary_path(snap, d).is_file()]
+    unsummarized = [d for d in all_dirs if d in dirty or not kbio.dir_summary_path(snap, d).is_file()]
+    pending_dirs = [d for d in unsummarized if d not in given_up_dirs]
     pending_dirs.sort(key=lambda d: (-(len(d.split("/")) if d else 0), d))
+    abandoned_dirs = sorted(d for d in unsummarized if d in given_up_dirs)
 
     tours = snap / "tours"
     tours_pending = not (tours.is_dir() and any(tours.iterdir()))
@@ -188,6 +198,7 @@ def plan_snapshot(kb: Path | str, study: str, sha: str, batch_lines: int = 1500)
         "overview": overview_pending,
         "tours": tours_pending,
         "abandoned": sorted(abandoned),
+        "abandonedDirs": abandoned_dirs,
         "done": not (pending or pending_dirs or overview_pending or tours_pending),
     }
     kbio.atomic_write_json(snap / "plan.json", result)
@@ -200,7 +211,7 @@ def summarize(plan: dict) -> str:
         f"Plan {plan['sha']}: {plan['reused']} explicaciones y {plan['reusedDirs']} directorios reutilizados, "
         f"{nfiles} archivos pendientes en {len(plan['batches'])} lotes, "
         f"{len(plan['dirs'])} directorios pendientes, "
-        f"{len(plan['abandoned'])} abandonados, "
+        f"{len(plan['abandoned'])} archivos y {len(plan['abandonedDirs'])} directorios abandonados, "
         f"overview={'pendiente' if plan['overview'] else 'ok'}, "
         f"tours={'pendientes' if plan['tours'] else 'ok'}, "
         f"{'completo' if plan['done'] else 'incompleto'}"

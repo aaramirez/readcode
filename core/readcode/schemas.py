@@ -24,6 +24,7 @@ KINDS = (
     "diff-explain",
     "links",
     "issues",
+    "search",
 )
 
 

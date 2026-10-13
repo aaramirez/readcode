@@ -189,3 +189,24 @@ def test_rev_cannot_be_an_option(study):
     kb, _, _, _ = study
     r = runner.invoke(app, ["snapshot", str(kb), "demo", "--sha", "--output=x"])
     assert r.exit_code != 0
+
+
+def test_new_snapshot_is_partial_and_resnapshot_keeps_status(study):
+    kb, sd, sha1, sha2 = study
+
+    def statuses():
+        return {s["sha"]: s["status"] for s in kbio.read_json(sd / "study.json")["snapshots"]}
+
+    snap(kb, sha1)
+    assert statuses() == {sha1: "partial"}
+    r = runner.invoke(app, ["mark", str(kb), "demo", "--sha", sha1, "--status", "explained"])
+    assert r.exit_code == 0, r.output
+    snap(kb, sha1)  # re-snapshot of a studied sha: status preserved
+    snap(kb, sha2)
+    assert statuses() == {sha1: "explained", sha2: "partial"}
+
+
+def test_count_lines_matches_blob_lines_for_odd_breaks():
+    data = "a\fb\nc\x85d\ne\u2028f\ng\rh\r\ni".encode("utf-8")
+    assert count_lines(data) == len(kbio.blob_lines(data)) == 5
+    assert count_lines(data + b"\n") == 5

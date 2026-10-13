@@ -99,6 +99,9 @@ test('flujo completo del visor', async ({ page, request }) => {
     await expect(panel).toContainText('paso 1 de 5');
     await panel.getByRole('link', { name: '▶' }).click();
     await expect(panel).toContainText('paso 2 de 5');
+    // step markers come from the per-step doc key "tours/<id>.json#<n>"
+    await expect(panel.locator('a[href*="app/services/auth.py:L1-2"]')).toBeVisible();
+    await expect(panel.locator('.rc-broken')).toHaveCount(0);
     await panel.getByRole('link', { name: '▶' }).click();
     await expect(page).toHaveURL(hashIs(`#/fixture/${A}/tour/flujo-facturacion/3`));
     await expect(panel).toContainText('paso 3 de 5');

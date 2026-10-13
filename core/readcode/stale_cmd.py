@@ -18,6 +18,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from readcode import kbio, refs
+from readcode.schemas import validate
 
 
 class StaleError(RuntimeError):
@@ -35,8 +36,12 @@ def _read(path: Path) -> dict:
 def _lines(sdir: Path, blob: str | None) -> list[str]:
     if not blob:
         return []
-    text = kbio.blob_path(sdir, blob).read_bytes().decode("utf-8", errors="replace")
-    return text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+    path = kbio.blob_path(sdir, blob)
+    try:
+        return kbio.blob_lines(path.read_bytes())
+    except OSError as exc:
+        raise StaleError(f"blob {blob} unreadable ({path}): {exc.strerror or exc}; "
+                         "re-run `readcode snapshot` for both commits") from exc
 
 
 def _def_texts(defs: list[dict], lines: list[str]) -> dict[tuple, str]:
@@ -74,9 +79,18 @@ def stale_docs(kb: Path | str, study: str, sha_a: str, sha_b: str) -> dict:
         sha_a, sha_b = kbio.resolve_sha(study_data, sha_a), kbio.resolve_sha(study_data, sha_b)
     except ValueError as exc:
         raise StaleError(str(exc)) from exc
-    changes = _read(sdir / "diffs" / f"{sha_a}..{sha_b}" / "changes.json")
-    if not changes:
+    changes_path = sdir / "diffs" / f"{sha_a}..{sha_b}" / "changes.json"
+    if not changes_path.is_file():
         raise StaleError(f"changes.json for {sha_a}..{sha_b} missing; run `readcode diff` first")
+    try:
+        changes = kbio.read_json(changes_path)
+    except (OSError, ValueError) as exc:
+        raise StaleError(f"{changes_path} is not valid JSON ({exc}); "
+                         "regenerate it with `readcode diff`") from exc
+    errors = validate("changes", changes)
+    if errors:
+        raise StaleError(f"{changes_path} is malformed ({errors[0]}); "
+                         "regenerate it with `readcode diff`")
     snap_a, snap_b = kbio.snapshot_dir(sdir, sha_a), kbio.snapshot_dir(sdir, sha_b)
     sym_a = _read(snap_a / "symbols.json").get("files", {})
     sym_b = _read(snap_b / "symbols.json").get("files", {})

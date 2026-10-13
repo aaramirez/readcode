@@ -1,0 +1,4 @@
+[
+  {"path": "app/main.py", "blockId": "b1", "title": "Arranque", "range": [1, 12]},
+  {"path": "app/services/billing.py", "blockId": "b2", "title": "Cobro", "range": [13, 15]}
+]

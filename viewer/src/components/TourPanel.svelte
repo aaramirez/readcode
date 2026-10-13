@@ -1,9 +1,9 @@
 <script lang="ts">
   // Right pane while a tour plays: step title + narration (shared renderer,
-  // doc key "tours/<id>.json"), ◀ ▶ controls ([ and ] in App), progress, exit.
+  // doc key "tours/<id>.json#<step>": each step resolves refs from its own file), ◀ ▶ controls ([ and ] in App), progress, exit.
   import type { StudyData } from '../lib/data';
   import { format } from '../lib/router';
-  import { stepNav } from '../lib/tours';
+  import { stepNav, tourStepDocKey } from '../lib/tours';
   import type { Tour } from '../lib/types';
   import Markdown from './Markdown.svelte';
 
@@ -21,7 +21,7 @@
   const total = $derived(tour.steps.length);
   const nav = $derived(stepNav(total, step));
   const current = $derived(tour.steps[step - 1]);
-  const doc = $derived({ data, study, sha, docKey: `tours/${tour.id}.json` });
+  const doc = $derived({ data, study, sha, docKey: tourStepDocKey(tour.id, step) });
 
   function stepHref(n: number): string {
     return format({ kind: 'tour', study, sha, id: tour.id, step: n });

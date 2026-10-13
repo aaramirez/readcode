@@ -5,6 +5,7 @@
 // cache so a later call can retry).
 
 import { isDiagramName } from './markers';
+import { tourIdOfDocKey } from './tours';
 import type {
   Catalog,
   Changes,
@@ -15,6 +16,7 @@ import type {
   Graph,
   Issues,
   Links,
+  SearchEntry,
   Study,
   Symbols,
   Tour,
@@ -39,7 +41,6 @@ export function encodePath(path: string): string {
   return path.split('/').map(encodeURIComponent).join('/');
 }
 
-const TOUR_KEY = /^tours\/(.+)\.json$/;
 const ARCHIFY_RAW = /^\[\[archify:(.+)\]\]$/;
 
 export class KbClient {
@@ -136,17 +137,22 @@ export class StudyData {
     return this.kb.text(this.snap(sha, 'overview.md'));
   }
 
+  /** Block search index (search.json); null for kbs validated before it existed. */
+  search(sha: string): Promise<SearchEntry[] | null> {
+    return this.kb.json<SearchEntry[]>(this.snap(sha, 'search.json'));
+  }
+
   links(sha: string): Promise<Links | null> {
     return this.kb.json<Links>(this.snap(sha, 'links.json'));
   }
 
-  /** Tours of a snapshot, derived from links.json doc keys "tours/<id>.json" (sorted by id). */
+  /** Tours of a snapshot, derived from links.json doc keys "tours/<id>.json[#<step>]" (sorted by id). */
   async tours(sha: string): Promise<TourListEntry[]> {
     const links = await this.links(sha);
     if (!links) return [];
     const ids = Object.keys(links.docs)
-      .map((k) => TOUR_KEY.exec(k)?.[1])
-      .filter((id): id is string => id !== undefined);
+      .map(tourIdOfDocKey)
+      .filter((id): id is string => id !== null);
     return [...new Set(ids)].sort().map((id) => ({ id }));
   }
 

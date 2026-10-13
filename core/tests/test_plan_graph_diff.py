@@ -127,7 +127,8 @@ def test_plan_done(study):
     kbio.atomic_write_json(snap / "tours" / "t.json", {})
     plan = plan_snapshot(kb, "demo", sha1)
     assert plan == {"sha": sha1, "reusedFrom": None, "reused": 0, "reusedDirs": 0, "batches": [],
-                    "dirs": [], "overview": False, "tours": False, "abandoned": [], "done": True}
+                    "dirs": [], "overview": False, "tours": False, "abandoned": [],
+                    "abandonedDirs": [], "done": True}
 
 
 def test_plan_after_reexplaining_keeps_affected_dirs_and_overview_pending(study):
@@ -171,6 +172,51 @@ def test_plan_abandoned_files(study):
     plan = plan_snapshot(kb, "demo", sha1)
     assert [f["path"] for b in plan["batches"] for f in b["files"]] == ["app/models.py"]
     assert plan["abandoned"] == [] and "app" in plan["dirs"] and plan["overview"] is True
+
+
+def test_plan_abandoned_dirs_including_root(study):
+    kb, sd, sha1, _ = study
+    fake_explain(sd, sha1)
+    fake_dirs(sd, sha1)
+    snap = kbio.snapshot_dir(sd, sha1)
+    kbio.atomic_write_text(snap / "overview.md", "# o\n")
+    kbio.atomic_write_json(snap / "tours" / "t.json", {})
+    kbio.dir_summary_path(snap, "").unlink()
+    kbio.dir_summary_path(snap, "app/services").unlink()
+    kbio.dir_summary_path(snap, "web").unlink()
+    kbio.atomic_write_json(snap / "issues.json", {"schemaVersion": 1, "issues": [
+        {"file": "dirs/_root.json", "problem": "failed twice", "source": "generator"},
+        {"file": "dirs/app/services.json", "problem": "failed twice", "source": "generator"},
+        {"file": "dirs/web.json", "problem": "x", "source": "validate"},
+        {"file": "dirs/app.json", "problem": "summary exists", "source": "generator"}]})
+    plan = plan_snapshot(kb, "demo", sha1)
+    assert plan["dirs"] == ["web"]
+    assert plan["abandonedDirs"] == ["", "app/services"]
+    assert plan["abandoned"] == [] and plan["done"] is False
+    assert "2 directorios abandonados" in runner.invoke(
+        app, ["plan", str(kb), "demo", "--sha", sha1]).output
+    fake_dirs(sd, sha1)  # once written, an abandoned dir is simply done
+    plan = plan_snapshot(kb, "demo", sha1)
+    assert plan["dirs"] == [] and plan["abandonedDirs"] == [] and plan["done"] is True
+
+
+def test_plan_does_not_resurrect_deleted_tours_or_diagrams(study):
+    kb, sd, sha1, sha2 = study
+    fake_explain(sd, sha1)
+    s1, s2 = kbio.snapshot_dir(sd, sha1), kbio.snapshot_dir(sd, sha2)
+    kbio.atomic_write_json(s1 / "tours" / "a.json", {"id": "a"})
+    kbio.atomic_write_json(s1 / "tours" / "b.json", {"id": "b"})
+    kbio.atomic_write_text(s1 / "diagrams" / "x.html", "<html></html>")
+    kbio.atomic_write_text(s1 / "diagrams" / "y.mmd", "graph TD\n")
+    plan_snapshot(kb, "demo", sha2)
+    assert sorted(p.name for p in (s2 / "tours").iterdir()) == ["a.json", "b.json"]
+    (s2 / "tours" / "a.json").unlink()
+    for f in (s2 / "diagrams").iterdir():
+        f.unlink()  # diagrams/ left empty
+    plan = plan_snapshot(kb, "demo", sha2)
+    assert sorted(p.name for p in (s2 / "tours").iterdir()) == ["b.json"]
+    assert list((s2 / "diagrams").iterdir()) == []
+    assert plan["tours"] is False
 
 
 def test_plan_stale_explain_hash_is_pending(study):
@@ -296,3 +342,35 @@ def test_graph_real_graphify(study):
     graph = sd / "snapshots" / sha1 / "graph" / "graph.json"
     assert isinstance(json.loads(graph.read_text(encoding="utf-8")), dict)
     assert kbio.read_json(sd / "study.json")["tools"]["graphify"] is True
+
+
+def _odd_study(tmp_path, old: bytes, new: bytes, path="m.py"):
+    """Hand-built study with two snapshots of one file (no git needed)."""
+    from readcode.snapshot import count_lines
+
+    kb, sd = tmp_path / "kb", tmp_path / "kb" / "demo"
+    a, b = "a" * 40, "b" * 40
+    kbio.atomic_write_json(sd / "study.json", {
+        "schemaVersion": 1, "name": "demo", "title": "D", "repo": {"url": "x"},
+        "language": "es", "exclude": [], "tools": {"graphify": False, "archify": False},
+        "snapshots": [{"sha": a, "date": "2026-01-01T00:00:00Z", "message": "1", "status": "indexed"},
+                      {"sha": b, "date": "2026-01-02T00:00:00Z", "message": "2", "status": "indexed"}]})
+    for sha, data in ((a, old), (b, new)):
+        h = kbio.sha256_hex(data)
+        kbio.atomic_write_bytes(kbio.blob_path(sd, h), data)
+        kbio.atomic_write_json(kbio.snapshot_dir(sd, sha) / "tree.json", {
+            "schemaVersion": 1, "sha": sha, "excluded": [], "files": [
+                {"path": path, "blob": h, "language": "python", "lines": count_lines(data),
+                 "bytes": len(data), "indexed": True}]})
+    return kb, sd, a, b
+
+
+def test_diff_hunks_use_newline_only_lines(tmp_path):
+    old = "a\fb\nc\x85d\ne\u2028f\ng\rh\nkeep\nold\n".encode("utf-8")
+    new = "a\fb\nc\x85d\ne\u2028f\ng\rh\nkeep\nnew\n".encode("utf-8")
+    kb, _, a, b = _odd_study(tmp_path, old, new)
+    doc = diff_snapshots(kb, "demo", a, b)
+    (f,) = doc["files"]
+    # "old" is line 6 when splitting only on "\n" (splitlines() would say 9)
+    assert f["hunks"] == [{"fromRange": [6, 6], "toRange": [6, 6], "header": "@@ -6,1 +6,1 @@"}]
+    assert f["hunks"] == compute_hunks(old.decode().split("\n")[:-1], new.decode().split("\n")[:-1])

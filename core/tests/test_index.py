@@ -158,7 +158,7 @@ def test_reindex_is_idempotent(indexed):
     assert before == after
 
 
-def test_unparseable_file_does_not_abort(indexed, monkeypatch):
+def test_unparseable_file_does_not_abort(indexed, monkeypatch, capsys):
     from readcode import indexer
 
     kb, sd, sha1, _ = indexed
@@ -170,12 +170,15 @@ def test_unparseable_file_does_not_abort(indexed, monkeypatch):
         return real(source, language, path, paths)
 
     monkeypatch.setattr(indexer, "extract", flaky)
-    indexer.index_snapshot(kb, "demo", sha1)
+    result = indexer.index_snapshot(kb, "demo", sha1)
+    assert result["failed"] == 1
+    err = capsys.readouterr().err
+    assert "app/models.py (RuntimeError)" in err and err.count("\n") == 1
     assert tree(sd, sha1)["app/models.py"]["indexed"] is False
     assert "app/models.py" not in symbols(sd, sha1)["files"]
     assert "app/main.py" in symbols(sd, sha1)["files"]
     monkeypatch.undo()
-    indexer.index_snapshot(kb, "demo", sha1)  # restore for other tests
+    assert indexer.index_snapshot(kb, "demo", sha1)["failed"] == 0  # restore for other tests
     assert tree(sd, sha1)["app/models.py"]["indexed"] is True
 
 
@@ -197,3 +200,43 @@ def test_extract_edge_cases():
 
     ref = extract("ñ = f(1)\n".encode(), "python", "p.py", frozenset())["refs"][0]
     assert (ref["name"], ref["line"], ref["col"]) == ("f", 1, 4)  # columns in characters
+
+
+def test_cli_summary_counts_failures(indexed, monkeypatch):
+    from readcode import indexer
+
+    kb, sd, sha1, _ = indexed
+    real = indexer.extract
+
+    def flaky(source, language, path, paths):
+        if path in ("app/models.py", "app/main.py"):
+            raise ValueError("boom")
+        return real(source, language, path, paths)
+
+    monkeypatch.setattr(indexer, "extract", flaky)
+    r = runner.invoke(app, ["index", str(kb), "demo", "--sha", sha1])
+    assert r.exit_code == 0, r.output
+    assert "(2 con errores)" in r.output
+    assert "aviso: no se pudo indexar app/main.py (ValueError)" in r.output
+    monkeypatch.undo()
+    _run("index", str(kb), "demo", "--sha", sha1)
+
+
+def test_index_upgrades_unexplained_partial_to_indexed(indexed):
+    kb, sd, sha1, _ = indexed
+    statuses = {s["sha"]: s["status"] for s in kbio.read_json(sd / "study.json")["snapshots"]}
+    assert statuses[sha1] == "indexed"  # snapshot left it "partial", nothing explained yet
+
+
+def test_index_keeps_partial_when_explanations_exist(tmp_path, fixture_repo):
+    repo, sha1, _ = fixture_repo
+    kb = tmp_path / "kb"
+    _run("init", str(kb), "demo", "--repo", str(repo))
+    _run("snapshot", str(kb), "demo", "--sha", sha1)
+    sd = kb / "demo"
+    kbio.atomic_write_text(sd / "snapshots" / sha1 / "explain" / "app" / "main.py.json", "{}")
+    _run("index", str(kb), "demo", "--sha", sha1)
+    assert kbio.read_json(sd / "study.json")["snapshots"][0]["status"] == "partial"
+    _run("mark", str(kb), "demo", "--sha", sha1, "--status", "explained")
+    _run("index", str(kb), "demo", "--sha", sha1)
+    assert kbio.read_json(sd / "study.json")["snapshots"][0]["status"] == "explained"

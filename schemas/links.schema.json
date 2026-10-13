@@ -13,7 +13,7 @@
     },
     "docs": {
       "type": "object",
-      "description": "Map from doc key (path of the markdown-bearing file relative to the snapshot dir, e.g. \"explain/app/main.py.json\", \"overview.md\", \"tours/login.json\", \"dirs/app.json\") to its markers.",
+      "description": "Map from doc key (path of the markdown-bearing file relative to the snapshot dir, e.g. \"explain/app/main.py.json\", \"overview.md\", \"tours/login.json\", \"dirs/app.json\") to its markers. A tour's description uses \"tours/<id>.json\"; each tour step has its own key \"tours/<id>.json#<n>\" (n = 1-based step index), since steps resolve markers relative to their own file. Within one key a raw marker has a single resolution.",
       "additionalProperties": {
         "type": "array",
         "description": "Markers found in the doc.",

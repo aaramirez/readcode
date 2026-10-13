@@ -42,6 +42,19 @@ def read_json(path: Path | str) -> object:
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
+def blob_lines(data: bytes) -> list[str]:
+    r"""Lines of a blob as readcode numbers them (tree.json ``lines``, ranges, hunks).
+
+    UTF-8 with errors="replace", split ONLY on "\n" (a trailing "\r" per line is dropped, so
+    CRLF counts as one break; \f, \x85, U+2028 or a lone \r do not break lines). A final
+    newline does not start an extra line; empty data has no lines.
+    """
+    lines = data.decode("utf-8", errors="replace").split("\n")
+    if lines[-1] == "":
+        lines.pop()
+    return [line[:-1] if line.endswith("\r") else line for line in lines]
+
+
 def sha256_hex(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 

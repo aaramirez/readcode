@@ -85,6 +85,14 @@ describe('KbClient', () => {
     expect(await new KbClient('kb/', f).study('fixture').overview(SHA)).toBe('# Hola');
   });
 
+  it('fetches search.json (null when the kb predates it)', async () => {
+    const entries = [{ path: 'app/main.py', blockId: 'b1', title: 'Arranque', range: [1, 2] }];
+    const f = mockFetch({ [`kb/fixture/snapshots/${SHA}/search.json`]: entries });
+    const s = new KbClient('kb/', f).study('fixture');
+    expect(await s.search(SHA)).toEqual(entries);
+    expect(await new KbClient('kb/', mockFetch({})).study('fixture').search(SHA)).toBeNull();
+  });
+
   describe('tours and diagrams lists from links.json', () => {
     const links: Links = {
       schemaVersion: 1,
@@ -100,6 +108,11 @@ describe('KbClient', () => {
           { raw: '[[archify:flujo]]', kind: 'archify', status: 'exact', target: 'diagrams/flujo.html' },
           { raw: '[[archify:falta]]', kind: 'archify', status: 'broken' },
         ],
+        'tours/login.json#1': [],
+        'tours/alta-usuario.json#2': [
+          { raw: '[[ref:#crear]]', kind: 'symbol', status: 'exact', target: 'app/usuarios.py', range: [4, 9] },
+        ],
+        'tours/solo-pasos.json#1': [],
         'explain/app/tours/x.py.json': [],
         'dirs/_root.json': [],
       },
@@ -109,9 +122,9 @@ describe('KbClient', () => {
       return { f, s: new KbClient('kb/', f).study('fixture') };
     };
 
-    it('derives tour ids from doc keys tours/<id>.json (even with zero markers)', async () => {
+    it('derives tour ids from doc keys tours/<id>.json and per-step tours/<id>.json#<n> (even with zero markers)', async () => {
       const { s } = setup();
-      expect(await s.tours(SHA)).toEqual([{ id: 'alta-usuario' }, { id: 'login' }]);
+      expect(await s.tours(SHA)).toEqual([{ id: 'alta-usuario' }, { id: 'login' }, { id: 'solo-pasos' }]);
     });
 
     it('derives unique archify names, flagging broken ones', async () => {

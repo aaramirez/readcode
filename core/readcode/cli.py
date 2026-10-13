@@ -73,7 +73,7 @@ def index(
         raise typer.Exit(1)
     typer.echo(
         f"Indexado {result['sha']}: {result['indexed']} archivos con símbolos, "
-        f"{result['skipped']} sin indexar"
+        f"{result['skipped']} sin indexar ({result['failed']} con errores)"
     )
 
 

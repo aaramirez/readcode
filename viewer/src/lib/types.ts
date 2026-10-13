@@ -162,6 +162,14 @@ export interface Tour {
   steps: TourStep[];
 }
 
+// search.schema.json (snapshots/<sha>/search.json, written by `readcode validate`)
+export interface SearchEntry {
+  path: string;
+  blockId: string;
+  title: string;
+  range: Range;
+}
+
 // links.schema.json
 export type MarkerKind = 'symbol' | 'lines' | 'archify' | 'invalid';
 export type MarkerStatus = 'exact' | 'ambiguous' | 'broken';

@@ -88,7 +88,7 @@ def test_clean_study_exit0_and_links(mini):
     docs = data["docs"]
     assert set(docs) == {"explain/app/main.py.json", "explain/app/util.py.json",
                          "explain/app/other.py.json", "dirs/_root.json", "dirs/app.json",
-                         "tours/intro.json", "overview.md"}
+                         "tours/intro.json", "tours/intro.json#1", "overview.md"}
     assert docs["explain/app/util.py.json"] == [] and docs["dirs/_root.json"] == []
     main = docs["explain/app/main.py.json"]
     assert main == [
@@ -104,7 +104,8 @@ def test_clean_study_exit0_and_links(mini):
          "candidates": [{"target": "app/main.py", "range": [6, 10]},
                         {"target": "app/util.py", "range": [1, 4]}]}]
     assert docs["dirs/app.json"][0]["range"] == [1, 3]
-    assert docs["tours/intro.json"][0]["target"] == "app/main.py"
+    assert docs["tours/intro.json"] == []
+    assert docs["tours/intro.json#1"][0]["target"] == "app/main.py"
     assert docs["overview.md"][0]["target"] == "app/util.py"
     assert kbio.read_json(snap / "issues.json") == {"schemaVersion": 1, "issues": []}
 
@@ -242,3 +243,54 @@ def test_diff_validation_and_links(mini):
     # deleted file: resolved against snapshot A as fallback
     assert dl["docs"]["explain.md"][0]["status"] == "exact"
     assert dl["docs"]["explain/app/util.py.json"][0]["target"] == "app/main.py"
+
+
+def test_tour_steps_get_their_own_doc_keys(mini):
+    """The same raw marker in two steps resolves relative to each step's file."""
+    kb, _, snap = mini
+    kbio.atomic_write_json(snap / "tours" / "intro.json", {
+        "schemaVersion": 1, "id": "intro", "title": "Intro", "description": "Ver [[ref:#fmt]]",
+        "steps": [
+            {"path": "app/main.py", "range": [1, 5], "title": "s1", "body": "[[ref:#helper]]"},
+            {"path": "app/util.py", "range": [1, 4], "title": "s2", "body": "[[ref:#helper]]"},
+            {"path": "app/other.py", "range": [1, 3], "title": "s3", "body": "sin marcas"}]})
+    assert _problems(kb) == []
+    docs = links(snap)["docs"]
+    assert docs["tours/intro.json"][0]["target"] == "app/util.py"
+    assert docs["tours/intro.json#1"] == [
+        {"raw": "[[ref:#helper]]", "kind": "symbol", "status": "exact",
+         "target": "app/main.py", "range": [6, 10]}]
+    assert docs["tours/intro.json#2"] == [
+        {"raw": "[[ref:#helper]]", "kind": "symbol", "status": "exact",
+         "target": "app/util.py", "range": [1, 4]}]
+    assert docs["tours/intro.json#3"] == []
+
+
+def test_same_raw_resolving_differently_in_one_doc_is_reported(mini):
+    from readcode.validate_cmd import _Collector, _Resolver
+
+    _, _, snap = mini
+    tree = kbio.read_json(snap / "tree.json")
+    symbols = kbio.read_json(snap / "symbols.json")
+    res, out = _Resolver(tree, symbols, set()), _Collector()
+    res.markdown("k.json", "x/k.json", "[[ref:#helper]]", "app/main.py", "a", out)
+    res.markdown("k.json", "x/k.json", "[[ref:#helper]]", "app/main.py", "b", out)
+    assert out.problems == []  # same resolution twice is fine
+    res.markdown("k.json", "x/k.json", "[[ref:#helper]]", "app/util.py", "c", out)
+    assert len(out.problems) == 1
+    assert "resolves differently" in out.problems[0]["problem"]
+    assert out.problems[0]["file"] == "x/k.json"
+
+
+def test_search_json_lists_every_explain_block(mini):
+    kb, _, snap = mini
+    kbio.atomic_write_json(kbio.explain_path(snap, "app/broken.py"), {"schemaVersion": 1})
+    _problems(kb)  # broken.py is reported and left out of the index
+    data = kbio.read_json(snap / "search.json")
+    assert validate("search", data) == []
+    assert data == [
+        {"path": "app/main.py", "blockId": "b1", "title": "main", "range": [1, 5]},
+        {"path": "app/main.py", "blockId": "b2", "title": "helper", "range": [6, 10]},
+        {"path": "app/other.py", "blockId": "b1", "title": "t", "range": [1, 2]},
+        {"path": "app/util.py", "blockId": "b1", "title": "t", "range": [1, 2]},
+    ]

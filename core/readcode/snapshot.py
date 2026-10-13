@@ -65,10 +65,8 @@ def detect_language(path: str) -> str | None:
 
 
 def count_lines(data: bytes) -> int:
-    if not data:
-        return 0
-    n = data.count(b"\n")
-    return n if data.endswith(b"\n") else n + 1
+    r"""Line count of a blob: ``len(kbio.blob_lines(data))`` ("\n"-only line breaks)."""
+    return len(kbio.blob_lines(data))
 
 
 def _list_blobs(repo: Path, sha: str) -> list[tuple[str, str, int]]:
@@ -234,7 +232,11 @@ def snapshot_study(kb: Path, study: str, rev: str, repo_path: Path | None = None
         raise SnapshotError("Invalid tree.json: " + "; ".join(errors))
     kbio.atomic_write_json(kbio.snapshot_dir(sdir, sha) / "tree.json", tree)
 
-    entry = {"sha": sha, "date": date, "message": message, "status": "partial"}
+    # A new snapshot starts "partial"; re-snapshotting a studied sha keeps its status
+    # (``index`` upgrades an unexplained "partial" to "indexed", ``mark`` sets the rest).
+    previous = next((s for s in study_data["snapshots"] if s["sha"] == sha), None)
+    status = previous["status"] if previous is not None else "partial"
+    entry = {"sha": sha, "date": date, "message": message, "status": status}
     snapshots = [s for s in study_data["snapshots"] if s["sha"] != sha]
     snapshots.append(entry)
     snapshots.sort(key=lambda s: _sort_key(s["date"]))

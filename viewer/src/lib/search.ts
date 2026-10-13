@@ -2,7 +2,7 @@
 // explanation block titles, ranked by a small subsequence score.
 
 import type { Route } from './router';
-import type { Explain, Symbols, Tree } from './types';
+import type { Explain, SearchEntry, Symbols, Tree } from './types';
 
 export interface SearchItem {
   kind: 'file' | 'symbol' | 'block';
@@ -95,6 +95,32 @@ export function blockItems(explain: Explain, study: string, sha: string): Search
   }));
 }
 
+/** Block items from search.json (same items as blockItems over every explanation). */
+export function searchEntryItems(entries: SearchEntry[], study: string, sha: string): SearchItem[] {
+  return entries.map((e) => ({
+    kind: 'block',
+    text: e.title,
+    detail: `${e.path}:${e.range[0]}-${e.range[1]}`,
+    route: { kind: 'file', study, sha, path: e.path, range: { start: e.range[0], end: e.range[1] } },
+  }));
+}
+
+/**
+ * Append-only list of search items: `add` pushes in place (amortized O(1) per
+ * item, no copy of what is already there) and bumps `version`, which callers
+ * can track to know when `items` changed.
+ */
+export class SearchIndex {
+  readonly items: SearchItem[] = [];
+  version = 0;
+
+  add(more: readonly SearchItem[]): void {
+    if (more.length === 0) return;
+    for (const item of more) this.items.push(item);
+    this.version++;
+  }
+}
+
 /**
  * Run `fn` over `items` with at most `limit` in flight, reporting each result
  * as it arrives. Failed tasks are skipped; `cancelled()` stops scheduling.
@@ -119,4 +145,54 @@ export async function mapLimit<T, R>(
     }
   }
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+}
+
+/** What loadBlockItems needs from StudyData (a subset, so tests can fake it). */
+export interface BlockSource {
+  search(sha: string): Promise<SearchEntry[] | null>;
+  explain(sha: string, path: string): Promise<Explain | null>;
+}
+
+/**
+ * Block items of a snapshot, reported through `onItems` as they become available.
+ * Uses search.json when the kb has it (a single request; resolves 'index');
+ * otherwise (missing or failing) fetches every file's explanation, `limit` at a
+ * time, reporting each one's blocks and the files still pending (resolves 'files').
+ */
+export async function loadBlockItems(
+  src: BlockSource,
+  tree: Tree,
+  study: string,
+  sha: string,
+  onItems: (items: SearchItem[]) => void,
+  opts: { cancelled?: () => boolean; onPending?: (n: number) => void; limit?: number } = {},
+): Promise<'index' | 'files'> {
+  const cancelled = opts.cancelled ?? (() => false);
+  let entries: SearchEntry[] | null = null;
+  try {
+    entries = await src.search(sha);
+  } catch {
+    entries = null;
+  }
+  if (cancelled()) return entries ? 'index' : 'files';
+  if (entries) {
+    onItems(searchEntryItems(entries, study, sha));
+    return 'index';
+  }
+  // every file may have an explanation (also non-indexed ones such as README.md)
+  let pending = tree.files.length;
+  opts.onPending?.(pending);
+  await mapLimit(
+    tree.files,
+    opts.limit ?? 6,
+    (f) =>
+      src.explain(sha, f.path).finally(() => {
+        if (!cancelled()) opts.onPending?.(--pending);
+      }),
+    (ex) => {
+      if (ex) onItems(blockItems(ex, study, sha));
+    },
+    cancelled,
+  );
+  return 'files';
 }

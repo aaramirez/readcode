@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { blockItems, fileItems, fuzzyScore, mapLimit, rankItems, symbolItems, type SearchItem } from './search';
-import type { Explain, Symbols, Tree } from './types';
+import {
+  SearchIndex,
+  blockItems,
+  fileItems,
+  fuzzyScore,
+  loadBlockItems,
+  mapLimit,
+  rankItems,
+  searchEntryItems,
+  symbolItems,
+  type BlockSource,
+  type SearchItem,
+} from './search';
+import type { Explain, SearchEntry, Symbols, Tree } from './types';
 
 const SHA = 'c'.repeat(40);
 
@@ -127,5 +139,80 @@ describe('mapLimit', () => {
       stop = true;
     }, undefined, () => stop);
     expect(calls).toBe(1);
+  });
+});
+
+describe('search.json', () => {
+  const entries: SearchEntry[] = [{ path: 'app/services/billing.py', blockId: 'b1', title: 'Cálculo del total', range: [1, 3] }];
+
+  it('builds the same block items as the explanations do', () => {
+    expect(searchEntryItems(entries, 'fixture', SHA)).toEqual(blockItems(explain, 'fixture', SHA));
+  });
+
+  function source(search: () => Promise<SearchEntry[] | null>) {
+    const calls: string[] = [];
+    const src: BlockSource = {
+      search: async (sha) => {
+        calls.push(`search:${sha}`);
+        return search();
+      },
+      explain: async (_sha, path) => {
+        calls.push(`explain:${path}`);
+        return path === explain.path ? explain : null;
+      },
+    };
+    return { src, calls };
+  }
+
+  it('uses search.json when present (one request, no explain fetches)', async () => {
+    const { src, calls } = source(async () => entries);
+    const got: SearchItem[][] = [];
+    const pending: number[] = [];
+    const mode = await loadBlockItems(src, tree, 'fixture', SHA, (items) => got.push(items), { onPending: (n) => pending.push(n) });
+    expect(mode).toBe('index');
+    expect(calls).toEqual([`search:${SHA}`]);
+    expect(got).toEqual([searchEntryItems(entries, 'fixture', SHA)]);
+    expect(pending).toEqual([]);
+  });
+
+  it.each([
+    ['missing (404 → null)', async () => null],
+    ['failing', async () => Promise.reject(new Error('HTTP 500'))],
+  ])('falls back to every explanation when search.json is %s', async (_label, search) => {
+    const { src, calls } = source(search as () => Promise<SearchEntry[] | null>);
+    const got: SearchItem[] = [];
+    const pending: number[] = [];
+    const mode = await loadBlockItems(src, tree, 'fixture', SHA, (items) => got.push(...items), { onPending: (n) => pending.push(n) });
+    expect(mode).toBe('files');
+    expect(calls.slice(1).sort()).toEqual(['explain:app/main.py', 'explain:app/services/billing.py']);
+    expect(got).toEqual(blockItems(explain, 'fixture', SHA));
+    expect(pending).toEqual([2, 1, 0]);
+  });
+
+  it('reports nothing once cancelled', async () => {
+    const { src } = source(async () => entries);
+    const got: SearchItem[][] = [];
+    await loadBlockItems(src, tree, 'fixture', SHA, (items) => got.push(items), { cancelled: () => true });
+    expect(got).toEqual([]);
+  });
+});
+
+describe('SearchIndex', () => {
+  it('appends in place without copying the existing items', () => {
+    const index = new SearchIndex();
+    const items = index.items;
+    index.add(fileItems(tree, 'fixture', SHA));
+    expect(index.version).toBe(1);
+    index.add([]);
+    expect(index.version).toBe(1);
+    const many = Array.from({ length: 200_000 }, (_, i): SearchItem => ({
+      kind: 'block',
+      text: `b${i}`,
+      route: { kind: 'overview', study: 'fixture', sha: SHA },
+    }));
+    index.add(many); // no spread: must not overflow the call stack
+    expect(index.items).toBe(items);
+    expect(index.items.length).toBe(2 + many.length);
+    expect(index.version).toBe(2);
   });
 });
